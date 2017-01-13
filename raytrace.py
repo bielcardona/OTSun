@@ -6,7 +6,7 @@ Created on Fri Nov 25 15:10:31 2016
 
 from FreeCAD import Base
 import Part
-import numpy as np
+import numpy
 import itertools
 import random
 import math
@@ -52,19 +52,6 @@ class Material:
                 par_value = float(par.text)
                 pars[par_name] = par_value
             Material(name, kind, pars)
-
-    def change_of_direction(self, ray, normal_vector):
-        pass
-        # calcular nou vector de direccio (ray.current_material)
-
-
-class Glass(Material):
-    def change_of_direction(self, ray, normal_vector):
-        r = random.random()
-        if r < 0.75:
-            ray.reflexion(ray.directions[-1], normal_vector)
-
-class Mirror1(Material):
 
 
 vacuum_medium = Material("Vacuum", "Solid",
@@ -191,14 +178,10 @@ class SunWindow:
         (self.origin, self.v1, self.v2, self.length1, self.length2) = (
             SunWindow.find_min_rectangle(projected_points, direction))
         self.aperture = self.length1 * self.length2
-        self.main_direction = direction
 
     def random_point(self):
         return (self.origin + self.v1 * self.length1 * random.random() +
                 self.v2 * self.length2 * random.random())
-
-    def random_direction(self):
-        return self.main_direction
 
     def add_to_document(self, doc):
         sw = Part.makePolygon([self.origin,
@@ -209,9 +192,6 @@ class SunWindow:
                                ], True)
         doc.addObject("Part::Feature", "SunWindow").Shape = sw
 
-class SunWindowBuie(SunWindow):
-    def random_direction(self):
-        return self.main_direction + random()
 
 class Ray:
     """
@@ -263,7 +243,7 @@ class Ray:
         if solid:
             material = self.scene.materials[solid]
             exco = material.parameters['extinction_coefficient']
-            self.energy = self.energy * np.exp(exco * dist)
+            self.energy = self.energy * exp(exco * dist)
             print self.energy, exco, dist
         return closestpair
 
@@ -385,7 +365,7 @@ class Experiment:
     def __init__(self, scene, direction, number_of_rays, initial_energy,
                  show_in_doc=None):
         self.scene = scene
-        ## self.direction = direction
+        self.direction = direction
         self.sunwindow = SunWindow(scene, direction)
         if show_in_doc:
             self.sunwindow.add_to_document(show_in_doc)
