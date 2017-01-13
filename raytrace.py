@@ -6,7 +6,7 @@ Created on Fri Nov 25 15:10:31 2016
 
 from FreeCAD import Base
 import Part
-import numpy
+import numpy as np
 import itertools
 import random
 import math
@@ -52,6 +52,79 @@ class Material:
                 par_value = float(par.text)
                 pars[par_name] = par_value
             Material(name, kind, pars)
+
+    def change_of_direction(self, ray, normal_vector):
+        pass
+        # calcular nou vector de direccio (ray.current_material)
+
+
+class VolumeMaterial(Material):
+    def __init__(self,index_of_refraction):
+        super(VolumeMaterial,self).__init__()
+        pass
+
+
+class SimpleVolumeMaterial(VolumeMaterial):
+    def __init__(self,index_of_refraction):
+        super(SimpleVolumeMaterial,self).__init__()
+        self.index_of_refraction = index_of_refraction
+
+    def change_of_direction(self, ray, normal_vector):
+        pass
+
+glass1 = SimpleVolumeMaterial(1.7)
+
+
+class SurfaceMaterial(Material):
+    def __init__(self,index_of_refraction):
+        super(SurfaceMaterial,self).__init__()
+        pass
+
+    def scatter_direction(self, ray, direction):
+        # pensar!
+        pass
+
+
+class SimpleSurfaceMaterial(SurfaceMaterial):
+    def __init__(self, probability_of_reflexion, probability_of_absortion):
+        super(SimpleSurfaceMaterial,self).__init__()
+        self.probability_of_reflexion = probability_of_reflexion
+        self.probability_of_absortion = probability_of_absortion
+        self.transmitance = 1 - probability_of_absortion - probability_of_reflexion
+
+    def change_of_direction(self, ray, normal_vector):
+        pass
+
+def opaque_simple_material(por):
+    return SimpleSurfaceMaterial(por,1-por)
+
+def transparent_simple_material(por):
+    return SimpleSurfaceMaterial(por,0)
+
+perfect_mirror = opaque_simple_material(1)
+perfect_absorber = opaque_simple_material(0)
+
+class TabulatedSurfaceMaterial(SurfaceMaterial):
+    def __init__(self, reflactances_file):
+        super(TabulatedSurfaceMaterial,self).__init__()
+        self.reflactances = None # carregar dades del fitxer
+
+    def get_reflactance(self,wavelength):
+        pass
+
+class ClosedFormSurfaceMaterial(SurfaceMaterial):
+    def __init__(self, function_of_reflactance):
+        super(ClosedFormSurfaceMaterial,self).__init__()
+        self.function_of_reflactance = function_of_reflactance
+
+    def get_reflactance(self,wavelength):
+        return self.function_of_reflactance(wavelength)
+
+def function1(wavelength):
+    return math.exp(wavelength/1000)
+
+strangemat1 = ClosedFormSurfaceMaterial(function1)
+
 
 
 vacuum_medium = Material("Vacuum", "Solid",
@@ -178,10 +251,14 @@ class SunWindow:
         (self.origin, self.v1, self.v2, self.length1, self.length2) = (
             SunWindow.find_min_rectangle(projected_points, direction))
         self.aperture = self.length1 * self.length2
+        self.main_direction = direction
 
     def random_point(self):
         return (self.origin + self.v1 * self.length1 * random.random() +
                 self.v2 * self.length2 * random.random())
+
+    def random_direction(self):
+        return self.main_direction
 
     def add_to_document(self, doc):
         sw = Part.makePolygon([self.origin,
@@ -192,6 +269,9 @@ class SunWindow:
                                ], True)
         doc.addObject("Part::Feature", "SunWindow").Shape = sw
 
+class SunWindowBuie(SunWindow):
+    def random_direction(self):
+        return self.main_direction + random()
 
 class Ray:
     """
@@ -243,7 +323,7 @@ class Ray:
         if solid:
             material = self.scene.materials[solid]
             exco = material.parameters['extinction_coefficient']
-            self.energy = self.energy * exp(exco * dist)
+            self.energy = self.energy * np.exp(exco * dist)
             print self.energy, exco, dist
         return closestpair
 
@@ -365,7 +445,7 @@ class Experiment:
     def __init__(self, scene, direction, number_of_rays, initial_energy,
                  show_in_doc=None):
         self.scene = scene
-        self.direction = direction
+        ## self.direction = direction
         self.sunwindow = SunWindow(scene, direction)
         if show_in_doc:
             self.sunwindow.add_to_document(show_in_doc)
