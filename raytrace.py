@@ -39,6 +39,19 @@ def refraction(incident, normal, n1, n2):
     c2 = c2sq ** 0.5
     return incident * r + mynormal * (r * c1 - c2)
 
+def polar_to_cartesian(phi, theta):
+    """
+    Convert polar coordinates (given in degrees) to cartesian
+    :param phi:
+    :param theta:
+    :return:
+    """
+    rad = math.acos(-1.0) / 180.0
+    x = -math.sin(theta * rad) * math.cos(phi * rad)
+    y = -math.sin(theta * rad) * math.sin(phi * rad)
+    z = -math.cos(theta * rad)
+    return Base.Vector(x, y, z)
+
 # ---
 # Helper functions for input of functions
 # ---
@@ -78,22 +91,24 @@ class Material:
         # Compute new direction (ray.current_material)
 
 
-class VolumeMaterial(Material):
+class VolumeMaterial(object, Material):
     def __init__(self, name, parameters):
         super(VolumeMaterial,self).__init__(name, parameters)
         pass
 
     def change_of_direction(self, ray, normal_vector):
-        wavelength = ray.wavelength
+        # wavelength = ray.wavelength
+        pass
 
 
-def simpleVolumeMaterial(name, index_of_refraction):
+def simple_volume_material(name, index_of_refraction):
     return VolumeMaterial(name, {'index_of_refraction': constant_function(index_of_refraction)})
 
-glass1 = simpleVolumeMaterial(1.75)
+vacuum_medium = simple_volume_material("Vacuum", 1.0)
+glass1 = simple_volume_material("Glass1", 1.75)
 
 
-class SurfaceMaterial(Material):
+class SurfaceMaterial(object, Material):
     def __init__(self, name, parameters):
         super(SurfaceMaterial,self).__init__(name, parameters)
         pass
@@ -107,40 +122,14 @@ def opaque_simple_material(name, por):
                                   'probability_of_absortion':constant_function(1-por),
                                   'transmitance':constant_function(0)})
 
-def transparent_simple_material(por):
+def transparent_simple_material(name, por):
     return SurfaceMaterial(name, {'probability_of_reflexion':constant_function(por),
                                   'probability_of_absortion':constant_function(0),
                                   'transmitance':constant_function(1-por)})
 
-perfect_mirror = opaque_simple_material(1)
-perfect_absorber = opaque_simple_material(0)
+perfect_mirror = opaque_simple_material("Mirror", 1)
+perfect_absorber = opaque_simple_material("Absorber", 0)
 
-class TabulatedSurfaceMaterial(SurfaceMaterial):
-    def __init__(self, reflactances_file):
-        super(TabulatedSurfaceMaterial,self).__init__()
-        self.reflactances = None # carregar dades del fitxer
-
-    def get_reflactance(self,wavelength):
-        pass
-
-class ClosedFormSurfaceMaterial(SurfaceMaterial):
-    def __init__(self, function_of_reflactance):
-        super(ClosedFormSurfaceMaterial,self).__init__()
-        self.function_of_reflactance = function_of_reflactance
-
-    def get_reflactance(self,wavelength):
-        return self.function_of_reflactance(wavelength)
-
-def function1(wavelength):
-    return math.exp(wavelength/1000)
-
-strangemat1 = ClosedFormSurfaceMaterial(function1)
-
-
-
-vacuum_medium = Material("Vacuum", "Solid",
-                         {'index_of_refraction': 1.0,
-                          'probability_of_reflexion': 0.0})
 
 
 class Scene:
@@ -282,7 +271,7 @@ class SunWindow:
 
 class SunWindowBuie(SunWindow):
     def random_direction(self):
-        return self.main_direction + random()
+        return self.main_direction + random.random()
 
 class Ray:
     """
@@ -408,20 +397,6 @@ class Ray:
         lshape_wire = Part.makePolygon(self.points)
         MyShape_ray = doc.addObject("Part::Feature", "Ray")
         MyShape_ray.Shape = lshape_wire
-
-
-def polar_to_cartesian(phi, theta):
-    """
-    Convert polar coordinates (given in degrees) to cartesian
-    :param phi:
-    :param theta:
-    :return:
-    """
-    rad = math.acos(-1.0) / 180.0
-    x = -math.sin(theta * rad) * math.cos(phi * rad)
-    y = -math.sin(theta * rad) * math.sin(phi * rad)
-    z = -math.cos(theta * rad)
-    return Base.Vector(x, y, z)
 
 
 class Experiment:
