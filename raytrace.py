@@ -18,8 +18,9 @@ except ImportError:
 
 
 # ---
-# Helper functions
-#
+# Helper functions for reflexion and refraction
+# ---
+
 def reflexion(incident, normal):
     """
     Implementation of law of reflexion
@@ -43,7 +44,15 @@ def refraction(incident, normal, n1, n2):
     c2 = c2sq ** 0.5
     return incident * r + mynormal * (r * c1 - c2)
 
+# ---
+# Helper functions for input of functions
+# ---
 
+def constant_function(c):
+    return lambda x: c
+
+def tabulated_function(xvalues, yvalues):
+    return lambda x: np.interp(x, xvalues, yvalues)
 
 class Material:
     """
