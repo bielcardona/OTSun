@@ -20,6 +20,28 @@ except ImportError:
 # ---
 # Helper functions
 #
+def reflexion(incident, normal):
+    """
+    Implementation of law of reflexion
+    """
+    # We assume all vectors are normalized
+    return incident - normal * 2.0 * normal.dot(incident)
+
+def refraction(incident, normal, n1, n2):
+    """
+    Implementation of Snell's law of refraction
+    """
+    # https://en.wikipedia.org/wiki/Snell's_law#Vector_form
+    mynormal = normal * 1.0
+    if mynormal.dot(incident) > 0:
+        mynormal = mynormal * (-1.0)
+    r = n1 / n2
+    c1 = - mynormal.dot(incident)
+    c2sq = 1.0 - r * r * (1.0 - c1 * c1)
+    if c2sq < 0:
+        return reflexion(incident, normal)
+    c2 = c2sq ** 0.5
+    return incident * r + mynormal * (r * c1 - c2)
 
 
 
@@ -320,30 +342,6 @@ class Ray:
             print self.energy, exco, dist
         return closestpair
 
-    @staticmethod
-    def reflexion(incident, normal):
-        """
-        Implementation of law of reflexion
-        """
-        # We assume all vectors are normalized
-        return incident - normal * 2.0 * normal.dot(incident)
-
-    @staticmethod
-    def refraction(incident, normal, n1, n2):
-        """
-        Implementation of Snell's law of refraction
-        """
-        # https://en.wikipedia.org/wiki/Snell's_law#Vector_form
-        mynormal = normal * 1.0
-        if mynormal.dot(incident) > 0:
-            mynormal = mynormal * (-1.0)
-        r = n1 / n2
-        c1 = - mynormal.dot(incident)
-        c2sq = 1.0 - r * r * (1.0 - c1 * c1)
-        if c2sq < 0:
-            return Ray.reflexion(incident, normal)
-        c2 = c2sq ** 0.5
-        return incident * r + mynormal * (r * c1 - c2)
 
     def next_direction(self, pair):
         """
@@ -367,7 +365,7 @@ class Ray:
                 print "Mirror"
                 por = material.parameters["probability_of_reflection"]
                 if random.random() < por:
-                    self.directions.append(Ray.reflexion(v0, normal))
+                    self.directions.append(reflexion(v0, normal))
                 else:
                     self.energy = 0
                     self.finished = True
@@ -390,11 +388,11 @@ class Ray:
             por = mat2.parameters.get('probability_of_reflection', 0)
             rnd = random.random()
             if rnd < por:
-                self.directions.append(Ray.reflexion(v0, normal))
+                self.directions.append(reflexion(v0, normal))
             else:
                 n1 = mat1.parameters.get('index_of_refraction', 1)
                 n2 = mat2.parameters.get('index_of_refraction', 1)
-                self.directions.append(Ray.refraction(v0, normal, n1, n2))
+                self.directions.append(refraction(v0, normal, n1, n2))
 
     def run(self, max_hops=20):
         """
