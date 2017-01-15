@@ -130,8 +130,6 @@ def transparent_simple_material(name, por):
 perfect_mirror = opaque_simple_material("Mirror", 1)
 perfect_absorber = opaque_simple_material("Absorber", 0)
 
-
-
 class Scene:
     """
     Class used to define the Scene. It encodes all the objects 
@@ -395,8 +393,8 @@ class Ray:
 
     def add_to_document(self, doc):
         lshape_wire = Part.makePolygon(self.points)
-        MyShape_ray = doc.addObject("Part::Feature", "Ray")
-        MyShape_ray.Shape = lshape_wire
+        my_shape_ray = doc.addObject("Part::Feature", "Ray")
+        my_shape_ray.Shape = lshape_wire
 
 
 class Experiment:
@@ -434,9 +432,9 @@ if __name__ == "__main__":
 
     home = expanduser("~")
     filename = join(home, "materials.xml")
-    doc = FreeCAD.activeDocument()
-    sel = doc.Objects
+    current_doc = FreeCAD.activeDocument()
+    sel = current_doc.Objects
     Material.load_from_file(filename)
-    scene = Scene(sel)
-    exp = Experiment(scene, Base.Vector(1, 1, 1), 100, 1.0 ,1.0, doc)
-    exp.run(doc)
+    current_scene = Scene(sel)
+    exp = Experiment(current_scene, Base.Vector(1, 1, 1), 100, 1.0 ,1.0, current_doc)
+    exp.run(current_doc)
