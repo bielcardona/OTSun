@@ -10,12 +10,17 @@ import numpy as np
 import itertools
 import random
 import math
-import os
 
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import xml.etree.ElementTree as ET
+
+
+# ---
+# Helper functions
+#
+
 
 
 class Material:
@@ -24,10 +29,9 @@ class Material:
     """
     by_name = {}
 
-    def __init__(self, name, kind, parameters):
+    def __init__(self, name, parameters):
         self.by_name[name] = self
         self.name = name
-        self.kind = kind
         self.parameters = parameters
 
     @classmethod
@@ -39,34 +43,22 @@ class Material:
         name = label[start + 1:end]
         return cls.by_name.get(name, None)
 
-    @classmethod
-    def load_from_file(cls, filename):
-        tree = ET.ElementTree(file=filename)
-        for el in tree.iter(tag="Material"):
-            name = el.find("Name").text
-            kind = el.find("Kind").text
-            el_pars = el.find("Parameters")
-            pars = {}
-            for par in el_pars.getchildren():
-                par_name = par.tag
-                par_value = float(par.text)
-                pars[par_name] = par_value
-            Material(name, kind, pars)
-
     def change_of_direction(self, ray, normal_vector):
         pass
-        # calcular nou vector de direccio (ray.current_material)
+        # Compute new direction (ray.current_material)
 
 
 class VolumeMaterial(Material):
-    def __init__(self,index_of_refraction):
-        super(VolumeMaterial,self).__init__()
+    def __init__(self, name, parameters):
+        super(VolumeMaterial,self).__init__(name, parameters)
         pass
 
+    def change_of_direction(self, ray, normal_vector):
+        wavelength = ray.wavelength
 
 class SimpleVolumeMaterial(VolumeMaterial):
-    def __init__(self,index_of_refraction):
-        super(SimpleVolumeMaterial,self).__init__()
+    def __init__(self, name, parameters):
+        super(SimpleVolumeMaterial,self).__init__(name, parameters)
         self.index_of_refraction = index_of_refraction
 
     def change_of_direction(self, ray, normal_vector):
@@ -76,8 +68,8 @@ glass1 = SimpleVolumeMaterial(1.7)
 
 
 class SurfaceMaterial(Material):
-    def __init__(self,index_of_refraction):
-        super(SurfaceMaterial,self).__init__()
+    def __init__(self, name, parameters):
+        super(SurfaceMaterial,self).__init__(name, parameters)
         pass
 
     def scatter_direction(self, ray, direction):
@@ -86,8 +78,8 @@ class SurfaceMaterial(Material):
 
 
 class SimpleSurfaceMaterial(SurfaceMaterial):
-    def __init__(self, probability_of_reflexion, probability_of_absortion):
-        super(SimpleSurfaceMaterial,self).__init__()
+    def __init__(self, name, parameters):
+        super(SimpleSurfaceMaterial,self).__init__(name, parameters)
         self.probability_of_reflexion = probability_of_reflexion
         self.probability_of_absortion = probability_of_absortion
         self.transmitance = 1 - probability_of_absortion - probability_of_reflexion
@@ -279,8 +271,9 @@ class Ray:
     describes as it interacts with the scene and its energy.
     """
 
-    def __init__(self, origin, direction, energy, scene):
+    def __init__(self, wavelength, origin, direction, energy, scene):
         self.scene = scene
+        self.wavelength = wavelength
         self.points = [origin]
         self.directions = [direction]
         self.energy = energy
@@ -442,7 +435,7 @@ class Experiment:
     given direction.
     """
 
-    def __init__(self, scene, direction, number_of_rays, initial_energy,
+    def __init__(self, scene, direction, number_of_rays, wavelength, initial_energy,
                  show_in_doc=None):
         self.scene = scene
         ## self.direction = direction
@@ -450,6 +443,7 @@ class Experiment:
         if show_in_doc:
             self.sunwindow.add_to_document(show_in_doc)
         self.number_of_rays = number_of_rays
+        self.wavelength = wavelength
         self.initial_energy = initial_energy
         self.captured_energy = 0
 
@@ -474,5 +468,5 @@ if __name__ == "__main__":
     sel = doc.Objects
     Material.load_from_file(filename)
     scene = Scene(sel)
-    exp = Experiment(scene, Base.Vector(1, 1, 1), 100, 1.0, doc)
+    exp = Experiment(scene, Base.Vector(1, 1, 1), 100, 1.0 ,1.0, doc)
     exp.run(doc)
