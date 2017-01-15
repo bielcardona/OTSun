@@ -11,11 +11,6 @@ import itertools
 import random
 import math
 
-try:
-    import xml.etree.cElementTree as ET
-except ImportError:
-    import xml.etree.ElementTree as ET
-
 
 # ---
 # Helper functions for reflexion and refraction
@@ -54,6 +49,10 @@ def constant_function(c):
 def tabulated_function(xvalues, yvalues):
     return lambda x: np.interp(x, xvalues, yvalues)
 
+# ---
+# Classes for materials
+# ---
+
 class Material:
     """
     Class used to represent materials and their physical properties
@@ -87,15 +86,11 @@ class VolumeMaterial(Material):
     def change_of_direction(self, ray, normal_vector):
         wavelength = ray.wavelength
 
-class SimpleVolumeMaterial(VolumeMaterial):
-    def __init__(self, name, parameters):
-        super(SimpleVolumeMaterial,self).__init__(name, parameters)
-        self.index_of_refraction = index_of_refraction
 
-    def change_of_direction(self, ray, normal_vector):
-        pass
+def simpleVolumeMaterial(name, index_of_refraction):
+    return VolumeMaterial(name, {'index_of_refraction': constant_function(index_of_refraction)})
 
-glass1 = SimpleVolumeMaterial(1.7)
+glass1 = simpleVolumeMaterial(1.7)
 
 
 class SurfaceMaterial(Material):
@@ -107,22 +102,15 @@ class SurfaceMaterial(Material):
         # pensar!
         pass
 
-
-class SimpleSurfaceMaterial(SurfaceMaterial):
-    def __init__(self, name, parameters):
-        super(SimpleSurfaceMaterial,self).__init__(name, parameters)
-        self.probability_of_reflexion = probability_of_reflexion
-        self.probability_of_absortion = probability_of_absortion
-        self.transmitance = 1 - probability_of_absortion - probability_of_reflexion
-
-    def change_of_direction(self, ray, normal_vector):
-        pass
-
-def opaque_simple_material(por):
-    return SimpleSurfaceMaterial(por,1-por)
+def opaque_simple_material(name, por):
+    return SurfaceMaterial(name, {'probability_of_reflexion':constant_function(por),
+                                  'probability_of_absortion':constant_function(1-por),
+                                  'transmitance':constant_function(0)})
 
 def transparent_simple_material(por):
-    return SimpleSurfaceMaterial(por,0)
+    return SurfaceMaterial(name, {'probability_of_reflexion':constant_function(por),
+                                  'probability_of_absortion':constant_function(0),
+                                  'transmitance':constant_function(1-por)})
 
 perfect_mirror = opaque_simple_material(1)
 perfect_absorber = opaque_simple_material(0)
