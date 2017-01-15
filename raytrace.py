@@ -90,7 +90,7 @@ class VolumeMaterial(Material):
 def simpleVolumeMaterial(name, index_of_refraction):
     return VolumeMaterial(name, {'index_of_refraction': constant_function(index_of_refraction)})
 
-glass1 = simpleVolumeMaterial(1.7)
+glass1 = simpleVolumeMaterial(1.75)
 
 
 class SurfaceMaterial(Material):
