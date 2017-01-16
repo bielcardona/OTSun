@@ -322,7 +322,7 @@ class Ray:
         if solid:
             material = self.scene.materials[solid]
             exco = material.parameters['extinction_coefficient']
-            self.energy = self.energy * np.exp(exco * dist)
+            self.energy *= math.exp(exco * dist)
             print self.energy, exco, dist
         return closestpair
 
@@ -406,7 +406,7 @@ class Experiment:
     def __init__(self, scene, direction, number_of_rays, wavelength, initial_energy,
                  show_in_doc=None):
         self.scene = scene
-        ## self.direction = direction
+        self.direction = direction
         self.sunwindow = SunWindow(scene, direction)
         if show_in_doc:
             self.sunwindow.add_to_document(show_in_doc)
@@ -417,7 +417,7 @@ class Experiment:
 
     def run(self, show_in_doc=None):
         for _ in xrange(self.number_of_rays):
-            ray = Ray(self.sunwindow.random_point(), self.direction,
+            ray = Ray(self.wavelength, self.sunwindow.random_point(), self.direction,
                       self.initial_energy, self.scene)
             ray.run()
             if show_in_doc:
@@ -434,7 +434,7 @@ if __name__ == "__main__":
     filename = join(home, "materials.xml")
     current_doc = FreeCAD.activeDocument()
     sel = current_doc.Objects
-    Material.load_from_file(filename)
+    # Material.load_from_file(filename)
     current_scene = Scene(sel)
     exp = Experiment(current_scene, Base.Vector(1, 1, 1), 100, 1.0 ,1.0, current_doc)
     exp.run(current_doc)
