@@ -66,7 +66,7 @@ def tabulated_function(xvalues, yvalues):
 # Classes for materials
 # ---
 
-class Material:
+class Material(object):
     """
     Class used to represent materials and their physical properties
     """
@@ -91,7 +91,7 @@ class Material:
         # Compute new direction (ray.current_material)
 
 
-class VolumeMaterial(object, Material):
+class VolumeMaterial(Material, object):
     def __init__(self, name, parameters):
         super(VolumeMaterial,self).__init__(name, parameters)
         pass
@@ -108,7 +108,7 @@ vacuum_medium = simple_volume_material("Vacuum", 1.0)
 glass1 = simple_volume_material("Glass1", 1.75)
 
 
-class SurfaceMaterial(object, Material):
+class SurfaceMaterial(Material, object):
     def __init__(self, name, parameters):
         super(SurfaceMaterial,self).__init__(name, parameters)
         pass
