@@ -70,16 +70,19 @@ def tabulated_function(xvalues, yvalues):
 # ---
 # Classes for materials
 # ---
+
+# region Materials
+
 class Material(object):
     """
     Class used to represent materials and their physical properties
     """
     by_name = {}
 
-    def __init__(self, name, parameters):
+    def __init__(self, name, properties):
         self.by_name[name] = self
         self.name = name
-        self.parameters = parameters
+        self.properties = properties
 
     @classmethod
     def get_from_label(cls, label):
@@ -91,8 +94,8 @@ class Material(object):
         return cls.by_name.get(name, None)
 
     @classmethod
-    def create(cls, name, parameters):
-        _ = cls(name, parameters)
+    def create(cls, name, properties):
+        _ = cls(name, properties)
 
     def change_of_direction(self, ray, normal_vector):
         pass
@@ -100,14 +103,14 @@ class Material(object):
 
 
 class VolumeMaterial(Material, object):
-    def __init__(self, name, parameters):
-        super(VolumeMaterial, self).__init__(name, parameters)
+    def __init__(self, name, properties):
+        super(VolumeMaterial, self).__init__(name, properties)
         self.kind = 'Volume'
 
     def change_of_direction(self, ray, normal_vector):
         wavelength = ray.wavelength
-        n1 = ray.current_medium.parameters['index_of_refraction'](wavelength)
-        n2 = self.parameters['index_of_refraction'](wavelength)
+        n1 = ray.current_medium.properties['index_of_refraction'](wavelength)
+        n2 = self.properties['index_of_refraction'](wavelength)
         direction, phenomenon = refraction(ray.directions[-1], normal_vector, n1, n2)
         if phenomenon == "Refraction":
             ray.current_medium = self
@@ -126,8 +129,8 @@ create_simple_volume_material("Glass1", 1.75)
 
 
 class SurfaceMaterial(Material, object):
-    def __init__(self, name, parameters):
-        super(SurfaceMaterial, self).__init__(name, parameters)
+    def __init__(self, name, properties):
+        super(SurfaceMaterial, self).__init__(name, properties)
         self.kind = 'Surface'
 
     def scatter_direction(self, ray, direction):
@@ -150,6 +153,8 @@ def create_transparent_simple_material(name, por):
 create_opaque_simple_material("Mirror", 1)
 create_opaque_simple_material("Absorber", 0)
 
+
+# endregion
 
 class Scene:
     """
@@ -303,13 +308,13 @@ class Ray:
     describes as it interacts with the scene and its energy.
     """
 
-    def __init__(self, scene, origin, direction, parameters):
+    def __init__(self, scene, origin, direction, properties):
         self.scene = scene
         self.points = [origin]
         self.directions = [direction]
-        self.parameters = parameters
-        self.wavelength = parameters['wavelength']
-        self.energy = parameters['energy']
+        self.properties = properties
+        self.wavelength = properties['wavelength']
+        self.energy = properties['energy']
         self.finished = False
         self.got_absorbed = False
         self.current_medium = vacuum_medium
@@ -349,7 +354,7 @@ class Ray:
         solid = self.scene.solid_at_point(middle_point)
         if solid:
             material = self.scene.materials[solid]
-            exco = material.parameters['extinction_coefficient']
+            exco = material.properties['extinction_coefficient']
             self.energy *= math.exp(exco * dist)
             print self.energy, exco, dist
         return closestpair
@@ -374,7 +379,7 @@ class Ray:
                 pass
             if material.kind == "Mirror":
                 print "Mirror"
-                por = material.parameters["probability_of_reflection"]
+                por = material.properties["probability_of_reflection"]
                 if random.random() < por:
                     self.directions.append(reflexion(v0, normal))
                 else:
@@ -382,7 +387,7 @@ class Ray:
                     self.finished = True
                     self.got_absorbed = False
             if material.kind == "Absorber":
-                poa = material.parameters.get("probability_of_absortion", 1)
+                poa = material.properties.get("probability_of_absortion", 1)
                 if random.random() < poa:
                     self.finished = True
                     self.got_absorbed = True
@@ -396,13 +401,13 @@ class Ray:
             sol2 = self.scene.solid_at_point(p1 + v0 * self.scene.epsilon)
             mat1 = self.scene.materials.get(sol1, vacuum_medium)
             mat2 = self.scene.materials.get(sol2, vacuum_medium)
-            por = mat2.parameters.get('probability_of_reflection', 0)
+            por = mat2.properties.get('probability_of_reflection', 0)
             rnd = random.random()
             if rnd < por:
                 self.directions.append(reflexion(v0, normal))
             else:
-                n1 = mat1.parameters.get('index_of_refraction', 1)
-                n2 = mat2.parameters.get('index_of_refraction', 1)
+                n1 = mat1.properties.get('index_of_refraction', 1)
+                n2 = mat2.properties.get('index_of_refraction', 1)
                 self.directions.append(refraction(v0, normal, n1, n2))
 
     def run(self, max_hops=20):
