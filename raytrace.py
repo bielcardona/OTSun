@@ -24,6 +24,7 @@ def reflexion(incident, normal):
     return incident - normal * 2.0 * normal.dot(incident)
 
 
+# noinspection PyUnresolvedReferences,PyUnresolvedReferences
 def refraction(incident, normal, n1, n2):
     """
     Implementation of Snell's law of refraction
@@ -31,6 +32,7 @@ def refraction(incident, normal, n1, n2):
     # https://en.wikipedia.org/wiki/Snell's_law#Vector_form
     mynormal = normal * 1.0
     if mynormal.dot(incident) > 0:
+        # noinspection PyAugmentAssignment
         mynormal = mynormal * (-1.0)
     r = n1 / n2
     c1 = - mynormal.dot(incident)
@@ -91,6 +93,10 @@ class Material(object):
         name = label[start + 1:end]
         return cls.by_name.get(name, None)
 
+    @classmethod
+    def create(cls, name, parameters):
+        _ = cls(name, parameters)
+
     def change_of_direction(self, ray, normal_vector):
         pass
         # Compute new direction (ray.current_material)
@@ -106,12 +112,14 @@ class VolumeMaterial(Material, object):
         pass
 
 
-def simple_volume_material(name, index_of_refraction):
-    return VolumeMaterial(name, {'index_of_refraction': constant_function(index_of_refraction)})
+def create_simple_volume_material(name, index_of_refraction):
+    VolumeMaterial.create(name, {'index_of_refraction': constant_function(index_of_refraction)})
 
 
-vacuum_medium = simple_volume_material("Vacuum", 1.0)
-glass1 = simple_volume_material("Glass1", 1.75)
+create_simple_volume_material("Vacuum", 1.0)
+# noinspection PyNoneFunctionAssignment
+vacuum_medium = VolumeMaterial.get_from_label("Vacuum")
+create_simple_volume_material("Glass1", 1.75)
 
 
 class SurfaceMaterial(Material, object):
@@ -124,20 +132,20 @@ class SurfaceMaterial(Material, object):
         pass
 
 
-def opaque_simple_material(name, por):
-    return SurfaceMaterial(name, {'probability_of_reflexion': constant_function(por),
+def create_opaque_simple_material(name, por):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(1 - por),
                                   'transmitance': constant_function(0)})
 
 
-def transparent_simple_material(name, por):
-    return SurfaceMaterial(name, {'probability_of_reflexion': constant_function(por),
+def create_transparent_simple_material(name, por):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(0),
                                   'transmitance': constant_function(1 - por)})
 
 
-perfect_mirror = opaque_simple_material("Mirror", 1)
-perfect_absorber = opaque_simple_material("Absorber", 0)
+create_opaque_simple_material("Mirror", 1)
+create_opaque_simple_material("Absorber", 0)
 
 
 class Scene:
@@ -149,12 +157,13 @@ class Scene:
     def __init__(self, objects):
         self.faces = []  # All the faces in the Scene
         self.solids = []  # All the solids in the Scene
-        self.materials = {}  # Asign the materials to objects
+        self.materials = {}  # Assign the materials to objects
         # self.sum_energy = 0.0 # Energy of the Scene
         self.epsilon = 0.00001  # Tolerance for solid containment
         self.boundbox = None
 
         for obj in objects:
+            # noinspection PyNoneFunctionAssignment
             material = Material.get_from_label(obj.Label)
             if not material:
                 continue
@@ -237,12 +246,14 @@ class SunWindow:
             length2 = maxy - miny
             area = length1 * length2
             if not min_area or area < min_area:
+                # noinspection PyUnusedLocal
                 min_area = area
                 best_origin = p + v1 * minx + v2 * miny
                 best_v1 = v1
                 best_v2 = v2
                 best_length1 = length1
                 best_length2 = length2
+            # noinspection PyUnboundLocalVariable
             return best_origin, best_v1, best_v2, best_length1, best_length2
 
     def __init__(self, scene, direction):
