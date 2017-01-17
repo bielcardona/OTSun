@@ -23,6 +23,7 @@ def reflexion(incident, normal):
     # We assume all vectors are normalized
     return incident - normal * 2.0 * normal.dot(incident)
 
+
 def refraction(incident, normal, n1, n2):
     """
     Implementation of Snell's law of refraction
@@ -39,6 +40,7 @@ def refraction(incident, normal, n1, n2):
     c2 = c2sq ** 0.5
     return incident * r + mynormal * (r * c1 - c2)
 
+
 def polar_to_cartesian(phi, theta):
     """
     Convert polar coordinates (given in degrees) to cartesian
@@ -52,6 +54,7 @@ def polar_to_cartesian(phi, theta):
     z = -math.cos(theta * rad)
     return Base.Vector(x, y, z)
 
+
 # ---
 # Helper functions for input of functions
 # ---
@@ -59,8 +62,10 @@ def polar_to_cartesian(phi, theta):
 def constant_function(c):
     return lambda x: c
 
+
 def tabulated_function(xvalues, yvalues):
     return lambda x: np.interp(x, xvalues, yvalues)
+
 
 # ---
 # Classes for materials
@@ -93,7 +98,7 @@ class Material(object):
 
 class VolumeMaterial(Material, object):
     def __init__(self, name, parameters):
-        super(VolumeMaterial,self).__init__(name, parameters)
+        super(VolumeMaterial, self).__init__(name, parameters)
         pass
 
     def change_of_direction(self, ray, normal_vector):
@@ -104,31 +109,36 @@ class VolumeMaterial(Material, object):
 def simple_volume_material(name, index_of_refraction):
     return VolumeMaterial(name, {'index_of_refraction': constant_function(index_of_refraction)})
 
+
 vacuum_medium = simple_volume_material("Vacuum", 1.0)
 glass1 = simple_volume_material("Glass1", 1.75)
 
 
 class SurfaceMaterial(Material, object):
     def __init__(self, name, parameters):
-        super(SurfaceMaterial,self).__init__(name, parameters)
+        super(SurfaceMaterial, self).__init__(name, parameters)
         pass
 
     def scatter_direction(self, ray, direction):
         # pensar!
         pass
 
+
 def opaque_simple_material(name, por):
-    return SurfaceMaterial(name, {'probability_of_reflexion':constant_function(por),
-                                  'probability_of_absortion':constant_function(1-por),
-                                  'transmitance':constant_function(0)})
+    return SurfaceMaterial(name, {'probability_of_reflexion': constant_function(por),
+                                  'probability_of_absortion': constant_function(1 - por),
+                                  'transmitance': constant_function(0)})
+
 
 def transparent_simple_material(name, por):
-    return SurfaceMaterial(name, {'probability_of_reflexion':constant_function(por),
-                                  'probability_of_absortion':constant_function(0),
-                                  'transmitance':constant_function(1-por)})
+    return SurfaceMaterial(name, {'probability_of_reflexion': constant_function(por),
+                                  'probability_of_absortion': constant_function(0),
+                                  'transmitance': constant_function(1 - por)})
+
 
 perfect_mirror = opaque_simple_material("Mirror", 1)
 perfect_absorber = opaque_simple_material("Absorber", 0)
+
 
 class Scene:
     """
@@ -267,9 +277,11 @@ class SunWindow:
                                ], True)
         doc.addObject("Part::Feature", "SunWindow").Shape = sw
 
+
 class SunWindowBuie(SunWindow):
     def random_direction(self):
         return self.main_direction + random.random()
+
 
 class Ray:
     """
@@ -325,7 +337,6 @@ class Ray:
             self.energy *= math.exp(exco * dist)
             print self.energy, exco, dist
         return closestpair
-
 
     def next_direction(self, pair):
         """
@@ -386,10 +397,12 @@ class Ray:
         count = 0
         while not self.finished:
             pair = self.next_intersection()
-            if not pair: break
+            if not pair:
+                break
             self.next_direction(pair)
             count += 1
-            if count > max_hops: break
+            if count > max_hops:
+                break
 
     def add_to_document(self, doc):
         lshape_wire = Part.makePolygon(self.points)
@@ -436,5 +449,5 @@ if __name__ == "__main__":
     sel = current_doc.Objects
     # Material.load_from_file(filename)
     current_scene = Scene(sel)
-    exp = Experiment(current_scene, Base.Vector(1, 1, 1), 100, 1.0 ,1.0, current_doc)
+    exp = Experiment(current_scene, Base.Vector(1, 1, 1), 100, 1.0, 1.0, current_doc)
     exp.run(current_doc)
