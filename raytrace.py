@@ -450,15 +450,3 @@ class Experiment:
                 self.captured_energy += ray.energy
 
 
-if __name__ == "__main__":
-    import FreeCAD
-    from os.path import expanduser, join
-
-    home = expanduser("~")
-    filename = join(home, "materials.xml")
-    current_doc = FreeCAD.activeDocument()
-    sel = current_doc.Objects
-    # Material.load_from_file(filename)
-    current_scene = Scene(sel)
-    exp = Experiment(current_scene, Base.Vector(1, 1, 1), 100, 1.0, 1.0, current_doc)
-    exp.run(current_doc)
