@@ -15,13 +15,12 @@ import math
 # ---
 # Helper functions for reflexion and refraction
 # ---
-
 def reflexion(incident, normal):
     """
     Implementation of law of reflexion
     """
     # We assume all vectors are normalized
-    return incident - normal * 2.0 * normal.dot(incident)
+    return incident - normal * 2.0 * normal.dot(incident), "Reflexion"
 
 
 # noinspection PyUnresolvedReferences,PyUnresolvedReferences
@@ -40,7 +39,7 @@ def refraction(incident, normal, n1, n2):
     if c2sq < 0:
         return reflexion(incident, normal)
     c2 = c2sq ** 0.5
-    return incident * r + mynormal * (r * c1 - c2)
+    return incident * r + mynormal * (r * c1 - c2), "Refraction"
 
 
 def polar_to_cartesian(phi, theta):
@@ -60,7 +59,6 @@ def polar_to_cartesian(phi, theta):
 # ---
 # Helper functions for input of functions
 # ---
-
 def constant_function(c):
     return lambda x: c
 
@@ -72,7 +70,6 @@ def tabulated_function(xvalues, yvalues):
 # ---
 # Classes for materials
 # ---
-
 class Material(object):
     """
     Class used to represent materials and their physical properties
@@ -105,10 +102,16 @@ class Material(object):
 class VolumeMaterial(Material, object):
     def __init__(self, name, parameters):
         super(VolumeMaterial, self).__init__(name, parameters)
-        pass
+        self.kind = 'Volume'
 
     def change_of_direction(self, ray, normal_vector):
-        # wavelength = ray.wavelength
+        wavelength = ray.wavelength
+        n1 = ray.current_medium.parameters['index_of_refraction'](wavelength)
+        n2 = self.parameters['index_of_refraction'](wavelength)
+        direction, phenomenon = refraction(ray.directions[-1], normal_vector, n1, n2)
+        if phenomenon == "Refraction":
+            ray.current_medium = self
+        return direction
         pass
 
 
@@ -125,7 +128,7 @@ create_simple_volume_material("Glass1", 1.75)
 class SurfaceMaterial(Material, object):
     def __init__(self, name, parameters):
         super(SurfaceMaterial, self).__init__(name, parameters)
-        pass
+        self.kind = 'Surface'
 
     def scatter_direction(self, ray, direction):
         # pensar!
@@ -302,12 +305,14 @@ class Ray:
 
     def __init__(self, scene, origin, direction, parameters):
         self.scene = scene
-        self.wavelength = parameters['wavelength']
         self.points = [origin]
         self.directions = [direction]
+        self.parameters = parameters
+        self.wavelength = parameters['wavelength']
         self.energy = parameters['energy']
         self.finished = False
         self.got_absorbed = False
+        self.current_medium = vacuum_medium
 
     def next_intersection(self):
         """
@@ -448,5 +453,3 @@ class Experiment:
                 ray.add_to_document(show_in_doc)
             if ray.got_absorbed:
                 self.captured_energy += ray.energy
-
-
