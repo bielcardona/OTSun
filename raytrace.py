@@ -367,14 +367,15 @@ class Ray:
             next_solid = self.scene.solid_at_point(point_plus_delta)
             nearby_material = self.scene.materials.get(next_solid, vacuum_medium)
             direction, phenomenon = nearby_material.change_of_direction(self, normal)
+        next_material = None
         if phenomenon == 'Refraction':
+            # noinspection PyUnboundLocalVariable
             next_material = nearby_material
         elif phenomenon == 'Reflexion':
             next_material = current_material
         elif phenomenon == 'Absortion':
             next_material = None
         return direction, next_material, phenomenon
-
 
     def update_energy(self):
         pass
@@ -393,8 +394,8 @@ class Ray:
                 self.finished = True
                 self.got_absorbed = False
                 break
-            self.update_energy()
             vector, material, phenomenon = self.next_direction(face)
+            self.update_energy()
             self.directions.append(vector)
             self.materials.append(material)
             if phenomenon == 'Absortion':
