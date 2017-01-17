@@ -300,12 +300,12 @@ class Ray:
     describes as it interacts with the scene and its energy.
     """
 
-    def __init__(self, wavelength, origin, direction, energy, scene):
+    def __init__(self, scene, origin, direction, parameters):
         self.scene = scene
-        self.wavelength = wavelength
+        self.wavelength = parameters['wavelength']
         self.points = [origin]
         self.directions = [direction]
-        self.energy = energy
+        self.energy = parameters['energy']
         self.finished = False
         self.got_absorbed = False
 
@@ -441,8 +441,8 @@ class Experiment:
 
     def run(self, show_in_doc=None):
         for _ in xrange(self.number_of_rays):
-            ray = Ray(self.wavelength, self.sunwindow.random_point(), self.direction,
-                      self.initial_energy, self.scene)
+            ray = Ray(self.scene, self.sunwindow.random_point(), self.direction,
+                      {'wavelength': self.wavelength, 'energy': self.initial_energy})
             ray.run()
             if show_in_doc:
                 ray.add_to_document(show_in_doc)
