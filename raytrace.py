@@ -312,6 +312,7 @@ class Ray:
         self.scene = scene
         self.points = [origin]
         self.directions = [direction]
+        self.materials = [vacuum_medium]
         self.properties = properties
         self.wavelength = properties['wavelength']
         self.energy = properties['energy']
@@ -344,56 +345,86 @@ class Ray:
                           key=lambda (pair): p0.distanceToPoint(pair[0]))
         return tuple(closestpair)
 
-    def next_direction(self, pair):
+    def next_direction(self, face):
         """
-        Computes the next direction of the ray as it interacts with the scene. 
-        The direction is stored in the data of the ray.
+        Computes the next direction of the ray as it interacts with the scene,
+        the material where the ray will be travelling next and
+        a string representing the physical phenomenon that took place
         """
-        p1 = self.points[-1]
-        v0 = self.directions[-1]
-        if not pair:
-            self.directions.append(v0)
-            return None
-        face = pair[1]
-        uv = face.Surface.parameter(p1)
+        current_direction = self.directions[-1]
+        current_point = self.points[-1]
+        current_material = self.materials[-1]
+        uv = face.Surface.parameter(current_point)
         normal = face.normalAt(uv[0], uv[1])
         normal.normalize()
         if face in self.scene.materials:
+            # face is active
             material = self.scene.materials[face]
-            if material.kind == "Antireflectant":
-                pass
-            if material.kind == "Mirror":
-                print "Mirror"
-                por = material.properties["probability_of_reflection"]
-                if random.random() < por:
-                    self.directions.append(reflexion(v0, normal))
-                else:
-                    self.energy = 0
-                    self.finished = True
-                    self.got_absorbed = False
-            if material.kind == "Absorber":
-                poa = material.properties.get("probability_of_absortion", 1)
-                if random.random() < poa:
-                    self.finished = True
-                    self.got_absorbed = True
-                else:
-                    self.energy = 0
-                    self.finished = True
-                    self.got_absorbed = False
+            direction, phenomenon = material.change_of_direction(self, normal)
         else:
-            print "Refraction"
-            sol1 = self.scene.solid_at_point(p1 - v0 * self.scene.epsilon)
-            sol2 = self.scene.solid_at_point(p1 + v0 * self.scene.epsilon)
-            mat1 = self.scene.materials.get(sol1, vacuum_medium)
-            mat2 = self.scene.materials.get(sol2, vacuum_medium)
-            por = mat2.properties.get('probability_of_reflection', 0)
-            rnd = random.random()
-            if rnd < por:
-                self.directions.append(reflexion(v0, normal))
-            else:
-                n1 = mat1.properties.get('index_of_refraction', 1)
-                n2 = mat2.properties.get('index_of_refraction', 1)
-                self.directions.append(refraction(v0, normal, n1, n2))
+            # face is not active
+            point_plus_delta = current_point + current_direction * self.scene.epsilon
+            next_solid = self.scene.solid_at_point(point_plus_delta)
+            nearby_material = self.scene.materials.get(next_solid, vacuum_medium)
+            direction, phenomenon = nearby_material.change_of_direction(self, normal)
+        if phenomenon == 'Refraction':
+            next_material = nearby_material
+        elif phenomenon == 'Reflexion':
+            next_material = current_material
+        elif phenomenon == 'Absortion':
+            next_material = None
+        return direction, next_material, phenomenon
+
+    # def next_direction_old(self, pair):
+    #     """
+    #     Computes the next direction of the ray as it interacts with the scene.
+    #     The direction is stored in the data of the ray.
+    #     """
+    #     p1 = self.points[-1]
+    #     v0 = self.directions[-1]
+    #     if not pair:
+    #         self.directions.append(v0)
+    #         return None
+    #     face = pair[1]
+    #     uv = face.Surface.parameter(p1)
+    #     normal = face.normalAt(uv[0], uv[1])
+    #     normal.normalize()
+    #     if face in self.scene.materials:
+    #         material = self.scene.materials[face]
+    #         if material.kind == "Antireflectant":
+    #             pass
+    #         if material.kind == "Mirror":
+    #             print "Mirror"
+    #             por = material.properties["probability_of_reflection"]
+    #             if random.random() < por:
+    #                 self.directions.append(reflexion(v0, normal))
+    #             else:
+    #                 self.energy = 0
+    #                 self.finished = True
+    #                 self.got_absorbed = False
+    #         if material.kind == "Absorber":
+    #             poa = material.properties.get("probability_of_absortion", 1)
+    #             if random.random() < poa:
+    #                 self.finished = True
+    #                 self.got_absorbed = True
+    #             else:
+    #                 self.energy = 0
+    #                 self.finished = True
+    #                 self.got_absorbed = False
+    #     else:
+    #         print "Refraction"
+    #         sol1 = self.scene.solid_at_point(p1 - v0 * self.scene.epsilon)
+    #         sol2 = self.scene.solid_at_point(p1 + v0 * self.scene.epsilon)
+    #         mat1 = self.scene.materials.get(sol1, vacuum_medium)
+    #         mat2 = self.scene.materials.get(sol2, vacuum_medium)
+    #         por = mat2.properties.get('probability_of_reflection', 0)
+    #         rnd = random.random()
+    #         if rnd < por:
+    #             self.directions.append(reflexion(v0, normal))
+    #         else:
+    #             n1 = mat1.properties.get('index_of_refraction', 1)
+    #             n2 = mat2.properties.get('index_of_refraction', 1)
+    #             self.directions.append(refraction(v0, normal, n1, n2))
 
     def update_energy(self):
         pass
@@ -413,7 +444,12 @@ class Ray:
                 self.got_absorbed = False
                 break
             self.update_energy()
-            vector, phenomenon = self.next_direction(point, face)
+            vector, material, phenomenon = self.next_direction(face)
+            self.directions.append(vector)
+            self.materials.append(material)
+            if phenomenon == 'Absortion':
+                self.finished = True
+                self.got_absorbed = True
 
     def add_to_document(self, doc):
         lshape_wire = Part.makePolygon(self.points)
