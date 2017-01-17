@@ -324,7 +324,7 @@ class Ray:
         Computes the next intersection of the ray with the scene. 
         Returns a pair (point,face), where point is the point of intersection
         and face is the face that intersects.
-        If no intersection is found, it returns None.
+        If no intersection is found, it returns a "point at infinity" and None.
         """
         max_distance = 5 * self.scene.diameter
         p0 = self.points[-1]
@@ -339,25 +339,10 @@ class Ray:
             for punt in punts:
                 intersections.append([punt.Point, face])
         if not intersections:
-            self.points.append(p1)
-            self.directions.append(direction)
-            self.finished = True
-            self.got_absorbed = False
-            return None
+            return p1, None
         closestpair = min(intersections,
                           key=lambda (pair): p0.distanceToPoint(pair[0]))
-        closest = closestpair[0]
-        self.points.append(closest)
-
-        middle_point = (p0 + closest) * 0.5
-        dist = p0.distanceToPoint(closest)
-        solid = self.scene.solid_at_point(middle_point)
-        if solid:
-            material = self.scene.materials[solid]
-            exco = material.properties['extinction_coefficient']
-            self.energy *= math.exp(exco * dist)
-            print self.energy, exco, dist
-        return closestpair
+        return tuple(closestpair)
 
     def next_direction(self, pair):
         """
@@ -410,20 +395,25 @@ class Ray:
                 n2 = mat2.properties.get('index_of_refraction', 1)
                 self.directions.append(refraction(v0, normal, n1, n2))
 
+    def update_energy(self):
+        pass
+
     def run(self, max_hops=20):
         """
         Makes a sun ray propagate until it gets absorbed, it exits the scene,
         or gets caught in multiple (> max_hops) reflections.
         """
         count = 0
-        while not self.finished:
-            pair = self.next_intersection()
-            if not pair:
-                break
-            self.next_direction(pair)
+        while (not self.finished) and (count < max_hops):
             count += 1
-            if count > max_hops:
+            point, face = self.next_intersection()
+            self.points.append(point)
+            if not face:
+                self.finished = True
+                self.got_absorbed = False
                 break
+            self.update_energy()
+            vector, phenomenon = self.next_direction(point, face)
 
     def add_to_document(self, doc):
         lshape_wire = Part.makePolygon(self.points)
