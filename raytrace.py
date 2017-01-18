@@ -104,6 +104,11 @@ class Material(object):
 
 class VolumeMaterial(Material, object):
     def __init__(self, name, properties):
+        """
+        Initializes a Volume Material. The properties parameter must be a dict with the physical properties
+        describing the material. At least, the following must be provided:
+        'index_of_refraction': index of refraction of the material, as a function of its wavelength.
+        """
         super(VolumeMaterial, self).__init__(name, properties)
         self.kind = 'Volume'
 
@@ -125,13 +130,23 @@ def create_simple_volume_material(name, index_of_refraction):
 create_simple_volume_material("Vacuum", 1.0)
 # noinspection PyNoneFunctionAssignment
 vacuum_medium = VolumeMaterial.get_from_label("Vacuum")
-create_simple_volume_material("Glass1", 1.75)
 
 
 class SurfaceMaterial(Material, object):
     def __init__(self, name, properties):
+        """
+        Initializes a Surface Material. The properties parameter must be a dict with the physical properties
+        describing the material. At least, the following must be provided:
+        'probability_of_reflexion': probability that a photon gets reflected, as a function of its wavelength.
+        'probability_of_absortion': probability that a photon gets absorbed, as a function of its wavelength.
+        'transmitance': probability that a photon passes through the material, as a function of its wavelength.
+        """
         super(SurfaceMaterial, self).__init__(name, properties)
         self.kind = 'Surface'
+
+    def change_of_direction(self, ray, normal_vector):
+        # TODO: Implementar
+        pass
 
     def scatter_direction(self, ray, direction):
         # pensar!
@@ -148,10 +163,6 @@ def create_transparent_simple_material(name, por):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(0),
                                   'transmitance': constant_function(1 - por)})
-
-
-create_opaque_simple_material("Mirror", 1)
-create_opaque_simple_material("Absorber", 0)
 
 
 # endregion
