@@ -119,7 +119,7 @@ class VolumeMaterial(Material, object):
         direction, phenomenon = refraction(ray.directions[-1], normal_vector, n1, n2)
         if phenomenon == "Refraction":
             ray.current_medium = self
-        return direction
+        return direction, phenomenon
         pass
 
 
@@ -129,7 +129,7 @@ def create_simple_volume_material(name, index_of_refraction):
 
 create_simple_volume_material("Vacuum", 1.0)
 # noinspection PyNoneFunctionAssignment
-vacuum_medium = VolumeMaterial.get_from_label("Vacuum")
+vacuum_medium = VolumeMaterial.by_name["Vacuum"]
 
 
 class SurfaceMaterial(Material, object):
