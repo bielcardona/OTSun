@@ -145,11 +145,12 @@ class SurfaceMaterial(Material, object):
         self.kind = 'Surface'
 
     def change_of_direction(self, ray, normal_vector):
-        # TODO: Implementar
+        # TODO: Implementar bé. El que hi ha és provisional
+        return reflexion(ray.directions[-1], normal_vector)
         pass
 
     def scatter_direction(self, ray, direction):
-        # pensar!
+        # TODO: pensar
         pass
 
 
