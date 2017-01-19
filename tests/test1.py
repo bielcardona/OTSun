@@ -9,5 +9,5 @@ raytrace.create_simple_volume_material("Glass1", 1.5)
 current_doc = FreeCAD.activeDocument()
 sel = current_doc.Objects
 current_scene = raytrace.Scene(sel)
-exp = raytrace.Experiment(current_scene, Base.Vector(1, 1, 1), 10, 1.0, 1.0, current_doc)
+exp = raytrace.Experiment(current_scene, Base.Vector(1, 1, 1), 50, 1.0, 1.0, current_doc)
 exp.run(current_doc)

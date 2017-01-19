@@ -146,7 +146,14 @@ class SurfaceMaterial(Material, object):
 
     def change_of_direction(self, ray, normal_vector):
         # TODO: Implementar bé. El que hi ha és provisional
-        return reflexion(ray.directions[-1], normal_vector)
+        phenomena = ["Reflexion", "Absortion"]
+        probabilities = [self.properties['probability_of_reflexion'](ray.properties['wavelength']),
+                         self.properties['probability_of_absortion'](ray.properties['wavelength'])]
+        phenomenon = np.random.choice(phenomena, 1, p = probabilities)[0]
+        if phenomenon == 'Reflexion':
+            return reflexion(ray.directions[-1], normal_vector)
+        if phenomenon == "Absortion":
+            return Base.Vector(0.0, 0.0, 0.0), "Absortion"
         pass
 
     def scatter_direction(self, ray, direction):
