@@ -397,6 +397,7 @@ class Ray:
         return direction, next_material, phenomenon
 
     def update_energy(self):
+        # TODO: @Ramon
         pass
 
     def run(self, max_hops=20):
