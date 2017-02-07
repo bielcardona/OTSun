@@ -63,6 +63,6 @@ raytrace.create_simple_volume_material("Glass1", 1.5)
 # current_doc = FreeCAD.activeDocument()
 sel = doc.Objects
 current_scene = raytrace.Scene(sel)
-exp = raytrace.Experiment(current_scene, Base.Vector(0, 0, -1), 100, 1.0, 1.0, None)
+exp = raytrace.Experiment(current_scene, Base.Vector(0, 0, -1), 1000, 1.0, 1.0, None)
 exp.run(None)
 print exp.captured_energy
