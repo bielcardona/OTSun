@@ -320,7 +320,13 @@ class SunWindowBuie(SunWindow):
     def random_direction(self):
         return self.main_direction + random.random()
 
-
+	def __init__(self, scene, direction, circum_solar_ratio):
+        super(SunWindowBuie,self).__init__(scene, direction)
+        self.length1 *= 1.2
+		self.length2 *= 1.2
+		self.origin = self.origin - 0.1 * self.v1 * self.length1 - 0.1 * self.v2 * self.length2
+        		
+		
 class Ray:
     """
     Class used to model a sun ray. It keeps information of the path it 
