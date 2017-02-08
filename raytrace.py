@@ -153,7 +153,10 @@ class SurfaceMaterial(Material, object):
         if phenomenon == 'Reflexion':
             return reflexion(ray.directions[-1], normal_vector)
         if phenomenon == "Absortion":
-            return Base.Vector(0.0, 0.0, 0.0), "Absortion"
+            if self.properties['energy_collector']:
+                return Base.Vector(0.0, 0.0, 0.0), "Got_Absorbed"
+            else:
+                return Base.Vector(0.0, 0.0, 0.0), "Absortion"
         pass
 
     def scatter_direction(self, ray, direction):
@@ -440,7 +443,9 @@ class Ray:
             self.materials.append(material)
             if phenomenon == 'Absortion':
                 self.finished = True
+            if phenomenon == 'Got_Absorbed':
                 self.got_absorbed = True
+                self.finished = True
 
     def add_to_document(self, doc):
         lshape_wire = Part.makePolygon(self.points)
