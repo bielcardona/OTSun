@@ -172,7 +172,13 @@ def create_transparent_simple_material(name, por):
                                   'probability_of_absortion': constant_function(0),
                                   'transmitance': constant_function(1 - por)})
 
-
+def create_mirror_simple_material(name, properties):
+    props = properties
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(props['por']),
+                                  'probability_of_absortion': constant_function(1 - props['por']),
+                                  'transmitance': constant_function(0),
+                                  'energy_collector': False})
+ 
 # endregion
 
 class Scene:
@@ -320,11 +326,11 @@ class SunWindowBuie(SunWindow):
     def random_direction(self):
         return self.main_direction + random.random()
 
-	def __init__(self, scene, direction, circum_solar_ratio):
+    def __init__(self, scene, direction, circum_solar_ratio):
         super(SunWindowBuie,self).__init__(scene, direction)
         self.length1 *= 1.2
-		self.length2 *= 1.2
-		self.origin = self.origin - 0.1 * self.v1 * self.length1 - 0.1 * self.v2 * self.length2
+        self.length2 *= 1.2
+        self.origin = self.origin - 0.1 * self.v1 * self.length1 - 0.1 * self.v2 * self.length2
         		
 		
 class Ray:
