@@ -179,6 +179,14 @@ def create_mirror_simple_material(name, properties):
                                   'transmitance': constant_function(0),
                                   'energy_collector': False})
  
+
+def create_absorber_simple_material(name, properties):
+    props = properties
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(props['por']),
+                                  'probability_of_absortion': constant_function(1 - props['por']),
+                                  'transmitance': constant_function(0),
+                                  'energy_collector': True})
+
 # endregion
 
 class Scene:
