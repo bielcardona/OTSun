@@ -23,7 +23,20 @@ def reflexion(incident, normal):
     return incident - normal * 2.0 * normal.dot(incident), "Reflexion"
 
 
-# noinspection PyUnresolvedReferences,PyUnresolvedReferences
+def lambertian_reflexion(normal):
+    """
+    Implementation of lambertian reflection for diffusely reflecting surface
+    """
+    # We assume the normal is normalized
+    dot =  - 1.0
+    while (dot < 0.0): 
+        random_vector = Base.Vector(random.random()-0.5, random.random()-0.5, random.random()-0.5)
+        random_vector.normalize()
+        dot = normal.dot(random_vector)
+    return random_vector, "Reflexion"
+	
+	
+	# noinspection PyUnresolvedReferences,PyUnresolvedReferences
 def refraction(incident, normal, n1, n2):
     """
     Implementation of Snell's law of refraction
@@ -151,10 +164,15 @@ class SurfaceMaterial(Material, object):
                          self.properties['probability_of_absortion'](ray.properties['wavelength'])]
         phenomenon = np.random.choice(phenomena, 1, p = probabilities)[0]
         if phenomenon == 'Reflexion':
-            reflected = reflexion(ray.directions[-1], normal_vector)
+            if 'specular_material' in self.properties:
+                reflected = reflexion(ray.directions[-1], normal_vector)
+                return reflected
+            if 'lambertian_material' in self.properties:
+                reflected = lambertian_reflexion(normal_vector)
+                return reflected
             if 'dispersion_factor' in self.properties:
                 reflected = reflected + random.random()
-            return reflected
+                return reflected
         if phenomenon == "Absortion":
             if self.properties['energy_collector']:
                 return Base.Vector(0.0, 0.0, 0.0), "Got_Absorbed"
