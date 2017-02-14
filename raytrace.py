@@ -19,11 +19,24 @@ def reflexion(incident, normal):
     """
     Implementation of law of reflexion
     """
-    # We assume all vectors are normalized
+    # We assume all vectors are normalized and the normal.dot(incident) < 0
     return incident - normal * 2.0 * normal.dot(incident), "Reflexion"
 
 
-# noinspection PyUnresolvedReferences,PyUnresolvedReferences
+def lambertian_reflexion(normal):
+    """
+    Implementation of lambertian reflection for diffusely reflecting surface
+    """
+    # We assume the normal is normalized and the normal.dot(incident) < 0
+    dot =  - 1.0
+    while (dot < 0.0): 
+        random_vector = Base.Vector(random.random()-0.5, random.random()-0.5, random.random()-0.5)
+        random_vector.normalize()
+        dot = normal.dot(random_vector)
+    return random_vector, "Reflexion"
+	
+	
+	# noinspection PyUnresolvedReferences,PyUnresolvedReferences
 def refraction(incident, normal, n1, n2):
     """
     Implementation of Snell's law of refraction
@@ -50,9 +63,9 @@ def polar_to_cartesian(phi, theta):
     :return:
     """
     rad = math.acos(-1.0) / 180.0
-    x = -math.sin(theta * rad) * math.cos(phi * rad)
-    y = -math.sin(theta * rad) * math.sin(phi * rad)
-    z = -math.cos(theta * rad)
+    x = math.sin(theta * rad) * math.cos(phi * rad)
+    y = math.sin(theta * rad) * math.sin(phi * rad)
+    z = math.cos(theta * rad)
     return Base.Vector(x, y, z)
 
 
@@ -147,14 +160,25 @@ class SurfaceMaterial(Material, object):
     def change_of_direction(self, ray, normal_vector):
         # TODO: Implementar bé. El que hi ha és provisional
         phenomena = ["Reflexion", "Absortion"]
-        probabilities = [self.properties['probability_of_reflexion'](ray.properties['wavelength']),
-                         self.properties['probability_of_absortion'](ray.properties['wavelength'])]
+        if ray.directions[-1].dot(normal_vector) < 0 : # Ray intercepted on the frontside of the surface
+            normal = normal_vector
+            probabilities = [self.properties['probability_of_reflexion_Front'](ray.properties['wavelength']),
+                             self.properties['probability_of_absortion_Front'](ray.properties['wavelength'])]
+        else: # Ray intercepted on the backside of the surface
+            normal = normal = normal_vector * (-1.0)
+            probabilities = [self.properties['probability_of_reflexion_Back'](ray.properties['wavelength']),
+                             self.properties['probability_of_absortion_Back'](ray.properties['wavelength'])]
         phenomenon = np.random.choice(phenomena, 1, p = probabilities)[0]
         if phenomenon == 'Reflexion':
-            reflected = reflexion(ray.directions[-1], normal_vector)
+            if 'specular_material':
+                reflected = reflexion(ray.directions[-1], normal)
+                return reflected
+            if 'lambertian_material':
+                reflected = lambertian_reflexion(normal)
+                return reflected
             if 'dispersion_factor' in self.properties:
                 reflected = reflected + random.random()
-            return reflected
+                return reflected
         if phenomenon == "Absortion":
             if self.properties['energy_collector']:
                 return Base.Vector(0.0, 0.0, 0.0), "Got_Absorbed"
@@ -178,20 +202,24 @@ def create_transparent_simple_material(name, por):
                                   'probability_of_absortion': constant_function(0),
                                   'transmitance': constant_function(1 - por)})
 
-def create_mirror_simple_material(name, properties):
-    props = properties
-    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(props['por']),
-                                  'probability_of_absortion': constant_function(1 - props['por']),
+def create_mirror_simple_material(name, por):
+    SurfaceMaterial.create(name, {'probability_of_reflexion_Front': constant_function(por),
+                                  'probability_of_reflexion_Back': constant_function(por),
+                                  'probability_of_absortion_Front': constant_function(1 - por),
+                                  'probability_of_absortion_Back': constant_function(1 - por),
                                   'transmitance': constant_function(0),
-                                  'energy_collector': False})
+                                  'energy_collector': False,
+                                  'specular_material': True})
  
 
-def create_absorber_simple_material(name, properties):
-    props = properties
-    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(props['por']),
-                                  'probability_of_absortion': constant_function(1 - props['por']),
+def create_absorber_simple_material(name, por):
+    SurfaceMaterial.create(name, {'probability_of_reflexion_Front': constant_function(por),
+                                  'probability_of_reflexion_Back': constant_function(por),
+                                  'probability_of_absortion_Front': constant_function(1 - por),
+                                  'probability_of_absortion_Back': constant_function(1 - por),
                                   'transmitance': constant_function(0),
-                                  'energy_collector': True})
+                                  'energy_collector': True,
+                                  'lambertian_material': True})
 
 # endregion
 
