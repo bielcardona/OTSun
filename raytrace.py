@@ -165,10 +165,10 @@ class SurfaceMaterial(Material, object):
             probabilities = [self.properties['probability_of_reflexion_Front'](ray.properties['wavelength']),
                              self.properties['probability_of_absortion_Front'](ray.properties['wavelength'])]
         else: # Ray intercepted on the backside of the surface
-            normal = - normal_vector
+            normal = normal = normal_vector * (-1.0)
             probabilities = [self.properties['probability_of_reflexion_Back'](ray.properties['wavelength']),
                              self.properties['probability_of_absortion_Back'](ray.properties['wavelength'])]
-		phenomenon = np.random.choice(phenomena, 1, p = probabilities)[0]
+        phenomenon = np.random.choice(phenomena, 1, p = probabilities)[0]
         if phenomenon == 'Reflexion':
             if 'specular_material':
                 reflected = reflexion(ray.directions[-1], normal)
