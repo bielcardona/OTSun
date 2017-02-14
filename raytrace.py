@@ -63,9 +63,9 @@ def polar_to_cartesian(phi, theta):
     :return:
     """
     rad = math.acos(-1.0) / 180.0
-    x = -math.sin(theta * rad) * math.cos(phi * rad)
-    y = -math.sin(theta * rad) * math.sin(phi * rad)
-    z = -math.cos(theta * rad)
+    x = math.sin(theta * rad) * math.cos(phi * rad)
+    y = math.sin(theta * rad) * math.sin(phi * rad)
+    z = math.cos(theta * rad)
     return Base.Vector(x, y, z)
 
 
