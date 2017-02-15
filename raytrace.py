@@ -170,10 +170,10 @@ class SurfaceMaterial(Material, object):
                              self.properties['probability_of_absortion_Back'](ray.properties['wavelength'])]
         phenomenon = np.random.choice(phenomena, 1, p = probabilities)[0]
         if phenomenon == 'Reflexion':
-            if 'specular_material':
+            if if 'specular_material' in self.properties:
                 reflected = reflexion(ray.directions[-1], normal)
                 return reflected
-            if 'lambertian_material':
+            if 'lambertian_material' in self.properties:
                 reflected = lambertian_reflexion(normal)
                 return reflected
             if 'dispersion_factor' in self.properties:
