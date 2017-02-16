@@ -133,7 +133,7 @@ vacuum_medium = VolumeMaterial.by_name["Vacuum"]
 
 
 class SurfaceMaterial(Material, object):
-    def __init__(self, name, properties):
+    def __init__(self, name, properties_front, properties_back = None):
         """
         Initializes a Surface Material. The properties parameter must be a dict with the physical properties
         describing the material. At least, the following must be provided:
@@ -141,8 +141,17 @@ class SurfaceMaterial(Material, object):
         'probability_of_absortion': probability that a photon gets absorbed, as a function of its wavelength.
         'transmitance': probability that a photon passes through the material, as a function of its wavelength.
         """
-        super(SurfaceMaterial, self).__init__(name, properties)
+        super(SurfaceMaterial, self).__init__(name, properties_front)
+        self.properties_front = properties_front
+        if properties_back is None:
+            self.properties_back = properties_front
+        else:
+            self.properties_back = properties_back
         self.kind = 'Surface'
+
+    @classmethod
+    def create(cls, name, properties_front, properties_back = None):
+        _ = cls(name, properties_front, properties_back)
 
     def change_of_direction(self, ray, normal_vector):
         # TODO: Implementar bé. El que hi ha és provisional
