@@ -171,12 +171,14 @@ class SurfaceMaterial(Material, object):
         phenomena = ["Reflexion", "Absortion"]
         if ray.directions[-1].dot(normal_vector) < 0 : # Ray intercepted on the frontside of the surface
             normal = normal_vector
-            probabilities = [self.properties['probability_of_reflexion_Front'](ray.properties['wavelength']),
-                             self.properties['probability_of_absortion_Front'](ray.properties['wavelength'])]
+            properties = self.properties_front
+            probabilities = [properties['probability_of_reflexion'](ray.properties['wavelength']),
+                             properties['probability_of_absortion'](ray.properties['wavelength'])]
         else: # Ray intercepted on the backside of the surface
             normal = normal_vector * (-1.0)
-            probabilities = [self.properties['probability_of_reflexion_Back'](ray.properties['wavelength']),
-                             self.properties['probability_of_absortion_Back'](ray.properties['wavelength'])]
+            properties = self.properties_back
+            probabilities = [properties['probability_of_reflexion'](ray.properties['wavelength']),
+                             properties['probability_of_absortion'](ray.properties['wavelength'])]
         phenomenon = np.random.choice(phenomena, 1, p = probabilities)[0]
         if phenomenon == 'Reflexion':
             if 'specular_material' in self.properties:
@@ -203,7 +205,8 @@ class SurfaceMaterial(Material, object):
 def create_opaque_simple_material(name, por):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(1 - por),
-                                  'transmitance': constant_function(0)})
+                                  'transmitance': constant_function(0),
+                                  'energy_collector': False})
 
 
 def create_transparent_simple_material(name, por):
@@ -222,13 +225,44 @@ def create_mirror_simple_material(name, por):
  
 
 def create_absorber_simple_material(name, por):
-    SurfaceMaterial.create(name, {'probability_of_reflexion_Front': constant_function(por),
-                                  'probability_of_reflexion_Back': constant_function(por),
-                                  'probability_of_absortion_Front': constant_function(1 - por),
-                                  'probability_of_absortion_Back': constant_function(1 - por),
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
+                                  'probability_of_absortion': constant_function(1 - por),
                                   'transmitance': constant_function(0),
                                   'energy_collector': True,
                                   'lambertian_material': True})
+
+def simple_reflector_twolayers(name, por_front, por_back):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por_front),
+                                  'probability_of_absortion': constant_function(1 - por_front),
+                                  'transmitance': constant_function(0),
+                                  'specular_material': True,
+                                  'energy_collector': False},
+                                 {'probability_of_reflexion': constant_function(por_back),
+                                  'probability_of_absortion': constant_function(1 - por_back),
+                                  'transmitance': constant_function(0),
+                                  'specular_material': True,
+                                  'energy_collector': False})
+								  
+								  
+def create_absorber_lambertian_layer(name, por):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
+                                  'probability_of_absortion': constant_function(1 - por),
+                                  'transmitance': constant_function(0),
+                                  'energy_collector': True,
+                                  'lambertian_material': True})
+
+
+def create_reflector_specular_layer(name, por):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
+                                  'probability_of_absortion': constant_function(1 - por),
+                                  'transmitance': constant_function(0),
+                                  'energy_collector': False,
+                                  'specular_material': True})
+
+								  
+def create_two_layers_material(name, layer_front, layer_back):
+    SurfaceMaterial.create(name, Material.by_name[layer_front].properties,
+	                             Material.by_name[layer_back].properties)
 
 # endregion
 
