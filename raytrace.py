@@ -36,6 +36,48 @@ def lambertian_reflexion(normal):
     return random_vector, "Reflexion"
 	
 	
+def single_gaussian_dispersion(normal, reflected, sigma_1):
+    """
+    Implementation of single gaussian dispersion based on the ideal reflected direction
+    """
+    rad = math.pi/180.0
+    u = random.random()
+    theta = (-2. * sigma_1 ** 2. * math.log(u)) ** 0.5 / 1000.0 / rad
+    v = reflected[0]
+    axis_1 = normal.cross(reflected[0])
+    rotation_1 = Base.Rotation(axis_1,theta)
+    new_v1 = rotation_1.multVec(v)
+    u = random.random()
+    phi = 360. * u
+    axis_2 = v
+    rotation_2 = Base.Rotation(axis_2,phi)
+    new_v2 = rotation_2.multVec(new_v1)    
+    return new_v2, "Reflexion"    
+
+
+def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
+    """
+    Implementation of double gaussian dispersion based on the ideal reflected direction
+    """
+    rad = math.pi/180.0
+    k_ran = random.random()
+    u = random.random()
+    if k_ran < k :
+        theta = (-2. * sigma_1 ** 2. * math.log(u)) ** 0.5 / 1000.0 / rad
+    else:
+	    theta = (-2. * sigma_2 ** 2. * math.log(u)) ** 0.5 / 1000.0 / rad
+    v = reflected[0]
+    axis_1 = normal.cross(reflected[0])
+    rotation_1 = Base.Rotation(axis_1,theta)
+    new_v1 = rotation_1.multVec(v)
+    u = random.random()
+    phi = 360. * u
+    axis_2 = v
+    rotation_2 = Base.Rotation(axis_2,phi)
+    new_v2 = rotation_2.multVec(new_v1)    
+    return new_v2, "Reflexion"
+	
+
 	# noinspection PyUnresolvedReferences,PyUnresolvedReferences
 def refraction(incident, normal, n1, n2):
     """
@@ -181,17 +223,24 @@ class SurfaceMaterial(Material, object):
                              properties['probability_of_absortion'](ray.properties['wavelength'])]
         phenomenon = np.random.choice(phenomena, 1, p = probabilities)[0]
         if phenomenon == 'Reflexion':
-            if 'specular_material' in self.properties:
+            if 'specular_material' in properties:
                 reflected = reflexion(ray.directions[-1], normal)
+                if 'sigma_1' in properties:
+                    sigma_1 = properties['sigma_1']
+                    if 'sigma_2' in properties:
+                        sigma_2 = properties['sigma_2']
+                        k = properties['k']
+                        return double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k)
+                    return single_gaussian_dispersion(normal, reflected, sigma_1)						   
                 return reflected
-            if 'lambertian_material' in self.properties:
+            if 'lambertian_material' in properties:
                 reflected = lambertian_reflexion(normal)
                 return reflected
-            if 'dispersion_factor' in self.properties:
+            if 'dispersion_factor' in properties:
                 reflected = reflected + random.random()
                 return reflected
         if phenomenon == "Absortion":
-            if self.properties['energy_collector']:
+            if properties['energy_collector']:
                 return Base.Vector(0.0, 0.0, 0.0), "Got_Absorbed"
             else:
                 return Base.Vector(0.0, 0.0, 0.0), "Absortion"
@@ -258,6 +307,26 @@ def create_reflector_specular_layer(name, por):
                                   'transmitance': constant_function(0),
                                   'energy_collector': False,
                                   'specular_material': True})
+								  
+
+def create_reflector_onegaussian_layer(name, por, sigma):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
+                                  'probability_of_absortion': constant_function(1 - por),
+                                  'transmitance': constant_function(0),
+                                  'energy_collector': False,
+                                  'specular_material': True,
+                                  'sigma_1': sigma})
+
+								  
+def create_reflector_twogaussian_layer(name, por, sigma_1, sigma_2, k):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
+                                  'probability_of_absortion': constant_function(1 - por),
+                                  'transmitance': constant_function(0),
+                                  'energy_collector': False,
+                                  'specular_material': True,
+                                  'sigma_1': sigma_1,
+                                  'sigma_2': sigma_2,
+                                  'k' : k})
 
 								  
 def create_two_layers_material(name, layer_front, layer_back):
