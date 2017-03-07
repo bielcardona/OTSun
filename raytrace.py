@@ -89,11 +89,11 @@ def refraction(incident, normal, n1, n2):
         # noinspection PyAugmentAssignment
         mynormal = mynormal * (-1.0)
     r = n1 / n2
-    c1 = - mynormal.dot(incident)
-    c2sq = 1.0 - r * r * (1.0 - c1 * c1)
-    if c2sq < 0:
+    c1 = - mynormal.dot(incident) # cos (incidence_angle)
+    c2sq = 1.0 - r * r * (1.0 - c1 * c1) # cos (refracted_angle) ** 2
+    if c2sq < 0: # total internal reflection
         return reflexion(incident, normal)
-    c2 = c2sq ** 0.5
+    c2 = c2sq ** 0.5 # cos (refracted_angle)
     return incident * r + mynormal * (r * c1 - c2), "Refraction"
 
 
