@@ -131,6 +131,25 @@ def tabulated_function(xvalues, yvalues):
 
 
 # ---
+# Helper function for random Linear congruential generator 
+# ---	
+def ran(seed=None):
+    """
+    Implementation of a random Linear congruential generator based on the MTH$RANDOM
+    """
+# http://daviddeley.com/random/random4.htm
+    a = 69069.0
+    c = 1.0
+    m = 2.0 ** 32.0
+    rm = 1.0 / m
+    if seed != None:
+        ran.previous = seed
+    seed = np.remainder(ran.previous * a + c , m)
+    ran.previous = seed
+    return seed * rm
+	
+	
+# ---
 # Classes for materials
 # ---
 
