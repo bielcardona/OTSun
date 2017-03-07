@@ -94,7 +94,7 @@ def refraction(incident, normal, n1, n2):
     if c2sq < 0: # total internal reflection
         return reflexion(incident, normal)
     c2 = c2sq ** 0.5 # cos (refracted_angle)
-    	# https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
+    # https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
     Rs = ((n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)) ** 2. # reflectance for s-polarized (perpendicular) light
     Rp = ((n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)) ** 2. # reflectance for p-polarized (parallel) light
     Ru = 0.5 * (Rs + Rp) # reflectance for unpolarised light
