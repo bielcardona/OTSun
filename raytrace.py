@@ -89,12 +89,20 @@ def refraction(incident, normal, n1, n2):
         # noinspection PyAugmentAssignment
         mynormal = mynormal * (-1.0)
     r = n1 / n2
-    c1 = - mynormal.dot(incident)
-    c2sq = 1.0 - r * r * (1.0 - c1 * c1)
-    if c2sq < 0:
+    c1 = - mynormal.dot(incident) # cos (incidence_angle)
+    c2sq = 1.0 - r * r * (1.0 - c1 * c1) # cos (refracted_angle) ** 2
+    if c2sq < 0: # total internal reflection
         return reflexion(incident, normal)
-    c2 = c2sq ** 0.5
-    return incident * r + mynormal * (r * c1 - c2), "Refraction"
+    c2 = c2sq ** 0.5 # cos (refracted_angle)
+    # https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
+    Rs = ((n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)) ** 2. # reflectance for s-polarized (perpendicular) light
+    Rp = ((n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)) ** 2. # reflectance for p-polarized (parallel) light
+    Ru = 0.5 * (Rs + Rp) # reflectance for unpolarised light
+    u = random.random()
+    if u < Ru:
+        return reflexion(incident, normal)
+    else:		
+        return incident * r + mynormal * (r * c1 - c2), "Refraction"
 
 
 def polar_to_cartesian(phi, theta):
@@ -122,6 +130,25 @@ def tabulated_function(xvalues, yvalues):
     return lambda x: np.interp(x, xvalues, yvalues)
 
 
+# ---
+# Helper function for random Linear congruential generator 
+# ---	
+def ran(seed=None):
+    """
+    Implementation of a random Linear congruential generator based on the MTH$RANDOM
+    """
+# http://daviddeley.com/random/random4.htm
+    a = 69069.0
+    c = 1.0
+    m = 2.0 ** 32.0
+    rm = 1.0 / m
+    if seed != None:
+        ran.previous = seed
+    seed = np.remainder(ran.previous * a + c , m)
+    ran.previous = seed
+    return seed * rm
+	
+	
 # ---
 # Classes for materials
 # ---
@@ -263,16 +290,7 @@ def create_transparent_simple_material(name, por):
                                   'probability_of_absortion': constant_function(0),
                                   'transmitance': constant_function(1 - por)})
 
-def create_mirror_simple_material(name, por):
-    SurfaceMaterial.create(name, {'probability_of_reflexion_Front': constant_function(por),
-                                  'probability_of_reflexion_Back': constant_function(por),
-                                  'probability_of_absortion_Front': constant_function(1 - por),
-                                  'probability_of_absortion_Back': constant_function(1 - por),
-                                  'transmitance': constant_function(0),
-                                  'energy_collector': False,
-                                  'specular_material': True})
- 
-
+								  
 def create_absorber_simple_material(name, por):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(1 - por),
@@ -280,6 +298,7 @@ def create_absorber_simple_material(name, por):
                                   'energy_collector': True,
                                   'lambertian_material': True})
 
+								  
 def simple_reflector_twolayers(name, por_front, por_back):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por_front),
                                   'probability_of_absortion': constant_function(1 - por_front),
