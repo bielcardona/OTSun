@@ -193,13 +193,14 @@ class Material(object):
 
 
 class VolumeMaterial(Material, object):
-    def __init__(self, name, properties):
+    def __init__(self, name, index_of_refraction, extinction_coefficient = None):
         """
         Initializes a Volume Material. The properties parameter must be a dict with the physical properties
         describing the material. At least, the following must be provided:
         'index_of_refraction': index of refraction of the material, as a function of its wavelength.
+        'extinction_coefficient': extinction coefficient of the material in m-1
         """
-        super(VolumeMaterial, self).__init__(name, properties)
+        super(VolumeMaterial, self).__init__(name, index_of_refraction)
         self.kind = 'Volume'
 
     def change_of_direction(self, ray, normal_vector):
@@ -213,11 +214,12 @@ class VolumeMaterial(Material, object):
         pass
 
 
-def create_simple_volume_material(name, index_of_refraction):
-    VolumeMaterial.create(name, {'index_of_refraction': constant_function(index_of_refraction)})
+def create_simple_volume_material(name, index_of_refraction, extinction_coefficient = None):
+    VolumeMaterial.create(name, {'index_of_refraction': constant_function(index_of_refraction),
+                                 'extinction_coefficient': constant_function(extinction_coefficient)})
 
 
-create_simple_volume_material("Vacuum", 1.0)
+create_simple_volume_material("Vacuum", 1.0,0.0)
 # noinspection PyNoneFunctionAssignment
 vacuum_medium = VolumeMaterial.by_name["Vacuum"]
 
@@ -589,9 +591,16 @@ class Ray:
             next_material = None
         return direction, next_material, phenomenon
 
-    def update_energy(self):
+    def update_energy(self, point_1, point_2):
         # TODO: @Ramon
-        pass
+        solid_1 = self.scene.solid_at_point(point_1)
+        solid_2 = self.scene.solid_at_point(point_2)
+        if solid_1 and solid_1 == solid_2:
+            if 'extinction_coefficient' in self.scene.materials[solid_1].properties:
+                k = self.scene.materials[solid_1].properties['extinction_coefficient'](self.wavelength)
+                if k > 0:
+                    d = point_1.distanceToPoint(point_2)
+                    self.energy = self.energy * math.exp(- k * d / 1000.0)
 
     def run(self, max_hops=20):
         """
@@ -608,9 +617,9 @@ class Ray:
                 self.got_absorbed = False
                 break
             vector, material, phenomenon = self.next_direction(face)
-            self.update_energy()
             self.directions.append(vector)
             self.materials.append(material)
+            self.update_energy(self.points[-1], self. points[-2])
             if phenomenon == 'Absortion':
                 self.finished = True
             if phenomenon == 'Got_Absorbed':
