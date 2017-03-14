@@ -10,6 +10,7 @@ import numpy as np
 import itertools
 import random
 import math
+import time
 
 
 # ---
@@ -30,7 +31,7 @@ def lambertian_reflexion(normal):
     # We assume the normal is normalized and the normal.dot(incident) < 0
     dot =  - 1.0
     while (dot < 0.0): 
-        random_vector = Base.Vector(random.random()-0.5, random.random()-0.5, random.random()-0.5)
+        random_vector = Base.Vector(myrandom()-0.5, myrandom()-0.5, myrandom()-0.5)
         random_vector.normalize()
         dot = normal.dot(random_vector)
     return random_vector, "Reflexion"
@@ -41,13 +42,13 @@ def single_gaussian_dispersion(normal, reflected, sigma_1):
     Implementation of single gaussian dispersion based on the ideal reflected direction
     """
     rad = math.pi/180.0
-    u = random.random()
+    u = myrandom()
     theta = (-2. * sigma_1 ** 2. * math.log(u)) ** 0.5 / 1000.0 / rad
     v = reflected[0]
     axis_1 = normal.cross(reflected[0])
     rotation_1 = Base.Rotation(axis_1,theta)
     new_v1 = rotation_1.multVec(v)
-    u = random.random()
+    u = myrandom()
     phi = 360. * u
     axis_2 = v
     rotation_2 = Base.Rotation(axis_2,phi)
@@ -60,8 +61,8 @@ def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
     Implementation of double gaussian dispersion based on the ideal reflected direction
     """
     rad = math.pi/180.0
-    k_ran = random.random()
-    u = random.random()
+    k_ran = myrandom()
+    u = myrandom()
     if k_ran < k :
         theta = (-2. * sigma_1 ** 2. * math.log(u)) ** 0.5 / 1000.0 / rad
     else:
@@ -70,7 +71,7 @@ def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
     axis_1 = normal.cross(reflected[0])
     rotation_1 = Base.Rotation(axis_1,theta)
     new_v1 = rotation_1.multVec(v)
-    u = random.random()
+    u = myrandom()
     phi = 360. * u
     axis_2 = v
     rotation_2 = Base.Rotation(axis_2,phi)
@@ -98,7 +99,7 @@ def refraction(incident, normal, n1, n2):
     Rs = ((n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)) ** 2. # reflectance for s-polarized (perpendicular) light
     Rp = ((n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)) ** 2. # reflectance for p-polarized (parallel) light
     Ru = 0.5 * (Rs + Rp) # reflectance for unpolarised light
-    u = random.random()
+    u = myrandom()
     if u < Ru:
         return reflexion(incident, normal)
     else:		
@@ -142,11 +143,18 @@ def ran(seed=None):
     c = 1.0
     m = 2.0 ** 32.0
     rm = 1.0 / m
-    if seed != None:
+    if seed is not None:
         ran.previous = seed
     seed = np.remainder(ran.previous * a + c , m)
     ran.previous = seed
     return seed * rm
+
+
+# ---
+# Define the random algorithm
+# ---
+myrandom = random_congruential
+#myrandom = random.random
 	
 	
 # ---
@@ -264,7 +272,7 @@ class SurfaceMaterial(Material, object):
                 reflected = lambertian_reflexion(normal)
                 return reflected
             if 'dispersion_factor' in properties:
-                reflected = reflected + random.random()
+                reflected = reflected + myrandom()
                 return reflected
         if phenomenon == "Absortion":
             if properties['energy_collector']:
@@ -479,8 +487,8 @@ class SunWindow:
         self.main_direction = direction
 
     def random_point(self):
-        return (self.origin + self.v1 * self.length1 * random.random() +
-                self.v2 * self.length2 * random.random())
+        return (self.origin + self.v1 * self.length1 * myrandom() +
+                self.v2 * self.length2 * myrandom())
 
     def random_direction(self):
         return self.main_direction
@@ -497,7 +505,7 @@ class SunWindow:
 
 class SunWindowBuie(SunWindow):
     def random_direction(self):
-        return self.main_direction + random.random()
+        return self.main_direction + myrandom()
 
     def __init__(self, scene, direction, circum_solar_ratio):
         super(SunWindowBuie,self).__init__(scene, direction)
@@ -632,6 +640,7 @@ class Experiment:
         self.wavelength = wavelength
         self.initial_energy = initial_energy
         self.captured_energy = 0
+        random_congruential(time.time())
 
     def run(self, show_in_doc=None):
         for _ in xrange(self.number_of_rays):
