@@ -134,7 +134,7 @@ def tabulated_function(xvalues, yvalues):
 # ---
 # Helper function for random Linear congruential generator 
 # ---	
-def ran(seed=None):
+def random_congruential(seed=None):
     """
     Implementation of a random Linear congruential generator based on the MTH$RANDOM
     """
@@ -144,9 +144,9 @@ def ran(seed=None):
     m = 2.0 ** 32.0
     rm = 1.0 / m
     if seed is not None:
-        ran.previous = seed
-    seed = np.remainder(ran.previous * a + c , m)
-    ran.previous = seed
+        random_congruential.previous = seed
+    seed = np.remainder(random_congruential.previous * a + c , m)
+    random_congruential.previous = seed
     return seed * rm
 
 
