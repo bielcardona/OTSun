@@ -726,8 +726,10 @@ class Ray:
             next_material = None
         return direction, next_material, phenomenon
 
-    def update_energy(self, point_1, point_2):
+    def update_energy(self):
         # TODO: @Ramon
+        point_1 = self.points[-1]
+        point_2 = self.points[-2]
         solid_1 = self.scene.solid_at_point(point_1)
         solid_2 = self.scene.solid_at_point(point_2)
         if solid_1 and solid_1 == solid_2:
@@ -754,7 +756,7 @@ class Ray:
             vector, material, phenomenon = self.next_direction(face)
             self.directions.append(vector)
             self.materials.append(material)
-            self.update_energy(self.points[-1], self. points[-2])
+            self.update_energy()
             if phenomenon == 'Absortion':
                 self.finished = True
             if phenomenon == 'Got_Absorbed':
