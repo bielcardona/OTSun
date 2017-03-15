@@ -560,6 +560,7 @@ class SunWindowBuie(SunWindow,object):
         super(SunWindowBuie,self).__init__(scene, direction)
         self.length1 *= 1.1
         self.length2 *= 1.1
+        self.aperture = self.length1 * self.length2
         self.origin = self.origin - self.v1 * self.length1 * 0.05 - self.v2 * self.length2 * 0.05
         self.CSR = CircumSolarRatio
         self.SD = 4.65
