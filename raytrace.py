@@ -193,14 +193,14 @@ class Material(object):
 
 
 class VolumeMaterial(Material, object):
-    def __init__(self, name, index_of_refraction, extinction_coefficient = None):
+    def __init__(self, name, properties):
         """
         Initializes a Volume Material. The properties parameter must be a dict with the physical properties
         describing the material. At least, the following must be provided:
         'index_of_refraction': index of refraction of the material, as a function of its wavelength.
         'extinction_coefficient': extinction coefficient of the material in m-1
         """
-        super(VolumeMaterial, self).__init__(name, index_of_refraction)
+        super(VolumeMaterial, self).__init__(name, iproperties)
         self.kind = 'Volume'
 
     def change_of_direction(self, ray, normal_vector):
