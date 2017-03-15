@@ -276,9 +276,9 @@ class SurfaceMaterial(Material, object):
             normal = normal_vector * (-1.0)
             properties = self.properties_back
         if 'TW_model' in properties:
-            b_constant = self.properties['b_constant']
-            c_constant = self.properties['c_constant'] 
-            absortion_ratio = TW_Absorptance(normal, b_constant, c_constant, ray.directions[-1])
+            b_constant = properties['b_constant']
+            c_constant = properties['c_constant'] 
+            absortion_ratio = TW_absorptance_ratio(normal, b_constant, c_constant, ray.directions[-1])
             abs = properties['probability_of_absortion'](ray.properties['wavelength']) * absortion_ratio
             por = 1.0 - abs
             probabilities = [por, abs]
