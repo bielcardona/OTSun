@@ -200,7 +200,7 @@ class VolumeMaterial(Material, object):
         'index_of_refraction': index of refraction of the material, as a function of its wavelength.
         'extinction_coefficient': extinction coefficient of the material in m-1
         """
-        super(VolumeMaterial, self).__init__(name, iproperties)
+        super(VolumeMaterial, self).__init__(name, properties)
         self.kind = 'Volume'
 
     def change_of_direction(self, ray, normal_vector):
