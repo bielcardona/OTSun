@@ -77,6 +77,27 @@ def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
     rotation_2 = Base.Rotation(axis_2,phi)
     new_v2 = rotation_2.multVec(new_v1)    
     return new_v2, "Reflexion"
+
+
+def TW_absorptance_ratio(normal, b_constant, c_constant, incident):
+    """
+    Implementation of the angular Solar Absorptance model for selective absorber material.
+    1 - b * (1/cos - 1) ** c
+    Model based on the study:
+    Tesfamichael, T., and Wäckelgard, E., 2000, “Angular Solar Absorptance and
+    Incident Angle Modifier of Selective Absorbers for Solar Thermal Collectors,”
+    Sol. Energy, 68, pp. 335–341.
+    """
+    # We assume the normal is normalized.
+    incidence_angle = math.acos (normal.dot(incident) * (-1.0))
+    incidence_angle_deg = incidence_angle * 180.0 / math.pi
+    if incidence_angle_deg < 80.0:
+        absortion_ratio = 1.0 - b_constant * (1.0 / math.cos(incidence_angle) - 1.0) ** c_constant
+    else:
+        y0 = 1.0 - b_constant * (1.0 / math.cos(80.0 * math.pi / 180.0) - 1.0) ** c_constant
+        m = y0 / 10.0
+        absortion_ratio = y0 - m * (incidence_angle_deg - 80.0)
+    return absortion_ratio
 	
 
 	# noinspection PyUnresolvedReferences,PyUnresolvedReferences
@@ -254,8 +275,16 @@ class SurfaceMaterial(Material, object):
         else: # Ray intercepted on the backside of the surface
             normal = normal_vector * (-1.0)
             properties = self.properties_back
-        probabilities = [properties['probability_of_reflexion'](ray.properties['wavelength']),
-                         properties['probability_of_absortion'](ray.properties['wavelength'])]
+        if 'TW_model' in properties:
+            b_constant = self.properties['b_constant']
+            c_constant = self.properties['c_constant'] 
+            absortion_ratio = TW_Absorptance(normal, b_constant, c_constant, ray.directions[-1])
+            abs = properties['probability_of_absortion'](ray.properties['wavelength']) * absortion_ratio
+            por = 1.0 - abs
+            probabilities = [por, abs]
+        else:
+		    probabilities = [properties['probability_of_reflexion'](ray.properties['wavelength']),
+                             properties['probability_of_absortion'](ray.properties['wavelength'])]
         phenomenon = np.random.choice(phenomena, 1, p = probabilities)[0]
         if phenomenon == 'Reflexion':
             if 'specular_material' in properties:
@@ -328,6 +357,17 @@ def create_absorber_lambertian_layer(name, por):
                                   'lambertian_material': True})
 
 
+def create_absorber_TW_model_layer(name, por, b_constant, c_constant):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
+                                  'probability_of_absortion': constant_function(1 - por),
+                                  'transmitance': constant_function(0),
+                                  'energy_collector': True,
+                                  'lambertian_material': True,
+                                  'TW_model': True,
+                                  'b_constant': b_constant,
+                                  'c_constant': c_constant})
+								  
+								  
 def create_reflector_specular_layer(name, por):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(1 - por),
