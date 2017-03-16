@@ -731,11 +731,11 @@ class Ray:
         # TODO: @Ramon
         point_1 = self.points[-1]
         point_2 = self.points[-2]
-        solid_1 = self.scene.solid_at_point(point_1)
-        solid_2 = self.scene.solid_at_point(point_2)
-        if solid_1 and solid_1 == solid_2:
-            if 'extinction_coefficient' in self.scene.materials[solid_1].properties:
-                k = self.scene.materials[solid_1].properties['extinction_coefficient'](self.wavelength)
+        middle_point = point_1.add(point_2) * 0.5
+        actual_solid = self.scene.solid_at_point(middle_point)
+        if actual_solid:
+            if 'extinction_coefficient' in self.scene.materials[actual_solid].properties:
+                k = self.scene.materials[actual_solid].properties['extinction_coefficient'](self.wavelength)
                 if k > 0:
                     d = point_1.distanceToPoint(point_2)
                     self.energy = self.energy * math.exp(- k * d / 1000.0)
