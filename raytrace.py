@@ -319,7 +319,8 @@ def create_opaque_simple_material(name, por):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(1 - por),
                                   'transmitance': constant_function(0),
-                                  'energy_collector': False})
+                                  'energy_collector': False,
+                                  'specular_material': True}, None)
 
 
 def create_transparent_simple_material(name, por):
