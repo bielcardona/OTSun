@@ -101,7 +101,7 @@ def TW_absorptance_ratio(normal, b_constant, c_constant, incident):
 	
 
 	# noinspection PyUnresolvedReferences,PyUnresolvedReferences
-def refraction(incident, normal, n1, n2):
+def refraction(incident, normal, n1, n2, perpendicular_polarized):
     """
     Implementation of Snell's law of refraction
     """
@@ -117,11 +117,11 @@ def refraction(incident, normal, n1, n2):
         return reflexion(incident, normal)
     c2 = c2sq ** 0.5 # cos (refracted_angle)
     # https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
-    Rs = ((n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)) ** 2. # reflectance for s-polarized (perpendicular) light
-    Rp = ((n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)) ** 2. # reflectance for p-polarized (parallel) light
-    Ru = 0.5 * (Rs + Rp) # reflectance for unpolarised light
-    u = myrandom()
-    if u < Ru:
+    if perpendicular_polarized:
+        R = ((n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)) ** 2. # reflectance for s-polarized (perpendicular) light
+    else:
+        R = ((n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)) ** 2. # reflectance for p-polarized (parallel) light
+    if myrandom() < R:
         return reflexion(incident, normal)
     else:		
         return incident * r + mynormal * (r * c1 - c2), "Refraction"
@@ -228,7 +228,7 @@ class VolumeMaterial(Material, object):
         wavelength = ray.wavelength
         n1 = ray.current_medium.properties['index_of_refraction'](wavelength)
         n2 = self.properties['index_of_refraction'](wavelength)
-        direction, phenomenon = refraction(ray.directions[-1], normal_vector, n1, n2)
+        direction, phenomenon = refraction(ray.directions[-1], normal_vector, n1, n2, ray.perpendicular_polarized)
         if phenomenon == "Refraction":
             ray.current_medium = self
         return direction, phenomenon
@@ -745,7 +745,12 @@ class Ray:
         """
         Makes a sun ray propagate until it gets absorbed, it exits the scene,
         or gets caught in multiple (> max_hops) reflections.
+        Generates unpolarized light by random.		
         """
+        if myrandom() < 0.5:
+            self.perpendicular_polarized = True # s-polarized light (perpendicular)
+        else:
+            self.perpendicular_polarized = False # p-polarized light (parallel)
         count = 0
         while (not self.finished) and (count < max_hops):
             count += 1
