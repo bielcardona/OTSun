@@ -9,7 +9,6 @@ import Part
 import numpy as np
 import itertools
 import random
-import math
 import time
 
 
@@ -41,9 +40,9 @@ def single_gaussian_dispersion(normal, reflected, sigma_1):
     """
     Implementation of single gaussian dispersion based on the ideal reflected direction
     """
-    rad = math.pi/180.0
+    rad = np.pi/180.0
     u = myrandom()
-    theta = (-2. * sigma_1 ** 2. * math.log(u)) ** 0.5 / 1000.0 / rad
+    theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
     v = reflected[0]
     axis_1 = normal.cross(reflected[0])
     rotation_1 = Base.Rotation(axis_1,theta)
@@ -60,13 +59,13 @@ def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
     """
     Implementation of double gaussian dispersion based on the ideal reflected direction
     """
-    rad = math.pi/180.0
+    rad = np.pi/180.0
     k_ran = myrandom()
     u = myrandom()
     if k_ran < k :
-        theta = (-2. * sigma_1 ** 2. * math.log(u)) ** 0.5 / 1000.0 / rad
+        theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
     else:
-	    theta = (-2. * sigma_2 ** 2. * math.log(u)) ** 0.5 / 1000.0 / rad
+	    theta = (-2. * sigma_2 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
     v = reflected[0]
     axis_1 = normal.cross(reflected[0])
     rotation_1 = Base.Rotation(axis_1,theta)
@@ -89,19 +88,19 @@ def TW_absorptance_ratio(normal, b_constant, c_constant, incident):
     Sol. Energy, 68, pp. 335–341.
     """
     # We assume the normal is normalized.
-    incidence_angle = math.acos (normal.dot(incident) * (-1.0))
-    incidence_angle_deg = incidence_angle * 180.0 / math.pi
+    incidence_angle = np.arccos (normal.dot(incident) * (-1.0))
+    incidence_angle_deg = incidence_angle * 180.0 / np.pi
     if incidence_angle_deg < 80.0:
-        absortion_ratio = 1.0 - b_constant * (1.0 / math.cos(incidence_angle) - 1.0) ** c_constant
+        absortion_ratio = 1.0 - b_constant * (1.0 / np.cos(incidence_angle) - 1.0) ** c_constant
     else:
-        y0 = 1.0 - b_constant * (1.0 / math.cos(80.0 * math.pi / 180.0) - 1.0) ** c_constant
+        y0 = 1.0 - b_constant * (1.0 / np.cos(80.0 * np.pi / 180.0) - 1.0) ** c_constant
         m = y0 / 10.0
         absortion_ratio = y0 - m * (incidence_angle_deg - 80.0)
     return absortion_ratio
 	
 
 	# noinspection PyUnresolvedReferences,PyUnresolvedReferences
-def refraction(incident, normal, n1, n2):
+def refraction(incident, normal, n1, n2, perpendicular_polarized):
     """
     Implementation of Snell's law of refraction
     """
@@ -117,11 +116,11 @@ def refraction(incident, normal, n1, n2):
         return reflexion(incident, normal)
     c2 = c2sq ** 0.5 # cos (refracted_angle)
     # https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
-    Rs = ((n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)) ** 2. # reflectance for s-polarized (perpendicular) light
-    Rp = ((n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)) ** 2. # reflectance for p-polarized (parallel) light
-    Ru = 0.5 * (Rs + Rp) # reflectance for unpolarised light
-    u = myrandom()
-    if u < Ru:
+    if perpendicular_polarized:
+        R = ((n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)) ** 2. # reflectance for s-polarized (perpendicular) light
+    else:
+        R = ((n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)) ** 2. # reflectance for p-polarized (parallel) light
+    if myrandom() < R:
         return reflexion(incident, normal)
     else:		
         return incident * r + mynormal * (r * c1 - c2), "Refraction"
@@ -134,10 +133,10 @@ def polar_to_cartesian(phi, theta):
     :param theta:
     :return:
     """
-    rad = math.acos(-1.0) / 180.0
-    x = math.sin(theta * rad) * math.cos(phi * rad)
-    y = math.sin(theta * rad) * math.sin(phi * rad)
-    z = math.cos(theta * rad)
+    rad = np.arccos(-1.0) / 180.0
+    x = np.sin(theta * rad) * np.cos(phi * rad)
+    y = np.sin(theta * rad) * np.sin(phi * rad)
+    z = np.cos(theta * rad)
     return Base.Vector(x, y, z)
 
 
@@ -228,7 +227,7 @@ class VolumeMaterial(Material, object):
         wavelength = ray.wavelength
         n1 = ray.current_medium.properties['index_of_refraction'](wavelength)
         n2 = self.properties['index_of_refraction'](wavelength)
-        direction, phenomenon = refraction(ray.directions[-1], normal_vector, n1, n2)
+        direction, phenomenon = refraction(ray.directions[-1], normal_vector, n1, n2, ray.perpendicular_polarized)
         if phenomenon == "Refraction":
             ray.current_medium = self
         return direction, phenomenon
@@ -319,7 +318,8 @@ def create_opaque_simple_material(name, por):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(1 - por),
                                   'transmitance': constant_function(0),
-                                  'energy_collector': False})
+                                  'energy_collector': False,
+                                  'specular_material': True}, None)
 
 
 def create_transparent_simple_material(name, por):
@@ -579,9 +579,9 @@ class SunWindowBuie(SunWindow,object):
     def random_direction(self):
         ran_1 = myrandom()
         if ran_1 < 1.0 - self.CSR:
-            th_u = SunWindowBuie.th_solar_disk_region(ran_1,self.aa1,self.SD)/1000.0*180.0/math.pi
+            th_u = SunWindowBuie.th_solar_disk_region(ran_1,self.aa1,self.SD)/1000.0*180.0/np.pi
         else:
-            th_u = SunWindowBuie.th_circumsolar_region(ran_1,self.CSR,self.SD,self.SS,self.aa2)/1000.0*180.0/math.pi 
+            th_u = SunWindowBuie.th_circumsolar_region(ran_1,self.CSR,self.SD,self.SS,self.aa2)/1000.0*180.0/np.pi 
         v = self.main_direction
         rotation_1 = Base.Rotation(self.v1,th_u)
         new_v1 = rotation_1.multVec(v)
@@ -595,14 +595,14 @@ class SunWindowBuie(SunWindow,object):
 				
     @staticmethod
     def solar_disk__density_distribution(angle):
-        return 2.0 *math.pi * math.cos(0.326*angle) / math.cos(0.305*angle) * angle
+        return 2.0 *np.pi * np.cos(0.326*angle) / np.cos(0.305*angle) * angle
 		
 		
     @staticmethod
     def circumsolar__density_distribution(angle,CSR):
         gamma = 2.2 * np.log(0.52 * CSR) * CSR **(0.43) - 0.1
         kappa = 0.9 * np.log(13.5 * CSR) * CSR ** (-0.3)
-        return 2.0 * math.pi * np.exp(kappa) * angle ** (gamma + 1.0)
+        return 2.0 * np.pi * np.exp(kappa) * angle ** (gamma + 1.0)
 
     @staticmethod		
     def a1(CSR,SD):
@@ -645,7 +645,7 @@ class SunWindowBuie(SunWindow,object):
         gamma = 2.2 * np.log(0.52 * CSR) * CSR **(0.43) - 0.1
         kappa = 0.9 * np.log(13.5 * CSR) * CSR ** (-0.3)
         u_csr = (u - 1.0) + CSR # Since CSR-CDF starts at zero
-        f1 = u_csr  * (gamma + 2.0) / (aa2 * 2 * math.pi * np.exp(kappa))
+        f1 = u_csr  * (gamma + 2.0) / (aa2 * 2 * np.pi * np.exp(kappa))
         f2 = SD ** (gamma + 2.0)
         exp = (1.0 / (gamma + 2.0))
         th_u = np.power(f1 + f2, exp)
@@ -738,13 +738,18 @@ class Ray:
                 k = self.scene.materials[actual_solid].properties['extinction_coefficient'](self.wavelength)
                 if k > 0:
                     d = point_1.distanceToPoint(point_2)
-                    self.energy = self.energy * math.exp(- k * d / 1000.0)
+                    self.energy = self.energy * np.exp(- k * d / 1000.0)
 
     def run(self, max_hops=20):
         """
         Makes a sun ray propagate until it gets absorbed, it exits the scene,
         or gets caught in multiple (> max_hops) reflections.
+        Generates unpolarized light by random.		
         """
+        if myrandom() < 0.5:
+            self.perpendicular_polarized = True # s-polarized light (perpendicular)
+        else:
+            self.perpendicular_polarized = False # p-polarized light (parallel)
         count = 0
         while (not self.finished) and (count < max_hops):
             count += 1
