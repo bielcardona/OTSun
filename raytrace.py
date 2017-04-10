@@ -519,7 +519,8 @@ class Scene:
 class SunWindow(object):
     """
     Class used to define a sun window, defined as a rectangle in space such
-    that the projection of the scene on the plane is enclosed in the rectangle
+    that the projection of the scene on the plane is enclosed in the rectangle,
+    the rectangle has an increase of 10% in each length
     """
 
     @staticmethod
@@ -550,7 +551,7 @@ class SunWindow(object):
                 best_length1 = length1
                 best_length2 = length2
             # noinspection PyUnboundLocalVariable
-            return best_origin, best_v1, best_v2, best_length1, best_length2
+            return best_origin, best_v1, best_v2, best_length1 * 1.1, best_length2 * 1.1
 
     def __init__(self, scene, direction):
         xs = [scene.boundbox.XMin, scene.boundbox.XMax]
