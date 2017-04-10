@@ -15,12 +15,20 @@ import time
 # ---
 # Helper functions for reflexion and refraction
 # ---
-def reflexion(incident, normal):
+def reflexion(incident, normal, polarization_vector):
     """
-    Implementation of law of reflexion
+    Implementation of law of reflexion for incident and polarization vector
     """
     # We assume all vectors are normalized and the normal.dot(incident) < 0
-    return incident - normal * 2.0 * normal.dot(incident), "Reflexion"
+    reflected = incident - normal * 2.0 * normal.dot(incident) # refelcted vector
+    c1 = - normal.dot(incident) # cos (incidence_angle)
+    angle = 2.0 * (np.pi - np.arccos(c1)) * 180.0 / np.pi # angle for make a rotation to the polarizacion vector
+    normal_parallel_plane = incident.cross(normal) # axis for the rotation, only parallel component must be rotated
+    if normal_parallel_plane == Base.Vector(0,0,0): # to avoid null vector in a common case
+        normal_parallel_plane = Base.Vector(1,0,0)
+    rotation = Base.Rotation(normal_parallel_plane,angle)
+    new_polarization_vector = rotation.multVec(polarization_vector)
+    return new_polarization_vector, reflected, "Reflexion"
 
 
 def lambertian_reflexion(normal):
