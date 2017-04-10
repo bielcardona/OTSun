@@ -585,54 +585,31 @@ class SunWindow(object):
         doc.addObject("Part::Feature", "SunWindow").Shape = sw
 
 
-class SunWindowBuie(SunWindow,object):
+class BuieDistribution:
     """
-    Class inherit from SunWindow, used to define a sun window with the sun profile based on Buie Equations.
-    The lenght of the window is 10% greater than the SunWindow class.
-	
-    A source of direct light from the sun according to the Buie model:
-    
+    A distribution for the direct light from the sun according to the Buie model:
     Buie, D., 2005. Corrigendum to "The effective size of the solar cone for 
     solar concentrating systems" [Solar Energy 74 (2003) 417-427]. 
     Solar Energy 79, 568-570. 5.2
     """
 
 		
-    def __init__(self, scene, direction, CircumSolarRatio):
-        super(SunWindowBuie,self).__init__(scene, direction)
-        self.length1 *= 1.1
-        self.length2 *= 1.1
-        self.aperture = self.length1 * self.length2
-        self.origin = self.origin - self.v1 * self.length1 * 0.05 - self.v2 * self.length2 * 0.05
+    def __init__(self, CircumSolarRatio):
         self.CSR = CircumSolarRatio
-        self.SD = 4.65
-        self.SS = 43.6
-        self.aa1 = SunWindowBuie.a1(self.CSR,4.65)
-        self.aa2 = SunWindowBuie.a2(self.CSR,self.SD,self.SS)
-        self.CDF_Disk_Region = SunWindowBuie.CDF_disk_region(self.aa1,self.SD)
-        self.main_direction = direction
+        self.SD = 4.65 # Solar Disk in mrad
+        self.SS = 43.6 # Solar Size in mrad
+        self.aa1 = BuieDistribution.a1(self.CSR,self.SD) # normalization constant for the disk region
+        self.aa2 = BuieDistribution.a2(self.CSR,self.SD,self.SS) # normalization constant for the circumsolar region
+        self.CDF_Disk_Region = BuieDistribution.CDF_disk_region(self.aa1,self.SD) # Buie distribution for the disk region
 
 		
-    def random_point(self):
-        return (self.origin + self.v1 * self.length1 * myrandom() +
-                self.v2 * self.length2 * myrandom())
-
-				
-    def random_direction(self):
-        ran_1 = myrandom()
-        if ran_1 < 1.0 - self.CSR:
-            th_u = SunWindowBuie.th_solar_disk_region(ran_1,self.aa1,self.SD)/1000.0*180.0/np.pi
+    def angle_distribution(self, random_number):
+        u = random_number
+        if u < 1.0 - self.CSR:
+            th_u = BuieDistribution.th_solar_disk_region(u,self.aa1,self.SD)/1000.0*180.0/np.pi
         else:
-            th_u = SunWindowBuie.th_circumsolar_region(ran_1,self.CSR,self.SD,self.SS,self.aa2)/1000.0*180.0/np.pi 
-        v = self.main_direction
-        rotation_1 = Base.Rotation(self.v1,th_u)
-        new_v1 = rotation_1.multVec(v)
-        ran_2 = myrandom()
-        phi = 360. * ran_2
-        axis_2 = v
-        rotation_2 = Base.Rotation(axis_2,phi)
-        new_v2 = rotation_2.multVec(new_v1)	    
-        return new_v2
+            th_u = BuieDistribution.th_circumsolar_region(u,self.CSR,self.SD,self.SS,self.aa2)/1000.0*180.0/np.pi 	    
+        return th_u
 
 				
     @staticmethod
@@ -649,7 +626,7 @@ class SunWindowBuie(SunWindow,object):
     @staticmethod		
     def a1(CSR,SD):
         """ Parameter a1 needed for the normalization of the probability distribution in thedisk region"""    
-        f = SunWindowBuie.solar_disk__density_distribution
+        f = BuieDistribution.solar_disk__density_distribution
         th = np.arange(0.0,SD,0.001)
         f_th = np.vectorize(f)
         aa1 = ( 1.0 - CSR ) / np.trapz(f_th(th), dx = 0.001)		
@@ -658,7 +635,7 @@ class SunWindowBuie(SunWindow,object):
     @staticmethod		
     def a2(CSR,SD,SS):
         """ Parameter a2 needed for the normalization of the probability distribution in the circumsolar region"""    
-        f = SunWindowBuie.circumsolar__density_distribution
+        f = BuieDistribution.circumsolar__density_distribution
         th = np.arange(SD,SS,0.001)
         f_th = np.vectorize(f)
         aa2 = CSR / np.trapz(f_th(th,CSR), dx = 0.001)		
@@ -667,7 +644,7 @@ class SunWindowBuie(SunWindow,object):
     @staticmethod	
     def CDF_disk_region(a1,SD):
         """ Cumulative Distribution Function in the solar disk region"""
-        f = SunWindowBuie.solar_disk__density_distribution
+        f = BuieDistribution.solar_disk__density_distribution
         th = np.arange(0.0,SD,0.001)
         f_th = np.vectorize(f)
         cumulative = np.cumsum(f_th(th))
@@ -677,7 +654,7 @@ class SunWindowBuie(SunWindow,object):
     @staticmethod
     def th_solar_disk_region(u,a1,SD):
         """ Random angle based on the probability distribution in the circumsolar region"""
-        CDF = SunWindowBuie.CDF_disk_region(a1,SD)
+        CDF = BuieDistribution.CDF_disk_region(a1,SD)
         idx = (np.abs(CDF[1] - u)).argmin()
         return  CDF[0][idx]	
     
