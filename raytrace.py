@@ -306,10 +306,10 @@ class VolumeMaterial(Material, object):
         wavelength = ray.wavelength
         n1 = ray.current_medium.properties['index_of_refraction'](wavelength)
         n2 = self.properties['index_of_refraction'](wavelength)
-        direction, phenomenon = refraction(ray.directions[-1], normal_vector, n1, n2, ray.perpendicular_polarized)
+        polarization_vector, direction, phenomenon = refraction(ray.directions[-1], normal_vector, n1, n2, ray.polarization_vectors[-1])
         if phenomenon == "Refraction":
             ray.current_medium = self
-        return direction, phenomenon
+        return polarization_vector, direction, phenomenon
         pass
 
 
