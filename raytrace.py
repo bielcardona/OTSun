@@ -170,7 +170,7 @@ def polar_to_cartesian(phi, theta):
     :param theta:
     :return:
     """
-    rad = np.arccos(-1.0) / 180.0
+    rad = np.pi / 180.0
     x = np.sin(theta * rad) * np.cos(phi * rad)
     y = np.sin(theta * rad) * np.sin(phi * rad)
     z = np.cos(theta * rad)
