@@ -777,30 +777,23 @@ class Ray:
 
 class Experiment:
     """
-    Sets up and runs and experiment in a given scene with a sun window in a 
-    given direction.
+    Sets up and runs and experiment in a given scene with a given light source.
+    If show_in_doc is given, the emitting region is drawn in the FreeCAD active document.
+    If show_in_doc is given, the rays could be drawn in the FreeCAD active document (using the run function).
     """
 
-    def __init__(self, scene, direction, number_of_rays, wavelength, initial_energy,
-                 show_in_doc=None, CSR_Buie_Model = None):
+    def __init__(self, scene, light_source, number_of_rays, show_in_doc = None):
         self.scene = scene
-        self.direction = direction
-        if CSR_Buie_Model:
-            self.sunwindow = SunWindowBuie(scene, direction, CSR_Buie_Model)
-        else:
-            self.sunwindow = SunWindow(scene, direction)
+        self.light_source = light_source
         if show_in_doc:
-            self.sunwindow.add_to_document(show_in_doc)
+            self.light_source.emitting_region.add_to_document(show_in_doc)
         self.number_of_rays = number_of_rays
-        self.wavelength = wavelength
-        self.initial_energy = initial_energy
         self.captured_energy = 0
-        random_congruential(time.time())
+        random_congruential(time.time()) # TODO: change location
 
     def run(self, show_in_doc=None):
         for _ in xrange(self.number_of_rays):
-            ray = Ray(self.scene, self.sunwindow.random_point(), self.direction,
-                      {'wavelength': self.wavelength, 'energy': self.initial_energy})
+            ray = self.light_source.emit_ray()
             ray.run()
             if show_in_doc:
                 ray.add_to_document(show_in_doc)
