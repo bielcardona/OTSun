@@ -774,7 +774,43 @@ class Ray:
         my_shape_ray = doc.addObject("Part::Feature", "Ray")
         my_shape_ray.Shape = lshape_wire
 
+class LightSource:
+    """
+    Sets up a light source with a given scene, a given emitting region and a given light spectrum.
+    The emitting region must provide the main direction.
+    Light spectrum could be: a constant value (for a single wavelength in nanometers), or a spectrum distribution.
+    The distribution (dispersion) for the main direction is provided in "direction_distribution".
+    The polarization_vector is a Base.Vector for polarized light. If is not given unpolarized light is generated.
+    """
 
+    def __init__(self, scene, emitting_region, light_spectrum, initial_energy, direction_distribution = None,
+                 polarization_vector = None):
+        self.scene = scene
+        self.emitting_region = emitting_region
+        self.light_spectrum = light_spectrum
+        self.initial_energy = initial_energy
+        self.direction_distribution = direction_distribution
+        self.polarization_vector = polarization_vector
+
+    def emit_ray(self):
+        point = self.emitting_region.random_point()
+        main_direction = self.emitting_region.main_direction # emitting main direction
+        direction = main_direction
+        polarization_vector = self.polarization_vector
+        if self.direction_distribution is not None: # TODO, main direction has a distribution
+            pass
+        if self.polarization_vector is None: # TODO, unpolarization is active 
+            pass		  
+        if callable(self.light_spectrum):
+            wavelength = pick_random(self.light_spectrum) # TODO light spectrum is active (nanometers)
+        else:
+            wavelength = self.light_spectrum # experiment with a single wavelength (nanometers)
+        ray = Ray(self.scene,point,direction,{'wavelength':wavelength,
+                                         'energy':self.initial_energy,
+                                         'polarization_vector': polarization_vector})
+        return ray		
+
+		
 class Experiment:
     """
     Sets up and runs and experiment in a given scene with a given light source.
