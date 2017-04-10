@@ -114,30 +114,53 @@ def TW_absorptance_ratio(normal, b_constant, c_constant, incident):
 	
 
 	# noinspection PyUnresolvedReferences,PyUnresolvedReferences
-def refraction(incident, normal, n1, n2, perpendicular_polarized):
+def refraction(incident, normal, n1, n2, polarization_vector):
     """
     Implementation of Snell's law of refraction
     """
     # https://en.wikipedia.org/wiki/Snell's_law#Vector_form
     mynormal = normal * 1.0
-    if mynormal.dot(incident) > 0:
+    if mynormal.dot(incident) > 0: # Ray intercepted on the backside of the surface
         # noinspection PyAugmentAssignment
         mynormal = mynormal * (-1.0)
     r = n1 / n2
     c1 = - mynormal.dot(incident) # cos (incidence_angle)
     c2sq = 1.0 - r * r * (1.0 - c1 * c1) # cos (refracted_angle) ** 2
     if c2sq < 0: # total internal reflection
-        return reflexion(incident, normal)
+        return reflexion(incident, mynormal, polarization_vector))
     c2 = c2sq ** 0.5 # cos (refracted_angle)
+    normal_parallel_plane = incident.cross(mynormal) # normal vector of the parallel plane
+    if normal_parallel_plane == Base.Vector(0,0,0): # to avoid null vector at mynormal and incident parallel vectors
+        normal_parallel_plane = Base.Vector(1,0,0)
+    normal_parallel_plane.normalize()
+    normal_perpendicular_plane = normal_parallel_plane.cross(incident) # normal vector of the perpendicular plane 
+    # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
+    parallel_v = polarization_vector - normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+    parallel_component = parallel_v.Length
+    perpendicular_v = polarization_vector - normal_perpendicular_plane * polarization_vector.dot(normal_perpendicular_plane)
+    perpendicular_component = perpendicular_v.Length
+    ref_per = perpendicular_component /(perpendicular_component + parallel_component)
+    perpendicular_polarized = False
     # https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
-    if perpendicular_polarized:
+    if myrandom() < ref_per:
         R = ((n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)) ** 2. # reflectance for s-polarized (perpendicular) light
+        perpendicular_polarized = True
+        polarization_vector = perpendicular_v.normalize()
     else:
         R = ((n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)) ** 2. # reflectance for p-polarized (parallel) light
-    if myrandom() < R:
-        return reflexion(incident, normal)
-    else:		
-        return incident * r + mynormal * (r * c1 - c2), "Refraction"
+        polarization_vector = parallel_v.normalize()
+    if myrandom() < R: # ray reflected    
+        return reflexion(incident, mynormal, polarization_vector)
+    else: # ray refracted		
+        refracted_direction = incident * r + mynormal * (r * c1 - c2)
+        perp_v = refracted_direction.cross(mynormal)
+        if perp_v == Base.Vector(0,0,0): # to avoid null vector at mynormal and incident parallel vectors
+            perp_v = Base.Vector(1,0,0)    
+        para_v = refracted_direction.cross(perp_v)
+        if perpendicular_polarized:
+            return perp_v, refracted_direction, "Refraction"			
+        else:
+		    return para_v, refracted_direction, "Refraction"
 
 
 def polar_to_cartesian(phi, theta):
