@@ -178,6 +178,48 @@ myrandom = random_congruential
 	
 	
 # ---
+# Helper function for dispersions and polarization vector  
+# ---	
+def dispersion_from_main_direction(main_direction, theta, phi):
+    v = main_direction
+    v_p = Base.Vector(v[1],-v[0],0)
+    if v_p == Base.Vector(0,0,0): # to avoid null vector at mynormal and incident parallel vectors
+        v_p = Base.Vector(1,0,0)
+    v_p.normalize()
+    rotation_1 = Base.Rotation(v_p,theta)
+    new_v1 = rotation_1.multVec(v)
+    axis_2 = main_direction
+    rotation_2 = Base.Rotation(axis_2,phi)
+    new_v2 = rotation_2.multVec(new_v1)
+    return new_v2    
+
+
+def dispersion_polarization(main_direction,polarization_vector,theta,phi):
+    v = main_direction
+    v_p = Base.Vector(v[1],-v[0],0)
+    if v_p == Base.Vector(0,0,0): # to avoid null vector at mynormal and incident parallel vectors
+        v_p = Base.Vector(1,0,0)
+    v_p.normalize()
+    rotation_1 = Base.Rotation(v_p,theta)
+    new_v1 = rotation_1.multVec(polarization_vector)
+    axis_2 = main_direction
+    rotation_2 = Base.Rotation(axis_2,phi)
+    new_v2 = rotation_2.multVec(new_v1)	    
+    return new_v2  	
+
+
+def random_polarization(direction):
+    v_p = Base.Vector(direction[1],-direction[0],0)
+    if v_p == Base.Vector(0,0,0):
+        v_p = Base.Vector(1,0,0)
+    v_p.normalize()
+    phi = 360.0 * myrandom()
+    rotation = Base.Rotation(direction,phi)
+    new_v_p = rotation.multVec(v_p)	
+    return new_v_p   
+	
+
+# ---
 # Classes for materials
 # ---
 
@@ -796,11 +838,14 @@ class LightSource:
         point = self.emitting_region.random_point()
         main_direction = self.emitting_region.main_direction # emitting main direction
         direction = main_direction
-        polarization_vector = self.polarization_vector
-        if self.direction_distribution is not None: # TODO, main direction has a distribution
-            pass
-        if self.polarization_vector is None: # TODO, unpolarization is active 
-            pass		  
+        if self.direction_distribution is not None: # main direction has a distribution
+            theta = self.direction_distribution.angle_distribution(myrandom())
+            phi = 360.0 * myrandom()
+            direction = dispersion_from_main_direction(main_direction, theta, phi)
+            if self.polarization_vector: # single polarization vector is active
+                polarization_vector = dispersion_polarization(main_direction,self.polarization_vector,theta,phi)
+        if self.polarization_vector is None: # unpolarization is active 
+            polarization_vector = random_polarization(direction) # random polarization from light direction		  
         if callable(self.light_spectrum):
             wavelength = pick_random(self.light_spectrum) # TODO light spectrum is active (nanometers)
         else:
