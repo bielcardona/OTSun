@@ -696,7 +696,7 @@ class SunWindowBuie(SunWindow,object):
 		
 class Ray:
     """
-    Class used to model a sun ray. It keeps information of the path it 
+    Class used to model a sun ray and its polarization vector. It keeps information of the path it 
     describes as it interacts with the scene and its energy.
     """
 
@@ -708,6 +708,7 @@ class Ray:
         self.properties = properties
         self.wavelength = properties['wavelength']
         self.energy = properties['energy']
+        self.polarization_vectors = [properties['polarization_vector']]
         self.finished = False
         self.got_absorbed = False
         self.current_medium = vacuum_medium
@@ -746,19 +747,20 @@ class Ray:
         current_direction = self.directions[-1]
         current_point = self.points[-1]
         current_material = self.materials[-1]
+        polarization_vector = self.polarization_vectors[-1]
         uv = face.Surface.parameter(current_point)
         normal = face.normalAt(uv[0], uv[1])
         normal.normalize()
         if face in self.scene.materials:
             # face is active
             material = self.scene.materials[face]
-            direction, phenomenon = material.change_of_direction(self, normal)
+            polarization_vector, direction, phenomenon = material.change_of_direction(self, normal)# TODO polarization_vector 
         else:
             # face is not active
             point_plus_delta = current_point + current_direction * self.scene.epsilon
             next_solid = self.scene.solid_at_point(point_plus_delta)
             nearby_material = self.scene.materials.get(next_solid, vacuum_medium)
-            direction, phenomenon = nearby_material.change_of_direction(self, normal)
+            polarization_vector, direction, phenomenon = nearby_material.change_of_direction(self, normal)# TODO polarization_vector
         next_material = None
         if phenomenon == 'Refraction':
             # noinspection PyUnboundLocalVariable
@@ -767,7 +769,9 @@ class Ray:
             next_material = current_material
         elif phenomenon == 'Absortion':
             next_material = None
-        return direction, next_material, phenomenon
+        elif phenomenon == 'Got_Absorbed': # it is needed? Review
+            next_material = None
+        return polarization_vector, direction, next_material, phenomenon
 
     def update_energy(self):
         # TODO: @Ramon
@@ -785,13 +789,8 @@ class Ray:
     def run(self, max_hops=20):
         """
         Makes a sun ray propagate until it gets absorbed, it exits the scene,
-        or gets caught in multiple (> max_hops) reflections.
-        Generates unpolarized light by random.		
+        or gets caught in multiple (> max_hops) reflections.		
         """
-        if myrandom() < 0.5:
-            self.perpendicular_polarized = True # s-polarized light (perpendicular)
-        else:
-            self.perpendicular_polarized = False # p-polarized light (parallel)
         count = 0
         while (not self.finished) and (count < max_hops):
             count += 1
@@ -801,9 +800,10 @@ class Ray:
                 self.finished = True
                 self.got_absorbed = False
                 break
-            vector, material, phenomenon = self.next_direction(face)
+            polarization_vector, vector, material, phenomenon = self.next_direction(face) # TODO polarization_vector
             self.directions.append(vector)
             self.materials.append(material)
+            self.polarization_vectors.append(polarization_vector)
             self.update_energy()
             if phenomenon == 'Absortion':
                 self.finished = True
@@ -815,6 +815,7 @@ class Ray:
         lshape_wire = Part.makePolygon(self.points)
         my_shape_ray = doc.addObject("Part::Feature", "Ray")
         my_shape_ray.Shape = lshape_wire
+
 
 class LightSource:
     """
