@@ -329,7 +329,7 @@ class SurfaceMaterial(Material, object):
         phenomenon = np.random.choice(phenomena, 1, p = probabilities)[0]
         if phenomenon == 'Reflexion':
             if 'specular_material' in properties:
-                reflected = reflexion(ray.directions[-1], normal)
+                reflected = reflexion(ray.directions[-1], normal, ray.polarization_vectors[-1])
                 if 'sigma_1' in properties:
                     sigma_1 = properties['sigma_1']
                     if 'sigma_2' in properties:
@@ -340,15 +340,16 @@ class SurfaceMaterial(Material, object):
                 return reflected
             if 'lambertian_material' in properties:
                 reflected = lambertian_reflexion(normal)
-                return reflected
+                polarization_vector = random_polarization(reflected[0]) # generates random polarization for lambertian reflection
+                return polarization_vector, reflected[0], reflected[1]
             if 'dispersion_factor' in properties:
                 reflected = reflected + myrandom()
                 return reflected
         if phenomenon == "Absortion":
             if properties['energy_collector']:
-                return Base.Vector(0.0, 0.0, 0.0), "Got_Absorbed"
+                return Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), "Got_Absorbed"
             else:
-                return Base.Vector(0.0, 0.0, 0.0), "Absortion"
+                return Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), "Absortion"
         pass
 
     def scatter_direction(self, ray, direction):
