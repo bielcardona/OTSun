@@ -77,16 +77,19 @@ def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
         theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
     else:
 	    theta = (-2. * sigma_2 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
-    v = reflected[0]
-    axis_1 = normal.cross(reflected[0])
+    v = reflected[1]
+    axis_1 = normal.cross(reflected[1])
     rotation_1 = Base.Rotation(axis_1,theta)
     new_v1 = rotation_1.multVec(v)
     u = myrandom()
     phi = 360. * u
     axis_2 = v
     rotation_2 = Base.Rotation(axis_2,phi)
-    new_v2 = rotation_2.multVec(new_v1)    
-    return new_v2, "Reflexion"
+    new_v2 = rotation_2.multVec(new_v1)
+    polarization_vector = reflected[0]
+    new_pol_1 = rotation_1.multVec(polarization_vector)
+    new_polarization_vector = rotation_2.multVec(new_pol_1)     
+    return new_polarization_vector, new_v2, "Reflexion"
 
 
 def TW_absorptance_ratio(normal, b_constant, c_constant, incident):
