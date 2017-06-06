@@ -255,7 +255,39 @@ def random_polarization(direction):
     new_v_p = rotation.multVec(v_p)	
     return new_v_p   
 	
+# ---
+# # Helper function for Cumulative Function Distribution and Randomly generatting distribution 
+# ---
 
+def create_CDF_from_PDF(data_file):
+    """
+    Creates a Cumulative Distribution Function from Probability Density Function data file (x,y)
+    data_file: x,y values
+    output: x_CDF, y_CDF
+    """
+    data_array = np.loadtxt(data_file, usecols=(0,1))
+    x = data_array[:,0]
+    y = data_array[:,1]
+    x_CDF = x
+    n = np.size(y)
+    y_ii = []
+    for i in np.arange(n-1):
+        y_i = (y[i+1] + y[i]) / 2.0 * (x[i+1] - x[i])
+        y_ii = np.append(y_ii, y_i)
+    y_ii = np.append(y_ii, y_ii[-1])
+    k_integration = np.trapz(y_ii, x_CDF)
+    y_CDF = np.cumsum(y_ii) / k_integration
+    return x_CDF, y_CDF / y_CDF[-1]
+
+def pick_random_from_CDF(cumulative_distribution_function):
+    """
+    Randomly generatting distribution acording to a Cumulative Distribution Function
+	We apply the Inverse transform sampling: https://en.wikipedia.org/wiki/Inverse_transform_sampling
+    """
+    CDF = cumulative_distribution_function
+    return np.interp(random.random(), CDF[1], CDF[0])	
+
+	
 # ---
 # Classes for materials
 # ---
@@ -863,10 +895,10 @@ class LightSource:
                 polarization_vector = dispersion_polarization(main_direction,self.polarization_vector,theta,phi)
         if self.polarization_vector is None: # unpolarization is active 
             polarization_vector = random_polarization(direction) # random polarization from light direction		  
-        if callable(self.light_spectrum):
-            wavelength = pick_random(self.light_spectrum) # TODO light spectrum is active (nanometers)
-        else:
+        if np.isscalar(self.light_spectrum):
             wavelength = self.light_spectrum # experiment with a single wavelength (nanometers)
+        else:
+            wavelength = pick_random_from_CDF(self.light_spectrum) # light spectrum is active (nanometers)
         ray = Ray(self.scene,point,direction,{'wavelength':wavelength,
                                          'energy':self.initial_energy,
                                          'polarization_vector': polarization_vector})
