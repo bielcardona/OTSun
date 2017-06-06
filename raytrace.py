@@ -328,8 +328,9 @@ class VolumeMaterial(Material, object):
         """
         Initializes a Volume Material. The properties parameter must be a dict with the physical properties
         describing the material. At least, the following must be provided:
-        'index_of_refraction': index of refraction of the material, as a function of its wavelength.
-        'extinction_coefficient': extinction coefficient of the material in m-1
+        'index_of_refraction': index of refraction of the material, as a function of its wavelength, only real part.
+        'extinction_coefficient': imaginary part of the index of refraction of the material in nm-1, as a function of its wavelength.
+        'attenuation coefficient': ettenuation coefficient of the material in m-1
         """
         super(VolumeMaterial, self).__init__(name, properties)
         self.kind = 'Volume'
@@ -345,11 +346,19 @@ class VolumeMaterial(Material, object):
         pass
 
 
-def create_simple_volume_material(name, index_of_refraction, extinction_coefficient = None):
+def create_simple_volume_material(name, index_of_refraction, attenuation coefficient = None):
     VolumeMaterial.create(name, {'index_of_refraction': constant_function(index_of_refraction),
-                                 'extinction_coefficient': constant_function(extinction_coefficient)})
+                                 'attenuation coefficient': constant_function(attenuation coefficient)})
 
-
+def create_wavelength_volume_material(name, file_material):
+    # file_material with three columns: wavelenth in nm, real(index of refraction), imagynary(index of refraction) in nm-1
+    data_material = np.loadtxt(file_material, usecols=(0,1,2))
+    wavelength_values = data_material[:,0]
+    n_values = data_material[:,1]
+    k_values = data_material[:,2]
+    VolumeMaterial.create(name, {'index_of_refraction': tabulated_function(wavelength_values, n_values),
+                                 'extinction_coefficient': tabulated_function(wavelength_values, k_values)})
+								 
 create_simple_volume_material("Vacuum", 1.0,0.0)
 # noinspection PyNoneFunctionAssignment
 vacuum_medium = VolumeMaterial.by_name["Vacuum"]
@@ -828,8 +837,13 @@ class Ray:
         middle_point = point_1.add(point_2) * 0.5
         actual_solid = self.scene.solid_at_point(middle_point)
         if actual_solid:
+            if 'attenuation coefficient' in self.scene.materials[actual_solid].properties:
+                k = self.scene.materials[actual_solid].properties['attenuation coefficient'](self.wavelength)
+                if k > 0:
+                    d = point_1.distanceToPoint(point_2)
+                    self.energy = self.energy * np.exp(- k * d / 1000.0)
             if 'extinction_coefficient' in self.scene.materials[actual_solid].properties:
-                k = self.scene.materials[actual_solid].properties['extinction_coefficient'](self.wavelength)
+                k = self.scene.materials[actual_solid].properties['extinction_coefficient'](self.wavelength)*4*np.pi/self.wavelength
                 if k > 0:
                     d = point_1.distanceToPoint(point_2)
                     self.energy = self.energy * np.exp(- k * d / 1000.0)
