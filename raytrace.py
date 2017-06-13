@@ -256,7 +256,7 @@ def random_polarization(direction):
     return new_v_p   
 	
 # ---
-# # Helper function for Cumulative Function Distribution and Randomly generatting distribution 
+# Helper function for Cumulative Function Distribution and Randomly generatting distribution 
 # ---
 
 def create_CDF_from_PDF(data_file):
@@ -330,7 +330,7 @@ class VolumeMaterial(Material, object):
         describing the material. At least, the following must be provided:
         'index_of_refraction': index of refraction of the material, as a function of its wavelength, only real part.
         'extinction_coefficient': imaginary part of the index of refraction of the material in nm-1, as a function of its wavelength.
-        'attenuation coefficient': ettenuation coefficient of the material in m-1
+        'attenuation_coefficient': ettenuation coefficient of the material in m-1
         """
         super(VolumeMaterial, self).__init__(name, properties)
         self.kind = 'Volume'
@@ -346,9 +346,9 @@ class VolumeMaterial(Material, object):
         pass
 
 
-def create_simple_volume_material(name, index_of_refraction, attenuation coefficient = None):
+def create_simple_volume_material(name, index_of_refraction, attenuation_coefficient = None):
     VolumeMaterial.create(name, {'index_of_refraction': constant_function(index_of_refraction),
-                                 'attenuation coefficient': constant_function(attenuation coefficient)})
+                                 'attenuation_coefficient': constant_function(attenuation_coefficient)})
 
 def create_wavelength_volume_material(name, file_material):
     # file_material with three columns: wavelenth in nm, real(index of refraction), imagynary(index of refraction) in nm-1
@@ -581,7 +581,7 @@ class Scene:
         Returns the solid that a point is inside.
         """
         for solid in self.solids:
-            if solid.isInside(point, self.epsilon, True):
+            if solid.isInside(point, self.epsilon, False):
                 return solid
         return None
 
@@ -837,8 +837,8 @@ class Ray:
         middle_point = point_1.add(point_2) * 0.5
         actual_solid = self.scene.solid_at_point(middle_point)
         if actual_solid:
-            if 'attenuation coefficient' in self.scene.materials[actual_solid].properties:
-                k = self.scene.materials[actual_solid].properties['attenuation coefficient'](self.wavelength)
+            if 'attenuation_coefficient' in self.scene.materials[actual_solid].properties:
+                k = self.scene.materials[actual_solid].properties['attenuation_coefficient'](self.wavelength)
                 if k > 0:
                     d = point_1.distanceToPoint(point_2)
                     self.energy = self.energy * np.exp(- k * d / 1000.0)
