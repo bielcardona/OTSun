@@ -3,3 +3,5 @@
 Vagrantfile
 .vagrant
 bootstrap.sh
+launch.json
+settings.json
