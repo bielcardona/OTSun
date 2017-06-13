@@ -581,7 +581,7 @@ class Scene:
         Returns the solid that a point is inside.
         """
         for solid in self.solids:
-            if solid.isInside(point, self.epsilon, True):
+            if solid.isInside(point, self.epsilon, False):
                 return solid
         return None
 
