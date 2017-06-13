@@ -127,7 +127,7 @@ def refraction(incident, normal, n1, n2, polarization_vector):
     c1 = - mynormal.dot(incident) # cos (incidence_angle)
     c2sq = 1.0 - r * r * (1.0 - c1 * c1) # cos (refracted_angle) ** 2
     if c2sq < 0: # total internal reflection
-        return reflexion(incident, mynormal, polarization_vector))
+        return reflexion(incident, mynormal, polarization_vector)
     c2 = c2sq ** 0.5 # cos (refracted_angle)
     normal_parallel_plane = incident.cross(mynormal) # normal vector of the parallel plane
     if normal_parallel_plane == Base.Vector(0,0,0): # to avoid null vector at mynormal and incident parallel vectors
