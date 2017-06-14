@@ -31,6 +31,7 @@ def reflexion(incident, normal, polarization_vector):
     return new_polarization_vector, reflected, "Reflexion"
 
 
+
 def lambertian_reflexion(normal):
     """
     Implementation of lambertian reflection for diffusely reflecting surface
@@ -395,51 +396,81 @@ class SurfaceMaterial(Material, object):
     def create(cls, name, properties_front, properties_back=None):
         _ = cls(name, properties_front, properties_back)
 
-    def change_of_direction(self, ray, normal_vector):
-        # TODO: Implementar bé. El que hi ha és provisional
-        phenomena = ["Reflexion", "Absortion"]
-        if ray.directions[-1].dot(normal_vector) < 0:  # Ray intercepted on the frontside of the surface
-            normal = normal_vector
-            properties = self.properties_front
-        else:  # Ray intercepted on the backside of the surface
-            normal = normal_vector * (-1.0)
-            properties = self.properties_back
+    def decide_phenomenon(self, ray, normal_vector, properties):
+        phenomena = ["Reflexion", "Absortion", "Transmitance"]
         if 'TW_model' in properties:
             b_constant = properties['b_constant']
             c_constant = properties['c_constant']
             absortion_ratio = TW_absorptance_ratio(normal, b_constant, c_constant, ray.directions[-1])
             absortion = properties['probability_of_absortion'](ray.properties['wavelength']) * absortion_ratio
             por = 1.0 - absortion
-            probabilities = [por, absortion]
+            probabilities = [por, absortion, 0] # Here I assume no transmitance
         else:
-            probabilities = [properties['probability_of_reflexion'](ray.properties['wavelength']),
-                             properties['probability_of_absortion'](ray.properties['wavelength'])]
+            try:
+                por = properties['probability_of_reflexion'](ray.properties['wavelength'])
+            except:
+                por = 1.0
+            try:
+                poa = properties['probability_of_absortion'](ray.properties['wavelength'])
+            except:
+                poa = 1 - por
+            try:
+                pot = properties['probability_of_transmitance'](ray.properties['wavelength'])
+            except:
+                pot = 0.0
+
+            probabilities = [por, poa, pot]
         phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
-        if phenomenon == 'Reflexion':
-            if 'specular_material' in properties:
-                reflected = reflexion(ray.directions[-1], normal, ray.polarization_vectors[-1])
-                if 'sigma_1' in properties:
-                    sigma_1 = properties['sigma_1']
-                    if 'sigma_2' in properties:
-                        sigma_2 = properties['sigma_2']
-                        k = properties['k']
-                        return double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k)
-                    return single_gaussian_dispersion(normal, reflected, sigma_1)
-                return reflected
-            if 'lambertian_material' in properties:
-                reflected = lambertian_reflexion(normal)
-                polarization_vector = random_polarization(
-                    reflected[0])  # generates random polarization for lambertian reflection
-                return polarization_vector, reflected[0], reflected[1]
-            if 'dispersion_factor' in properties:
-                reflected = reflected + myrandom()
-                return reflected
-        if phenomenon == "Absortion":
-            if properties['energy_collector']:
-                return Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), "Got_Absorbed"
-            else:
-                return Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), "Absortion"
+        return phenomenon
+
+    def change_of_direction_by_absortion(self, ray, normal_vector, properties):
+        if properties['energy_collector']:
+            return Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), "Got_Absorbed"
+        else:
+            return Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), "Absortion"
+
+    def change_of_direction_by_reflexion(self, ray, normal_vector, properties):
+        if 'specular_material' in properties:
+            reflected = reflexion(ray.directions[-1], normal, ray.polarization_vectors[-1])
+            if 'sigma_1' in properties:
+                sigma_1 = properties['sigma_1']
+                if 'sigma_2' in properties:
+                    sigma_2 = properties['sigma_2']
+                    k = properties['k']
+                    return double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k)
+                return single_gaussian_dispersion(normal, reflected, sigma_1)
+            return reflected
+        if 'lambertian_material' in properties:
+            reflected = lambertian_reflexion(normal)
+            polarization_vector = random_polarization(
+                reflected[0])  # generates random polarization for lambertian reflection
+            return polarization_vector, reflected[0], reflected[1]
+        if 'dispersion_factor' in properties:
+            reflected = reflected + myrandom()
+            return reflected
+
+    def change_of_direction_by_transmitance(self, ray, normal_vector, properties):
         pass
+
+
+    def change_of_direction(self, ray, normal_vector):
+
+        if ray.directions[-1].dot(normal_vector) < 0:  # Ray intercepted on the frontside of the surface
+            normal = normal_vector
+            properties = self.properties_front
+        else:  # Ray intercepted on the backside of the surface
+            normal = normal_vector * (-1.0)
+            properties = self.properties_back
+
+        phenomenon = self.decide_phenomenon(ray, normal_vector, properties)
+
+        if phenomenon == 'Reflexion':
+            return self.change_of_direction_by_reflexion(ray, normal_vector, properties)
+        elif phenomenon == 'Absortion':
+            return self.change_of_direction_by_absortion(ray, normal_vector, properties)
+        elif phenomenon == 'Transmitance':
+            return self.change_of_direction_by_transmitance(ray, normal_vector, properties)
+
 
     def scatter_direction(self, ray, direction):
         # TODO: pensar
