@@ -5,3 +5,7 @@ Vagrantfile
 bootstrap.sh
 launch.json
 settings.json
+tests/create_scene_testing_Fresnel-3.py
+tests/exec_test_Fresnel_Wavelength.py
+tests/freecad_script.py
+create_scene_testing_Fresnel-3.py

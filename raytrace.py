@@ -20,13 +20,13 @@ def reflexion(incident, normal, polarization_vector):
     Implementation of law of reflexion for incident and polarization vector
     """
     # We assume all vectors are normalized and the normal.dot(incident) < 0
-    reflected = incident - normal * 2.0 * normal.dot(incident) # refelcted vector
-    c1 = - normal.dot(incident) # cos (incidence_angle)
-    angle = 2.0 * (np.pi - np.arccos(c1)) * 180.0 / np.pi # angle for make a rotation to the polarizacion vector
-    normal_parallel_plane = incident.cross(normal) # axis for the rotation, only parallel component must be rotated
-    if normal_parallel_plane == Base.Vector(0,0,0): # to avoid null vector in a common case
-        normal_parallel_plane = Base.Vector(1,0,0)
-    rotation = Base.Rotation(normal_parallel_plane,angle)
+    reflected = incident - normal * 2.0 * normal.dot(incident)  # refelcted vector
+    c1 = - normal.dot(incident)  # cos (incidence_angle)
+    angle = 2.0 * (np.pi - np.arccos(c1)) * 180.0 / np.pi  # angle for make a rotation to the polarizacion vector
+    normal_parallel_plane = incident.cross(normal)  # axis for the rotation, only parallel component must be rotated
+    if normal_parallel_plane == Base.Vector(0, 0, 0):  # to avoid null vector in a common case
+        normal_parallel_plane = Base.Vector(1, 0, 0)
+    rotation = Base.Rotation(normal_parallel_plane, angle)
     new_polarization_vector = rotation.multVec(polarization_vector)
     return new_polarization_vector, reflected, "Reflexion"
 
@@ -36,59 +36,59 @@ def lambertian_reflexion(normal):
     Implementation of lambertian reflection for diffusely reflecting surface
     """
     # We assume the normal is normalized and the normal.dot(incident) < 0
-    dot =  - 1.0
-    while (dot < 0.0): 
-        random_vector = Base.Vector(myrandom()-0.5, myrandom()-0.5, myrandom()-0.5)
+    dot = - 1.0
+    while (dot < 0.0):
+        random_vector = Base.Vector(myrandom() - 0.5, myrandom() - 0.5, myrandom() - 0.5)
         random_vector.normalize()
         dot = normal.dot(random_vector)
     return random_vector, "Reflexion"
-	
-	
+
+
 def single_gaussian_dispersion(normal, reflected, sigma_1):
     """
     Implementation of single gaussian dispersion based on the ideal reflected direction
     """
-    rad = np.pi/180.0
+    rad = np.pi / 180.0
     u = myrandom()
     theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
     v = reflected[1]
     axis_1 = normal.cross(reflected[1])
-    rotation_1 = Base.Rotation(axis_1,theta)
+    rotation_1 = Base.Rotation(axis_1, theta)
     new_v1 = rotation_1.multVec(v)
     u = myrandom()
     phi = 360. * u
     axis_2 = v
-    rotation_2 = Base.Rotation(axis_2,phi)
+    rotation_2 = Base.Rotation(axis_2, phi)
     new_v2 = rotation_2.multVec(new_v1)
     polarization_vector = reflected[0]
     new_pol_1 = rotation_1.multVec(polarization_vector)
-    new_polarization_vector = rotation_2.multVec(new_pol_1)    
-    return new_polarization_vector, new_v2, "Reflexion"    
+    new_polarization_vector = rotation_2.multVec(new_pol_1)
+    return new_polarization_vector, new_v2, "Reflexion"
 
 
 def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
     """
     Implementation of double gaussian dispersion based on the ideal reflected direction
     """
-    rad = np.pi/180.0
+    rad = np.pi / 180.0
     k_ran = myrandom()
     u = myrandom()
-    if k_ran < k :
+    if k_ran < k:
         theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
     else:
-	    theta = (-2. * sigma_2 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
+        theta = (-2. * sigma_2 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
     v = reflected[1]
     axis_1 = normal.cross(reflected[1])
-    rotation_1 = Base.Rotation(axis_1,theta)
+    rotation_1 = Base.Rotation(axis_1, theta)
     new_v1 = rotation_1.multVec(v)
     u = myrandom()
     phi = 360. * u
     axis_2 = v
-    rotation_2 = Base.Rotation(axis_2,phi)
+    rotation_2 = Base.Rotation(axis_2, phi)
     new_v2 = rotation_2.multVec(new_v1)
     polarization_vector = reflected[0]
     new_pol_1 = rotation_1.multVec(polarization_vector)
-    new_polarization_vector = rotation_2.multVec(new_pol_1)     
+    new_polarization_vector = rotation_2.multVec(new_pol_1)
     return new_polarization_vector, new_v2, "Reflexion"
 
 
@@ -102,7 +102,7 @@ def TW_absorptance_ratio(normal, b_constant, c_constant, incident):
     Sol. Energy, 68, pp. 335–341.
     """
     # We assume the normal is normalized.
-    incidence_angle = np.arccos (normal.dot(incident) * (-1.0))
+    incidence_angle = np.arccos(normal.dot(incident) * (-1.0))
     incidence_angle_deg = incidence_angle * 180.0 / np.pi
     if incidence_angle_deg < 80.0:
         absortion_ratio = 1.0 - b_constant * (1.0 / np.cos(incidence_angle) - 1.0) ** c_constant
@@ -111,56 +111,57 @@ def TW_absorptance_ratio(normal, b_constant, c_constant, incident):
         m = y0 / 10.0
         absortion_ratio = y0 - m * (incidence_angle_deg - 80.0)
     return absortion_ratio
-	
 
-	# noinspection PyUnresolvedReferences,PyUnresolvedReferences
+
+# noinspection PyUnresolvedReferences,PyUnresolvedReferences
 def refraction(incident, normal, n1, n2, polarization_vector):
     """
     Implementation of Snell's law of refraction
     """
     # https://en.wikipedia.org/wiki/Snell's_law#Vector_form
     mynormal = normal * 1.0
-    if mynormal.dot(incident) > 0: # Ray intercepted on the backside of the surface
+    if mynormal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
         # noinspection PyAugmentAssignment
         mynormal = mynormal * (-1.0)
     r = n1 / n2
-    c1 = - mynormal.dot(incident) # cos (incidence_angle)
-    c2sq = 1.0 - r * r * (1.0 - c1 * c1) # cos (refracted_angle) ** 2
-    if c2sq < 0: # total internal reflection
+    c1 = - mynormal.dot(incident)  # cos (incidence_angle)
+    c2sq = 1.0 - r * r * (1.0 - c1 * c1)  # cos (refracted_angle) ** 2
+    if c2sq < 0:  # total internal reflection
         return reflexion(incident, mynormal, polarization_vector)
-    c2 = c2sq ** 0.5 # cos (refracted_angle)
-    normal_parallel_plane = incident.cross(mynormal) # normal vector of the parallel plane
-    if normal_parallel_plane == Base.Vector(0,0,0): # to avoid null vector at mynormal and incident parallel vectors
-        normal_parallel_plane = Base.Vector(1,0,0)
+    c2 = c2sq ** 0.5  # cos (refracted_angle)
+    normal_parallel_plane = incident.cross(mynormal)  # normal vector of the parallel plane
+    if normal_parallel_plane == Base.Vector(0, 0, 0):  # to avoid null vector at mynormal and incident parallel vectors
+        normal_parallel_plane = Base.Vector(1, 0, 0)
     normal_parallel_plane.normalize()
-    normal_perpendicular_plane = normal_parallel_plane.cross(incident) # normal vector of the perpendicular plane 
+    normal_perpendicular_plane = normal_parallel_plane.cross(incident)  # normal vector of the perpendicular plane
     # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
     parallel_v = polarization_vector - normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
     parallel_component = parallel_v.Length
-    perpendicular_v = polarization_vector - normal_perpendicular_plane * polarization_vector.dot(normal_perpendicular_plane)
+    perpendicular_v = polarization_vector - normal_perpendicular_plane * polarization_vector.dot(
+        normal_perpendicular_plane)
     perpendicular_component = perpendicular_v.Length
-    ref_per = perpendicular_component /(perpendicular_component + parallel_component)
+    ref_per = perpendicular_component / (perpendicular_component + parallel_component)
     perpendicular_polarized = False
     # https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
     if myrandom() < ref_per:
-        R = ((n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)) ** 2. # reflectance for s-polarized (perpendicular) light
+        R = ((n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)) ** 2.  # reflectance for s-polarized (perpendicular) light
         perpendicular_polarized = True
         polarization_vector = perpendicular_v.normalize()
     else:
-        R = ((n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)) ** 2. # reflectance for p-polarized (parallel) light
+        R = ((n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)) ** 2.  # reflectance for p-polarized (parallel) light
         polarization_vector = parallel_v.normalize()
-    if myrandom() < R: # ray reflected    
+    if myrandom() < R:  # ray reflected
         return reflexion(incident, mynormal, polarization_vector)
-    else: # ray refracted		
+    else:  # ray refracted
         refracted_direction = incident * r + mynormal * (r * c1 - c2)
         perp_v = refracted_direction.cross(mynormal)
-        if perp_v == Base.Vector(0,0,0): # to avoid null vector at mynormal and incident parallel vectors
-            perp_v = Base.Vector(1,0,0)    
+        if perp_v == Base.Vector(0, 0, 0):  # to avoid null vector at mynormal and incident parallel vectors
+            perp_v = Base.Vector(1, 0, 0)
         para_v = refracted_direction.cross(perp_v)
         if perpendicular_polarized:
-            return perp_v, refracted_direction, "Refraction"			
+            return perp_v, refracted_direction, "Refraction"
         else:
-		    return para_v, refracted_direction, "Refraction"
+            return para_v, refracted_direction, "Refraction"
 
 
 def polar_to_cartesian(phi, theta):
@@ -195,14 +196,14 @@ def random_congruential(seed=None):
     """
     Implementation of a random Linear congruential generator based on the MTH$RANDOM
     """
-# http://daviddeley.com/random/random4.htm
+    # http://daviddeley.com/random/random4.htm
     a = 69069.0
     c = 1.0
     m = 2.0 ** 32.0
     rm = 1.0 / m
     if seed is not None:
         random_congruential.previous = seed
-    seed = np.remainder(random_congruential.previous * a + c , m)
+    seed = np.remainder(random_congruential.previous * a + c, m)
     random_congruential.previous = seed
     return seed * rm
 
@@ -211,50 +212,53 @@ def random_congruential(seed=None):
 # Define the random algorithm
 # ---
 myrandom = random_congruential
-#myrandom = random.random
-	
-	
+
+
+# myrandom = random.random
+
+
 # ---
 # Helper function for dispersions and polarization vector  
 # ---	
 def dispersion_from_main_direction(main_direction, theta, phi):
     v = main_direction
-    v_p = Base.Vector(v[1],-v[0],0)
-    if v_p == Base.Vector(0,0,0): # to avoid null vector at mynormal and incident parallel vectors
-        v_p = Base.Vector(1,0,0)
+    v_p = Base.Vector(v[1], -v[0], 0)
+    if v_p == Base.Vector(0, 0, 0):  # to avoid null vector at mynormal and incident parallel vectors
+        v_p = Base.Vector(1, 0, 0)
     v_p.normalize()
-    rotation_1 = Base.Rotation(v_p,theta)
+    rotation_1 = Base.Rotation(v_p, theta)
     new_v1 = rotation_1.multVec(v)
     axis_2 = main_direction
-    rotation_2 = Base.Rotation(axis_2,phi)
+    rotation_2 = Base.Rotation(axis_2, phi)
     new_v2 = rotation_2.multVec(new_v1)
-    return new_v2    
+    return new_v2
 
 
-def dispersion_polarization(main_direction,polarization_vector,theta,phi):
+def dispersion_polarization(main_direction, polarization_vector, theta, phi):
     v = main_direction
-    v_p = Base.Vector(v[1],-v[0],0)
-    if v_p == Base.Vector(0,0,0): # to avoid null vector at mynormal and incident parallel vectors
-        v_p = Base.Vector(1,0,0)
+    v_p = Base.Vector(v[1], -v[0], 0)
+    if v_p == Base.Vector(0, 0, 0):  # to avoid null vector at mynormal and incident parallel vectors
+        v_p = Base.Vector(1, 0, 0)
     v_p.normalize()
-    rotation_1 = Base.Rotation(v_p,theta)
+    rotation_1 = Base.Rotation(v_p, theta)
     new_v1 = rotation_1.multVec(polarization_vector)
     axis_2 = main_direction
-    rotation_2 = Base.Rotation(axis_2,phi)
-    new_v2 = rotation_2.multVec(new_v1)	    
-    return new_v2  	
+    rotation_2 = Base.Rotation(axis_2, phi)
+    new_v2 = rotation_2.multVec(new_v1)
+    return new_v2
 
 
 def random_polarization(direction):
-    v_p = Base.Vector(direction[1],-direction[0],0)
-    if v_p == Base.Vector(0,0,0):
-        v_p = Base.Vector(1,0,0)
+    v_p = Base.Vector(direction[1], -direction[0], 0)
+    if v_p == Base.Vector(0, 0, 0):
+        v_p = Base.Vector(1, 0, 0)
     v_p.normalize()
     phi = 360.0 * myrandom()
-    rotation = Base.Rotation(direction,phi)
-    new_v_p = rotation.multVec(v_p)	
-    return new_v_p   
-	
+    rotation = Base.Rotation(direction, phi)
+    new_v_p = rotation.multVec(v_p)
+    return new_v_p
+
+
 # ---
 # Helper function for Cumulative Function Distribution and Randomly generatting distribution 
 # ---
@@ -265,29 +269,30 @@ def create_CDF_from_PDF(data_file):
     data_file: x,y values
     output: x_CDF, y_CDF
     """
-    data_array = np.loadtxt(data_file, usecols=(0,1))
-    x = data_array[:,0]
-    y = data_array[:,1]
+    data_array = np.loadtxt(data_file, usecols=(0, 1))
+    x = data_array[:, 0]
+    y = data_array[:, 1]
     x_CDF = x
     n = np.size(y)
     y_ii = []
-    for i in np.arange(n-1):
-        y_i = (y[i+1] + y[i]) / 2.0 * (x[i+1] - x[i])
+    for i in np.arange(n - 1):
+        y_i = (y[i + 1] + y[i]) / 2.0 * (x[i + 1] - x[i])
         y_ii = np.append(y_ii, y_i)
     y_ii = np.append(y_ii, y_ii[-1])
     k_integration = np.trapz(y_ii, x_CDF)
     y_CDF = np.cumsum(y_ii) / k_integration
     return x_CDF, y_CDF / y_CDF[-1]
 
+
 def pick_random_from_CDF(cumulative_distribution_function):
     """
     Randomly generatting distribution acording to a Cumulative Distribution Function
-	We apply the Inverse transform sampling: https://en.wikipedia.org/wiki/Inverse_transform_sampling
+    We apply the Inverse transform sampling: https://en.wikipedia.org/wiki/Inverse_transform_sampling
     """
     CDF = cumulative_distribution_function
-    return np.interp(random.random(), CDF[1], CDF[0])	
+    return np.interp(random.random(), CDF[1], CDF[0])
 
-	
+
 # ---
 # Classes for materials
 # ---
@@ -329,7 +334,8 @@ class VolumeMaterial(Material, object):
         Initializes a Volume Material. The properties parameter must be a dict with the physical properties
         describing the material. At least, the following must be provided:
         'index_of_refraction': index of refraction of the material, as a function of its wavelength, only real part.
-        'extinction_coefficient': imaginary part of the index of refraction of the material in nm-1, as a function of its wavelength.
+        'extinction_coefficient': imaginary part of the index of refraction of the material in nm-1, as a function of 
+        its wavelength.
         'attenuation_coefficient': ettenuation coefficient of the material in m-1
         """
         super(VolumeMaterial, self).__init__(name, properties)
@@ -339,33 +345,37 @@ class VolumeMaterial(Material, object):
         wavelength = ray.wavelength
         n1 = ray.current_medium.properties['index_of_refraction'](wavelength)
         n2 = self.properties['index_of_refraction'](wavelength)
-        polarization_vector, direction, phenomenon = refraction(ray.directions[-1], normal_vector, n1, n2, ray.polarization_vectors[-1])
+        polarization_vector, direction, phenomenon = refraction(ray.directions[-1], normal_vector, n1, n2,
+                                                                ray.polarization_vectors[-1])
         if phenomenon == "Refraction":
             ray.current_medium = self
         return polarization_vector, direction, phenomenon
         pass
 
 
-def create_simple_volume_material(name, index_of_refraction, attenuation_coefficient = None):
+def create_simple_volume_material(name, index_of_refraction, attenuation_coefficient=None):
     VolumeMaterial.create(name, {'index_of_refraction': constant_function(index_of_refraction),
                                  'attenuation_coefficient': constant_function(attenuation_coefficient)})
 
+
 def create_wavelength_volume_material(name, file_material):
-    # file_material with three columns: wavelenth in nm, real(index of refraction), imagynary(index of refraction) in nm-1
-    data_material = np.loadtxt(file_material, usecols=(0,1,2))
-    wavelength_values = data_material[:,0]
-    n_values = data_material[:,1]
-    k_values = data_material[:,2]
+    # file_material with three columns: wavelenth in nm, real(index of refraction), 
+    # imaginary(index of refraction) in nm-1
+    data_material = np.loadtxt(file_material, usecols=(0, 1, 2))
+    wavelength_values = data_material[:, 0]
+    n_values = data_material[:, 1]
+    k_values = data_material[:, 2]
     VolumeMaterial.create(name, {'index_of_refraction': tabulated_function(wavelength_values, n_values),
                                  'extinction_coefficient': tabulated_function(wavelength_values, k_values)})
-								 
-create_simple_volume_material("Vacuum", 1.0,0.0)
+
+
+create_simple_volume_material("Vacuum", 1.0, 0.0)
 # noinspection PyNoneFunctionAssignment
 vacuum_medium = VolumeMaterial.by_name["Vacuum"]
 
 
 class SurfaceMaterial(Material, object):
-    def __init__(self, name, properties_front, properties_back = None):
+    def __init__(self, name, properties_front, properties_back=None):
         """
         Initializes a Surface Material. The properties parameter must be a dict with the physical properties
         describing the material. At least, the following must be provided:
@@ -382,29 +392,29 @@ class SurfaceMaterial(Material, object):
         self.kind = 'Surface'
 
     @classmethod
-    def create(cls, name, properties_front, properties_back = None):
+    def create(cls, name, properties_front, properties_back=None):
         _ = cls(name, properties_front, properties_back)
 
     def change_of_direction(self, ray, normal_vector):
         # TODO: Implementar bé. El que hi ha és provisional
         phenomena = ["Reflexion", "Absortion"]
-        if ray.directions[-1].dot(normal_vector) < 0 : # Ray intercepted on the frontside of the surface
+        if ray.directions[-1].dot(normal_vector) < 0:  # Ray intercepted on the frontside of the surface
             normal = normal_vector
             properties = self.properties_front
-        else: # Ray intercepted on the backside of the surface
+        else:  # Ray intercepted on the backside of the surface
             normal = normal_vector * (-1.0)
             properties = self.properties_back
         if 'TW_model' in properties:
             b_constant = properties['b_constant']
-            c_constant = properties['c_constant'] 
+            c_constant = properties['c_constant']
             absortion_ratio = TW_absorptance_ratio(normal, b_constant, c_constant, ray.directions[-1])
-            abs = properties['probability_of_absortion'](ray.properties['wavelength']) * absortion_ratio
-            por = 1.0 - abs
-            probabilities = [por, abs]
+            absortion = properties['probability_of_absortion'](ray.properties['wavelength']) * absortion_ratio
+            por = 1.0 - absortion
+            probabilities = [por, absortion]
         else:
-		    probabilities = [properties['probability_of_reflexion'](ray.properties['wavelength']),
+            probabilities = [properties['probability_of_reflexion'](ray.properties['wavelength']),
                              properties['probability_of_absortion'](ray.properties['wavelength'])]
-        phenomenon = np.random.choice(phenomena, 1, p = probabilities)[0]
+        phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
         if phenomenon == 'Reflexion':
             if 'specular_material' in properties:
                 reflected = reflexion(ray.directions[-1], normal, ray.polarization_vectors[-1])
@@ -414,11 +424,12 @@ class SurfaceMaterial(Material, object):
                         sigma_2 = properties['sigma_2']
                         k = properties['k']
                         return double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k)
-                    return single_gaussian_dispersion(normal, reflected, sigma_1)						   
+                    return single_gaussian_dispersion(normal, reflected, sigma_1)
                 return reflected
             if 'lambertian_material' in properties:
                 reflected = lambertian_reflexion(normal)
-                polarization_vector = random_polarization(reflected[0]) # generates random polarization for lambertian reflection
+                polarization_vector = random_polarization(
+                    reflected[0])  # generates random polarization for lambertian reflection
                 return polarization_vector, reflected[0], reflected[1]
             if 'dispersion_factor' in properties:
                 reflected = reflected + myrandom()
@@ -448,7 +459,7 @@ def create_transparent_simple_material(name, por):
                                   'probability_of_absortion': constant_function(0),
                                   'transmitance': constant_function(1 - por)})
 
-								  
+
 def create_absorber_simple_material(name, por):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(1 - por),
@@ -456,20 +467,20 @@ def create_absorber_simple_material(name, por):
                                   'energy_collector': True,
                                   'lambertian_material': True})
 
-								  
+
 def simple_reflector_twolayers(name, por_front, por_back):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por_front),
                                   'probability_of_absortion': constant_function(1 - por_front),
                                   'transmitance': constant_function(0),
                                   'specular_material': True,
                                   'energy_collector': False},
-                                 {'probability_of_reflexion': constant_function(por_back),
-                                  'probability_of_absortion': constant_function(1 - por_back),
-                                  'transmitance': constant_function(0),
-                                  'specular_material': True,
-                                  'energy_collector': False})
-								  
-								  
+                           {'probability_of_reflexion': constant_function(por_back),
+                            'probability_of_absortion': constant_function(1 - por_back),
+                            'transmitance': constant_function(0),
+                            'specular_material': True,
+                            'energy_collector': False})
+
+
 def create_absorber_lambertian_layer(name, por):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(1 - por),
@@ -487,15 +498,15 @@ def create_absorber_TW_model_layer(name, por, b_constant, c_constant):
                                   'TW_model': True,
                                   'b_constant': b_constant,
                                   'c_constant': c_constant})
-								  
-								  
+
+
 def create_reflector_specular_layer(name, por):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(1 - por),
                                   'transmitance': constant_function(0),
                                   'energy_collector': False,
                                   'specular_material': True})
-								  
+
 
 def create_reflector_onegaussian_layer(name, por, sigma):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
@@ -505,7 +516,7 @@ def create_reflector_onegaussian_layer(name, por, sigma):
                                   'specular_material': True,
                                   'sigma_1': sigma})
 
-								  
+
 def create_reflector_twogaussian_layer(name, por, sigma_1, sigma_2, k):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(1 - por),
@@ -514,12 +525,13 @@ def create_reflector_twogaussian_layer(name, por, sigma_1, sigma_2, k):
                                   'specular_material': True,
                                   'sigma_1': sigma_1,
                                   'sigma_2': sigma_2,
-                                  'k' : k})
+                                  'k': k})
 
-								  
+
 def create_two_layers_material(name, layer_front, layer_back):
     SurfaceMaterial.create(name, Material.by_name[layer_front].properties,
-	                             Material.by_name[layer_back].properties)
+                           Material.by_name[layer_back].properties)
+
 
 # endregion
 
@@ -673,84 +685,82 @@ class BuieDistribution:
     Solar Energy 79, 568-570. 5.2
     """
 
-		
     def __init__(self, CircumSolarRatio):
         self.CSR = CircumSolarRatio
-        self.SD = 4.65 # Solar Disk in mrad
-        self.SS = 43.6 # Solar Size in mrad
-        self.aa1 = BuieDistribution.a1(self.CSR,self.SD) # normalization constant for the disk region
-        self.aa2 = BuieDistribution.a2(self.CSR,self.SD,self.SS) # normalization constant for the circumsolar region
-        self.CDF_Disk_Region = BuieDistribution.CDF_disk_region(self.aa1,self.SD) # Buie distribution for the disk region
+        self.SD = 4.65  # Solar Disk in mrad
+        self.SS = 43.6  # Solar Size in mrad
+        self.aa1 = BuieDistribution.a1(self.CSR, self.SD)  # normalization constant for the disk region
+        self.aa2 = BuieDistribution.a2(self.CSR, self.SD, self.SS)  # normalization constant for the circumsolar region
+        self.CDF_Disk_Region = BuieDistribution.CDF_disk_region(self.aa1,
+                                                                self.SD)  # Buie distribution for the disk region
 
-		
     def angle_distribution(self, random_number):
         u = random_number
         if u < 1.0 - self.CSR:
-            th_u = BuieDistribution.th_solar_disk_region(u,self.aa1,self.SD)/1000.0*180.0/np.pi
+            th_u = BuieDistribution.th_solar_disk_region(u, self.aa1, self.SD) / 1000.0 * 180.0 / np.pi
         else:
-            th_u = BuieDistribution.th_circumsolar_region(u,self.CSR,self.SD,self.SS,self.aa2)/1000.0*180.0/np.pi 	    
+            th_u = BuieDistribution.th_circumsolar_region(u, self.CSR, self.SD, self.SS,
+                                                          self.aa2) / 1000.0 * 180.0 / np.pi
         return th_u
 
-				
     @staticmethod
     def solar_disk__density_distribution(angle):
-        return 2.0 *np.pi * np.cos(0.326*angle) / np.cos(0.305*angle) * angle
-		
-		
+        return 2.0 * np.pi * np.cos(0.326 * angle) / np.cos(0.305 * angle) * angle
+
     @staticmethod
-    def circumsolar__density_distribution(angle,CSR):
-        gamma = 2.2 * np.log(0.52 * CSR) * CSR **(0.43) - 0.1
+    def circumsolar__density_distribution(angle, CSR):
+        gamma = 2.2 * np.log(0.52 * CSR) * CSR ** (0.43) - 0.1
         kappa = 0.9 * np.log(13.5 * CSR) * CSR ** (-0.3)
         return 2.0 * np.pi * np.exp(kappa) * angle ** (gamma + 1.0)
 
-    @staticmethod		
-    def a1(CSR,SD):
-        """ Parameter a1 needed for the normalization of the probability distribution in thedisk region"""    
+    @staticmethod
+    def a1(CSR, SD):
+        """ Parameter a1 needed for the normalization of the probability distribution in thedisk region"""
         f = BuieDistribution.solar_disk__density_distribution
-        th = np.arange(0.0,SD,0.001)
+        th = np.arange(0.0, SD, 0.001)
         f_th = np.vectorize(f)
-        aa1 = ( 1.0 - CSR ) / np.trapz(f_th(th), dx = 0.001)		
+        aa1 = (1.0 - CSR) / np.trapz(f_th(th), dx=0.001)
         return aa1
-		
-    @staticmethod		
-    def a2(CSR,SD,SS):
-        """ Parameter a2 needed for the normalization of the probability distribution in the circumsolar region"""    
+
+    @staticmethod
+    def a2(CSR, SD, SS):
+        """ Parameter a2 needed for the normalization of the probability distribution in the circumsolar region"""
         f = BuieDistribution.circumsolar__density_distribution
-        th = np.arange(SD,SS,0.001)
+        th = np.arange(SD, SS, 0.001)
         f_th = np.vectorize(f)
-        aa2 = CSR / np.trapz(f_th(th,CSR), dx = 0.001)		
+        aa2 = CSR / np.trapz(f_th(th, CSR), dx=0.001)
         return aa2
-		
-    @staticmethod	
-    def CDF_disk_region(a1,SD):
+
+    @staticmethod
+    def CDF_disk_region(a1, SD):
         """ Cumulative Distribution Function in the solar disk region"""
         f = BuieDistribution.solar_disk__density_distribution
-        th = np.arange(0.0,SD,0.001)
+        th = np.arange(0.0, SD, 0.001)
         f_th = np.vectorize(f)
         cumulative = np.cumsum(f_th(th))
-        CDF = (th, a1 * cumulative / 1000.0)			
+        CDF = (th, a1 * cumulative / 1000.0)
         return CDF
-		
+
     @staticmethod
-    def th_solar_disk_region(u,a1,SD):
+    def th_solar_disk_region(u, a1, SD):
         """ Random angle based on the probability distribution in the circumsolar region"""
-        CDF = BuieDistribution.CDF_disk_region(a1,SD)
+        CDF = BuieDistribution.CDF_disk_region(a1, SD)
         idx = (np.abs(CDF[1] - u)).argmin()
-        return  CDF[0][idx]	
-    
+        return CDF[0][idx]
+
     @staticmethod
-    def th_circumsolar_region(u,CSR,SD,SS,aa2):
+    def th_circumsolar_region(u, CSR, SD, SS, aa2):
         """ Random angle based on the CDF in the circumsolar region"""
-        gamma = 2.2 * np.log(0.52 * CSR) * CSR **(0.43) - 0.1
+        gamma = 2.2 * np.log(0.52 * CSR) * CSR ** (0.43) - 0.1
         kappa = 0.9 * np.log(13.5 * CSR) * CSR ** (-0.3)
-        u_csr = (u - 1.0) + CSR # Since CSR-CDF starts at zero
-        f1 = u_csr  * (gamma + 2.0) / (aa2 * 2 * np.pi * np.exp(kappa))
+        u_csr = (u - 1.0) + CSR  # Since CSR-CDF starts at zero
+        f1 = u_csr * (gamma + 2.0) / (aa2 * 2 * np.pi * np.exp(kappa))
         f2 = SD ** (gamma + 2.0)
         exp = (1.0 / (gamma + 2.0))
         th_u = np.power(f1 + f2, exp)
-        return  th_u
-        		
-		
+        return th_u
+
+
 class Ray:
     """
     Class used to model a sun ray and its polarization vector. It keeps information of the path it 
@@ -811,13 +821,17 @@ class Ray:
         if face in self.scene.materials:
             # face is active
             material = self.scene.materials[face]
-            polarization_vector, direction, phenomenon = material.change_of_direction(self, normal)# TODO polarization_vector 
+            polarization_vector, direction, phenomenon = material.change_of_direction(self,
+                                                                                      normal)
+            # TODO polarization_vector
         else:
             # face is not active
             point_plus_delta = current_point + current_direction * self.scene.epsilon
             next_solid = self.scene.solid_at_point(point_plus_delta)
             nearby_material = self.scene.materials.get(next_solid, vacuum_medium)
-            polarization_vector, direction, phenomenon = nearby_material.change_of_direction(self, normal)# TODO polarization_vector
+            polarization_vector, direction, phenomenon = nearby_material.change_of_direction(self,
+                                                                                             normal)
+            # TODO polarization_vector
         next_material = None
         if phenomenon == 'Refraction':
             # noinspection PyUnboundLocalVariable
@@ -826,7 +840,7 @@ class Ray:
             next_material = current_material
         elif phenomenon == 'Absortion':
             next_material = None
-        elif phenomenon == 'Got_Absorbed': # it is needed? Review
+        elif phenomenon == 'Got_Absorbed':  # it is needed? Review
             next_material = None
         return polarization_vector, direction, next_material, phenomenon
 
@@ -843,7 +857,8 @@ class Ray:
                     d = point_1.distanceToPoint(point_2)
                     self.energy = self.energy * np.exp(- k * d / 1000.0)
             if 'extinction_coefficient' in self.scene.materials[actual_solid].properties:
-                k = self.scene.materials[actual_solid].properties['extinction_coefficient'](self.wavelength)*4*np.pi/self.wavelength
+                k = self.scene.materials[actual_solid].properties['extinction_coefficient'](
+                    self.wavelength) * 4 * np.pi / self.wavelength
                 if k > 0:
                     d = point_1.distanceToPoint(point_2)
                     self.energy = self.energy * np.exp(- k * d / 1000.0)
@@ -862,7 +877,7 @@ class Ray:
                 self.finished = True
                 self.got_absorbed = False
                 break
-            polarization_vector, vector, material, phenomenon = self.next_direction(face) # TODO polarization_vector
+            polarization_vector, vector, material, phenomenon = self.next_direction(face)  # TODO polarization_vector
             self.directions.append(vector)
             self.materials.append(material)
             self.polarization_vectors.append(polarization_vector)
@@ -888,8 +903,8 @@ class LightSource:
     The polarization_vector is a Base.Vector for polarized light. If is not given unpolarized light is generated.
     """
 
-    def __init__(self, scene, emitting_region, light_spectrum, initial_energy, direction_distribution = None,
-                 polarization_vector = None):
+    def __init__(self, scene, emitting_region, light_spectrum, initial_energy, direction_distribution=None,
+                 polarization_vector=None):
         self.scene = scene
         self.emitting_region = emitting_region
         self.light_spectrum = light_spectrum
@@ -899,26 +914,26 @@ class LightSource:
 
     def emit_ray(self):
         point = self.emitting_region.random_point()
-        main_direction = self.emitting_region.main_direction # emitting main direction
+        main_direction = self.emitting_region.main_direction  # emitting main direction
         direction = main_direction
-        if self.direction_distribution is not None: # main direction has a distribution
+        if self.direction_distribution is not None:  # main direction has a distribution
             theta = self.direction_distribution.angle_distribution(myrandom())
             phi = 360.0 * myrandom()
             direction = dispersion_from_main_direction(main_direction, theta, phi)
-            if self.polarization_vector: # single polarization vector is active
-                polarization_vector = dispersion_polarization(main_direction,self.polarization_vector,theta,phi)
-        if self.polarization_vector is None: # unpolarization is active 
-            polarization_vector = random_polarization(direction) # random polarization from light direction		  
+            if self.polarization_vector:  # single polarization vector is active
+                polarization_vector = dispersion_polarization(main_direction, self.polarization_vector, theta, phi)
+        if self.polarization_vector is None:  # unpolarization is active
+            polarization_vector = random_polarization(direction)  # random polarization from light direction
         if np.isscalar(self.light_spectrum):
-            wavelength = self.light_spectrum # experiment with a single wavelength (nanometers)
+            wavelength = self.light_spectrum  # experiment with a single wavelength (nanometers)
         else:
-            wavelength = pick_random_from_CDF(self.light_spectrum) # light spectrum is active (nanometers)
-        ray = Ray(self.scene,point,direction,{'wavelength':wavelength,
-                                         'energy':self.initial_energy,
-                                         'polarization_vector': polarization_vector})
-        return ray		
+            wavelength = pick_random_from_CDF(self.light_spectrum)  # light spectrum is active (nanometers)
+        ray = Ray(self.scene, point, direction, {'wavelength': wavelength,
+                                                 'energy': self.initial_energy,
+                                                 'polarization_vector': polarization_vector})
+        return ray
 
-		
+
 class Experiment:
     """
     Sets up and runs and experiment in a given scene with a given light source.
@@ -926,14 +941,14 @@ class Experiment:
     If show_in_doc is given, the rays could be drawn in the FreeCAD active document (using the run function).
     """
 
-    def __init__(self, scene, light_source, number_of_rays, show_in_doc = None):
+    def __init__(self, scene, light_source, number_of_rays, show_in_doc=None):
         self.scene = scene
         self.light_source = light_source
         if show_in_doc:
             self.light_source.emitting_region.add_to_document(show_in_doc)
         self.number_of_rays = number_of_rays
         self.captured_energy = 0
-        random_congruential(time.time()) # TODO: change location
+        random_congruential(time.time())  # TODO: change location
 
     def run(self, show_in_doc=None):
         for _ in xrange(self.number_of_rays):
