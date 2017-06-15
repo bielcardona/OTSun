@@ -8,6 +8,7 @@ import numpy as np
 import os
 import raytrace
 import time
+import multiprocessing
 
 # Alias for active Document
 doc = FreeCAD.newDocument()
@@ -65,7 +66,7 @@ raytrace.create_wavelength_volume_material("Glass1", file_BK7)
 sel = doc.Objects
 current_scene = raytrace.Scene(sel)
 phi_ini = 0
-phi_end = 0
+phi_end = 0.3
 phi_end = phi_end + 0.00001
 phi_step = 0.1
 theta_ini = 0
@@ -77,17 +78,46 @@ aperture_collector = 100. * 100.
 data_file_spectrum = './ASTMG173-direct.txt'
 light_spectrum = raytrace.create_CDF_from_PDF(data_file_spectrum)
 outfile = open('./kk.txt', 'w')
+
+def make_run(ph,th):
+    main_direction = raytrace.polar_to_cartesian(ph, th) * -1.0  # Sun direction vector
+    emitting_region = raytrace.SunWindow(current_scene, main_direction)
+    l_s = raytrace.LightSource(current_scene, emitting_region, light_spectrum, 1.0)
+    exp = raytrace.Experiment(current_scene, l_s, number_photons)
+    exp.run()
+    efficiency = (exp.captured_energy / aperture_collector) / (
+    exp.number_of_rays / exp.light_source.emitting_region.aperture)
+    t1 = time.time()
+    print ("%s %s %s %s" % (ph, th, efficiency, t1 - t0))
+    outfile.write("%s %s %s %s\n" % (ph, th, efficiency, t1-t0))
+
 t0 = time.time()
+
+print "Sequential run"
+
 for ph in np.arange(phi_ini, phi_end, phi_step):
     for th in np.arange(theta_ini, theta_end, theta_step):
-        main_direction = raytrace.polar_to_cartesian(ph, th) * -1.0 # Sun direction vector
-        emitting_region = raytrace.SunWindow(current_scene,main_direction)
-        l_s = raytrace.LightSource(current_scene, emitting_region, light_spectrum, 1.0)
-        exp = raytrace.Experiment(current_scene, l_s, number_photons)
-        exp.run()
-        efficiency = (exp.captured_energy /aperture_collector ) / (exp.number_of_rays/exp.light_source.emitting_region.aperture)
-        t1 = time.time()
-        print ("%s %s %s %s" % (ph, th, efficiency, t1-t0)+ '\n')
-        outfile.write("%s %s %s %s" % (ph, th, efficiency, t1-t0)+ '\n')
+        #p = multiprocessing.Process(target=make_run, args=(ph,th,))
+        #jobs.append(p)
+        #p.start()
+        make_run(ph,th)
+
+print "Time: %s" % (time.time()-t0)
+
+t0 = time.time()
+
+print "Parallel run"
+
+print "CPUs %d" % multiprocessing.cpu_count()
+jobs = []
+for ph in np.arange(phi_ini, phi_end, phi_step):
+    for th in np.arange(theta_ini, theta_end, theta_step):
+        p = multiprocessing.Process(target=make_run, args=(ph,th,))
+        jobs.append(p)
+        p.start()
+        #make_run(ph, th)
+for p in jobs:
+    p.join()
+print "Time: %s" % (time.time() - t0)
 
 outfile.close()
