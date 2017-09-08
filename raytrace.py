@@ -359,13 +359,12 @@ def create_simple_volume_material(name, index_of_refraction, attenuation_coeffic
                                  'attenuation_coefficient': constant_function(attenuation_coefficient)})
 
 
-def create_wavelength_volume_material(name, file_material):
-    # file_material with three columns: wavelenth in nm, real(index of refraction), 
-    # imaginary(index of refraction) in nm-1
-    data_material = np.loadtxt(file_material, usecols=(0, 1, 2))
-    wavelength_values = data_material[:, 0]
-    n_values = data_material[:, 1]
-    k_values = data_material[:, 2]
+def create_wavelength_volume_material(name, file_index_of_refraction):
+    # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
+    data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
+    wavelength_values = data_refraction[:, 0]
+    n_values = data_refraction[:, 1]
+    k_values = data_refraction[:, 2]
     VolumeMaterial.create(name, {'index_of_refraction': tabulated_function(wavelength_values, n_values),
                                  'extinction_coefficient': tabulated_function(wavelength_values, k_values)})
 
@@ -382,7 +381,7 @@ class SurfaceMaterial(Material, object):
         describing the material. At least, the following must be provided:
         'probability_of_reflexion': probability that a photon gets reflected, as a function of its wavelength.
         'probability_of_absortion': probability that a photon gets absorbed, as a function of its wavelength.
-        'transmitance': probability that a photon passes through the material, as a function of its wavelength.
+        'probability_of_transmitance': probability that a photon passes through the material, as a function of its wavelength.
         """
         super(SurfaceMaterial, self).__init__(name, properties_front)
         self.properties_front = properties_front
@@ -401,7 +400,7 @@ class SurfaceMaterial(Material, object):
         if 'TW_model' in properties:
             b_constant = properties['b_constant']
             c_constant = properties['c_constant']
-            absortion_ratio = TW_absorptance_ratio(normal, b_constant, c_constant, ray.directions[-1])
+            absortion_ratio = TW_absorptance_ratio(normal_vector, b_constant, c_constant, ray.directions[-1])
             absortion = properties['probability_of_absortion'](ray.properties['wavelength']) * absortion_ratio
             por = 1.0 - absortion
             probabilities = [por, absortion, 0] # Here I assume no transmitance
@@ -431,23 +430,20 @@ class SurfaceMaterial(Material, object):
 
     def change_of_direction_by_reflexion(self, ray, normal_vector, properties):
         if 'specular_material' in properties:
-            reflected = reflexion(ray.directions[-1], normal, ray.polarization_vectors[-1])
+            reflected = reflexion(ray.directions[-1], normal_vector, ray.polarization_vectors[-1])
             if 'sigma_1' in properties:
                 sigma_1 = properties['sigma_1']
                 if 'sigma_2' in properties:
                     sigma_2 = properties['sigma_2']
                     k = properties['k']
-                    return double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k)
-                return single_gaussian_dispersion(normal, reflected, sigma_1)
+                    return double_gaussian_dispersion(normal_vector, reflected, sigma_1, sigma_2, k)
+                return single_gaussian_dispersion(normal_vector, reflected, sigma_1)
             return reflected
         if 'lambertian_material' in properties:
-            reflected = lambertian_reflexion(normal)
+            reflected = lambertian_reflexion(normal_vector)
             polarization_vector = random_polarization(
                 reflected[0])  # generates random polarization for lambertian reflection
             return polarization_vector, reflected[0], reflected[1]
-        if 'dispersion_factor' in properties:
-            reflected = reflected + myrandom()
-            return reflected
 
     def change_of_direction_by_transmitance(self, ray, normal_vector, properties):
         pass
@@ -456,10 +452,10 @@ class SurfaceMaterial(Material, object):
     def change_of_direction(self, ray, normal_vector):
 
         if ray.directions[-1].dot(normal_vector) < 0:  # Ray intercepted on the frontside of the surface
-            normal = normal_vector
+            normal = normal_vector  # not used
             properties = self.properties_front
         else:  # Ray intercepted on the backside of the surface
-            normal = normal_vector * (-1.0)
+            normal = normal_vector * (-1.0)  # not used
             properties = self.properties_back
 
         phenomenon = self.decide_phenomenon(ray, normal_vector, properties)
@@ -505,11 +501,11 @@ def simple_reflector_twolayers(name, por_front, por_back):
                                   'probability_of_transmitance': constant_function(0),
                                   'specular_material': True,
                                   'energy_collector': False},
-                           {'probability_of_reflexion': constant_function(por_back),
-                            'probability_of_absortion': constant_function(1 - por_back),
-                            'probability_of_transmitance': constant_function(0),
-                            'specular_material': True,
-                            'energy_collector': False})
+                                 {'probability_of_reflexion': constant_function(por_back),
+                                  'probability_of_absortion': constant_function(1 - por_back),
+                                  'probability_of_transmitance': constant_function(0),
+                                  'specular_material': True,
+                                  'energy_collector': False})
 
 
 def create_absorber_lambertian_layer(name, por):
@@ -883,16 +879,16 @@ class Ray:
         actual_solid = self.scene.solid_at_point(middle_point)
         if actual_solid:
             if 'attenuation_coefficient' in self.scene.materials[actual_solid].properties:
-                k = self.scene.materials[actual_solid].properties['attenuation_coefficient'](self.wavelength)
-                if k > 0:
+                alpha = self.scene.materials[actual_solid].properties['attenuation_coefficient'](self.wavelength)
+                if alpha > 0: # is it needed?
                     d = point_1.distanceToPoint(point_2)
-                    self.energy = self.energy * np.exp(- k * d / 1000.0)
+                    self.energy = self.energy * np.exp(- alpha * d / 1000.0)
             if 'extinction_coefficient' in self.scene.materials[actual_solid].properties:
-                k = self.scene.materials[actual_solid].properties['extinction_coefficient'](
-                    self.wavelength) * 4 * np.pi / self.wavelength
-                if k > 0:
+                alpha = self.scene.materials[actual_solid].properties['extinction_coefficient'](
+                    self.wavelength) * 4.0 * np.pi / (self.wavelength / 1000000000.0)
+                if alpha > 0: # is it needed?
                     d = point_1.distanceToPoint(point_2)
-                    self.energy = self.energy * np.exp(- k * d / 1000.0)
+                    self.energy = self.energy * np.exp(- alpha * d / 1000.0)
 
     def run(self, max_hops=20):
         """
