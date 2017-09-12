@@ -163,6 +163,30 @@ def refraction(incident, normal, n1, n2, polarization_vector):
             return perp_v, refracted_direction, "Refraction"
         else:
             return para_v, refracted_direction, "Refraction"
+			
+
+def shure_refraction(incident, normal, n1, n2, polarization_vector, perpendicular_polarized):
+    """
+    Implementation of Snell's law of refraction
+    """
+    # https://en.wikipedia.org/wiki/Snell's_law#Vector_form
+    mynormal = normal * 1.0
+    if mynormal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
+        # noinspection PyAugmentAssignment
+        mynormal = mynormal * (-1.0)
+    r = n1 / n2
+    c1 = - mynormal.dot(incident)  # cos (incidence_angle) 
+    c2sq = 1.0 - r * r * (1.0 - c1 * c1)  # cos (refracted_angle) ** 2
+    c2 = c2sq ** 0.5  # cos (refracted_angle)
+    refracted_direction = incident * r + mynormal * (r * c1 - c2)
+    perp_v = refracted_direction.cross(mynormal)
+    if perp_v == Base.Vector(0, 0, 0):  # to avoid null vector at mynormal and incident parallel vectors
+        perp_v = Base.Vector(1, 0, 0)    
+    para_v = refracted_direction.cross(perp_v)
+    if perpendicular_polarized:
+        return perp_v, refracted_direction, "Refraction"			
+    else:
+	    return para_v, refracted_direction, "Refraction"
 
 
 def polar_to_cartesian(phi, theta):
@@ -395,8 +419,10 @@ class SurfaceMaterial(Material, object):
     def create(cls, name, properties_front, properties_back=None):
         _ = cls(name, properties_front, properties_back)
 
-    def decide_phenomenon(self, ray, normal_vector, properties):
+    def decide_phenomenon(self, ray, normal_vector, properties, nearby_material):
         phenomena = ["Reflexion", "Absortion", "Transmitance"]
+        polarization_vector = ray.polarization_vectors[-1]
+        perpendicular_polarized = False
         if 'TW_model' in properties:
             b_constant = properties['b_constant']
             c_constant = properties['c_constant']
@@ -404,6 +430,8 @@ class SurfaceMaterial(Material, object):
             absortion = properties['probability_of_absortion'](ray.properties['wavelength']) * absortion_ratio
             por = 1.0 - absortion
             probabilities = [por, absortion, 0] # Here I assume no transmitance
+        if 'Matrix_polarized_reflectance_coating' in properties:  # polarized_coating_layer
+            pass # TODO Ramon 
         else:
             try:
                 por = properties['probability_of_reflexion'](ray.properties['wavelength'])
@@ -420,7 +448,7 @@ class SurfaceMaterial(Material, object):
 
             probabilities = [por, poa, pot]
         phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
-        return phenomenon
+        return phenomenon, polarization_vector, perpendicular_polarized
 
     def change_of_direction_by_absortion(self, ray, normal_vector, properties):
         if properties['energy_collector']:
@@ -444,12 +472,20 @@ class SurfaceMaterial(Material, object):
             polarization_vector = random_polarization(
                 reflected[0])  # generates random polarization for lambertian reflection
             return polarization_vector, reflected[0], reflected[1]
+        if 'Matrix_polarized_reflectance_coating' in properties: # polarized_coating_layer
+            pass # TODO Ramon
 
-    def change_of_direction_by_transmitance(self, ray, normal_vector, properties):
-        pass
+    def change_of_direction_by_transmitance(self, ray, normal_vector, nearby_material, perpendicular_polarized):
+        n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)  
+        n2 = nearby_material.properties['index_of_refraction'](ray.wavelength)
+        polarization_vector, direction, phenomenon = shure_refraction(ray.directions[-1], normal_vector, n1, n2,
+                                                                ray.polarization_vectors[-1],
+                                                                perpendicular_polarized)
+        ray.current_medium = nearby_material
+        return polarization_vector, direction, phenomenon
 
 
-    def change_of_direction(self, ray, normal_vector):
+    def change_of_direction(self, ray, normal_vector, nearby_material):
 
         if ray.directions[-1].dot(normal_vector) < 0:  # Ray intercepted on the frontside of the surface
             normal = normal_vector  # not used
@@ -458,14 +494,17 @@ class SurfaceMaterial(Material, object):
             normal = normal_vector * (-1.0)  # not used
             properties = self.properties_back
 
-        phenomenon = self.decide_phenomenon(ray, normal_vector, properties)
+        results = self.decide_phenomenon(ray, normal_vector, properties, nearby_material)
+        phenomenon = results[0]
+        ray.polarization_vectors[-1] = results[1]
+        perpendicular_polarized = results[2] # True or False
 
         if phenomenon == 'Reflexion':
             return self.change_of_direction_by_reflexion(ray, normal_vector, properties)
         elif phenomenon == 'Absortion':
             return self.change_of_direction_by_absortion(ray, normal_vector, properties)
         elif phenomenon == 'Transmitance':
-            return self.change_of_direction_by_transmitance(ray, normal_vector, properties)
+            return self.change_of_direction_by_transmitance(ray, normal_vector, nearby_material, perpendicular_polarized)
 
 
     def scatter_direction(self, ray, direction):
@@ -553,6 +592,15 @@ def create_reflector_twogaussian_layer(name, por, sigma_1, sigma_2, k):
                                   'sigma_1': sigma_1,
                                   'sigma_2': sigma_2,
                                   'k': k})
+								  
+
+def create_polarized_coating_transparent_layer(name, coating_material):
+    # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
+    # the values in coating_material should be in the corresponding order columns
+    data_material = np.loadtxt(coating_material, usecols=(0,1,2,3))
+    SurfaceMaterial.create(name, {'Matrix_polarized_reflectance_coating': matrix_reflectance(data_material),
+                                  'probability_of_absortion': constant_function(0),
+                                  'energy_collector': False})
 
 
 def create_two_layers_material(name, layer_front, layer_back):
@@ -848,8 +896,11 @@ class Ray:
         if face in self.scene.materials:
             # face is active
             material = self.scene.materials[face]
-            polarization_vector, direction, phenomenon = material.change_of_direction(self,
-                                                                                      normal)
+            point_plus_delta = current_point + current_direction * self.scene.epsilon
+            next_solid = self.scene.solid_at_point(point_plus_delta)
+            nearby_material = self.scene.materials.get(next_solid, vacuum_medium)
+            results = material.change_of_direction(self,normal,nearby_material)			
+            polarization_vector, direction, phenomenon = results[0], results[1], results[2]
             # TODO polarization_vector
         else:
             # face is not active
