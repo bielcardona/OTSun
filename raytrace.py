@@ -165,6 +165,53 @@ def refraction(incident, normal, n1, n2, polarization_vector):
             return para_v, refracted_direction, "Refraction"
 			
 
+def calculate_probabilities_polarizaton_coating(incident, normal, n1, n2, polarization_vector, Matrix_Reflectance,wavelength):
+    # returns probability of Reflexion, probability of Absortion, probability of Transmitance, polarization_vector
+    mynormal = normal * 1.0
+    backside = False
+    if mynormal.dot(incident) > 0: # Ray intercepted on the backside of the surface
+        # noinspection PyAugmentAssignment
+        mynormal = mynormal * (-1.0)
+        backside = True
+    r = n1 / n2
+    c1 = - mynormal.dot(incident) # cos (incidence_angle) 
+    c2sq = 1.0 - r * r * (1.0 - c1 * c1) # cos (refracted_angle) ** 2
+    if c2sq < 0: # total internal reflection
+        return 1, 0, 0, polarization_vector
+    c2 = c2sq ** 0.5 # cos (refracted_angle)
+    normal_parallel_plane = incident.cross(mynormal) # normal vector of the parallel plane
+    if normal_parallel_plane == Base.Vector(0,0,0): # to avoid null vector at mynormal and incident parallel vectors
+        normal_parallel_plane = Base.Vector(1,0,0)
+    normal_parallel_plane.normalize()
+    normal_perpendicular_plane = normal_parallel_plane.cross(incident) # normal vector of the perpendicular plane 
+    # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
+    parallel_v = polarization_vector - normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+    parallel_component = parallel_v.Length
+    perpendicular_v = polarization_vector - normal_perpendicular_plane * polarization_vector.dot(normal_perpendicular_plane)
+    perpendicular_component = perpendicular_v.Length
+    ref_per = perpendicular_component /(perpendicular_component + parallel_component)
+    perpendicular_polarized = False
+    # https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
+
+    if backside == True:  # Ray intercepted on the backside of the surface
+        angle = np.arccos(c2) * 180.0 / np.pi	
+    else:
+        angle = np.arccos(c1) * 180.0 / np.pi	    
+    Matrix_R = Matrix_Reflectance(angle,wavelength)
+    if myrandom() < ref_per:
+        R = calculate_reflectance(Matrix_R, angle, wavelength)[1] # reflectance for s-polarized (perpendicular) light
+        perpendicular_polarized = True
+        polarization_vector = perpendicular_v.normalize()
+    else:
+        angle = np.arccos(c1) * 180.0 / np.pi
+        R = calculate_reflectance(Matrix_R, angle, wavelength)[3]  # reflectance for p-polarized (parallel) light
+        polarization_vector = parallel_v.normalize()
+    if myrandom() < R: # ray reflected    
+        return 1, 0, 0, polarization_vector, perpendicular_polarized
+    else: # ray refracted		
+        return 0, 0, 1, polarization_vector, perpendicular_polarized
+			
+			
 def shure_refraction(incident, normal, n1, n2, polarization_vector, perpendicular_polarized):
     """
     Implementation of Snell's law of refraction
@@ -319,6 +366,78 @@ def pick_random_from_CDF(cumulative_distribution_function):
 
 
 # ---
+# Helper function for reflectance depending on the wavelength for coatings layers.
+# ---	
+
+def matrix_reflectance(data_material):
+    """
+    data_material: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
+    the values should be in the corresponding order columns
+	We generate a matrix for the interpolation depending on the x=angle and y=wavelength values (lambda values) 
+    """
+    steps = np.diff(data_material[:,1])
+    a = min(steps[steps>0])
+    steps = np.diff(data_material[:,0])
+    w = min(steps[steps>0])
+    return lambda x,y: [row for row in data_material if (x+a > row[1] and x-a < row[1]) and (y+w > row[0] and y-w < row[0])]
+
+
+def calculate_reflectance(matrix_reflectance, angle, wavelength):
+    """
+    data_array: values needed for the interpolation 
+	We generate an interpolation to find the perpendicular and parallel reflectance depending on the angle and wavelength
+    """
+    R_Matrix = np.mat(matrix_reflectance)
+    if len(R_Matrix) == 1: # interpolation is not needed
+	    return 'R_per',R_Matrix[0,2],'R_par',R_Matrix[0,3]
+
+
+    if len(R_Matrix) == 2: # simple interpolation
+        if R_Matrix[0,0] == R_Matrix[1,0]: # identical wavelengths; hence angle interpolation (column 1)
+            xvalues = [R_Matrix[0,1],R_Matrix[1,1]]
+            yvalues = [R_Matrix[0,2],R_Matrix[1,2]]
+            R_per = np.interp(angle, xvalues, yvalues)
+
+            xvalues = [R_Matrix[0,1],R_Matrix[1,1]]
+            yvalues = [R_Matrix[0,3],R_Matrix[1,3]]
+            R_par = np.interp(angle, xvalues, yvalues)
+            return 'R_per',R_per,'R_par',R_par
+			
+        if R_Matrix[0,1] == R_Matrix[1,1]: # identical angles; hence wavelength interpolation (column 0)
+            xvalues = [R_Matrix[0,0],R_Matrix[1,0]]
+            yvalues = [R_Matrix[0,2],R_Matrix[1,2]]
+            R_per = np.interp(wavelength, xvalues, yvalues)
+
+            xvalues = [R_Matrix[0,0],R_Matrix[1,0]]
+            yvalues = [R_Matrix[0,3],R_Matrix[1,3]]
+            R_par = np.interp(wavelength, xvalues, yvalues)
+            return 'R_per',R_per,'R_par',R_par
+
+			
+    if len(R_Matrix) == 4: # double interpolation
+        xvalues = [R_Matrix[0,1],R_Matrix[1,1]]
+        yvalues = [R_Matrix[0,2],R_Matrix[1,2]]
+        R1 = np.interp(angle, xvalues, yvalues)
+        xvalues = [R_Matrix[2,1],R_Matrix[3,1]]
+        yvalues = [R_Matrix[2,2],R_Matrix[3,2]]
+        R2 = np.interp(angle, xvalues, yvalues)
+        xvalues = [R_Matrix[0,0],R_Matrix[3,0]]
+        yvalues = [R1,R2]
+        R_per = np.interp(wavelength, xvalues, yvalues)
+        
+        xvalues = [R_Matrix[0,1],R_Matrix[1,1]]
+        yvalues = [R_Matrix[0,3],R_Matrix[1,3]]
+        R1 = np.interp(angle, xvalues, yvalues)
+        xvalues = [R_Matrix[2,1],R_Matrix[3,1]]
+        yvalues = [R_Matrix[2,3],R_Matrix[3,3]]
+        R2 = np.interp(angle, xvalues, yvalues)
+        xvalues = [R_Matrix[0,0],R_Matrix[3,0]]
+        yvalues = [R1,R2]
+        R_par = np.interp(wavelength, xvalues, yvalues)
+        return 'R_per',R_per,'R_par',R_par
+	
+	
+# ---
 # Classes for materials
 # ---
 
@@ -431,7 +550,15 @@ class SurfaceMaterial(Material, object):
             por = 1.0 - absortion
             probabilities = [por, absortion, 0] # Here I assume no transmitance
         if 'Matrix_polarized_reflectance_coating' in properties:  # polarized_coating_layer
-            pass # TODO Ramon 
+            n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)  #  (ray.wavelength) is the same as (ray.properties['wavelength'])
+            n2 = nearby_material.properties['index_of_refraction'](ray.wavelength)		
+            Matrix_Reflectance = properties['Matrix_polarized_reflectance_coating']
+            results = calculate_probabilities_polarizaton_coating(ray.directions[-1], normal_vector, n1, n2,
+                                                                         ray.polarization_vectors[-1],
+                                                                         Matrix_Reflectance, ray.wavelength)
+            probabilities = [results[0], results[1], results[2]]
+            polarization_vector = results[3]
+            perpendicular_polarized = results[4] 
         else:
             try:
                 por = properties['probability_of_reflexion'](ray.properties['wavelength'])
@@ -473,7 +600,8 @@ class SurfaceMaterial(Material, object):
                 reflected[0])  # generates random polarization for lambertian reflection
             return polarization_vector, reflected[0], reflected[1]
         if 'Matrix_polarized_reflectance_coating' in properties: # polarized_coating_layer
-            pass # TODO Ramon
+            reflected = reflexion(ray.directions[-1], normal_vector, ray.polarization_vectors[-1])
+            return reflected
 
     def change_of_direction_by_transmitance(self, ray, normal_vector, nearby_material, perpendicular_polarized):
         n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)  
