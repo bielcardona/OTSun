@@ -511,6 +511,15 @@ def create_wavelength_volume_material(name, file_index_of_refraction):
     VolumeMaterial.create(name, {'index_of_refraction': tabulated_function(wavelength_values, n_values),
                                  'extinction_coefficient': tabulated_function(wavelength_values, k_values)})
 
+def create_PV_material(name, file_index_of_refraction):
+    # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
+    data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
+    wavelength_values = data_refraction[:, 0]
+    n_values = data_refraction[:, 1]
+    k_values = data_refraction[:, 2]
+    VolumeMaterial.create(name, {'index_of_refraction': tabulated_function(wavelength_values, n_values),
+                                 'extinction_coefficient': tabulated_function(wavelength_values, k_values),
+                                 'PV_material' : True})
 
 create_simple_volume_material("Vacuum", 1.0, 0.0)
 # noinspection PyNoneFunctionAssignment
@@ -982,6 +991,9 @@ class Ray:
         self.finished = False
         self.got_absorbed = False
         self.current_medium = vacuum_medium
+        self.PV_energy = 0.0
+        self.PV_values = []
+        self.in_PV = False
 
     def next_intersection(self):
         """
@@ -1087,7 +1099,21 @@ class Ray:
             self.directions.append(vector)
             self.materials.append(material)
             self.polarization_vectors.append(polarization_vector)
+            energy_before = self.energy
             self.update_energy()
+            point_1 = self.points[-1]
+            point_2 = self.points[-2]
+            middle_point = point_1.add(point_2) * 0.5
+            actual_solid = self.scene.solid_at_point(middle_point)
+            if actual_solid:
+                if 'PV_material' in self.scene.materials[actual_solid].properties:
+                    self.in_PV = True
+                    self.PV_energy = energy_before
+                    alpha = self.scene.materials[actual_solid].properties['extinction_coefficient'](
+                    self.wavelength) * 4.0 * np.pi / (self.wavelength / 1000000000.0)/1000.0 # mm-1
+                    self.PV_values.append((point_2.x,point_2.y,point_2.z,point_1.x,point_1.y,point_1.z,energy_before,self.energy,self.wavelength,alpha))
+            if self.energy < 0.0001: # needed for PV calculations
+                self.finished = True
             if phenomenon == 'Absortion':
                 self.finished = True
             if phenomenon == 'Got_Absorbed':
@@ -1164,3 +1190,12 @@ class Experiment:
                 ray.add_to_document(show_in_doc)
             if ray.got_absorbed:
                 self.captured_energy += ray.energy
+            if ray.in_PV:
+                self.PV_energy.append(ray.PV_energy)
+                self.PV_wavelength.append(ray.wavelength)
+                length = len(ray.PV_values)
+                for z in np.arange(0,length,1):
+                    self.PV_values.append(ray.PV_values[z])
+            else:
+                self.PV_energy.append(0.0)
+                self.PV_wavelength.append(ray.wavelength)
