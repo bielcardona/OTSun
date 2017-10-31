@@ -711,6 +711,14 @@ def create_reflector_specular_layer(name, por):
                                   'specular_material': True})
 
 
+def create_reflector_lambertian_layer(name, por):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
+                                  'probability_of_absortion': constant_function(1 - por),
+                                  'probability_of_transmitance': constant_function(0),
+                                  'energy_collector': False,
+                                  'lambertian_material': True})
+
+
 def create_reflector_onegaussian_layer(name, por, sigma):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(1 - por),
