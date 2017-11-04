@@ -1,3 +1,7 @@
+import sys
+sys.path.append("/usr/lib/freecad")
+sys.path.append("/usr/lib/freecad/lib")
+sys.path.append("/vagrant")
 # General modules
 
 import FreeCAD

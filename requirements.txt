@@ -1,0 +1,2 @@
+numpy==1.12
+# FreeCAD should also be installed manually
