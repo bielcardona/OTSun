@@ -1,0 +1,338 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Welcome to pySunScene’s documentation! &mdash; pySunScene 0.8 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="pySunScene 0.8 documentation" href="#" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="#">pySunScene 0.8 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="welcome-to-pysunscene-s-documentation">
+<h1>Welcome to pySunScene&#8217;s documentation!<a class="headerlink" href="#welcome-to-pysunscene-s-documentation" title="Permalink to this headline">¶</a></h1>
+<p>Contents:</p>
+<div class="toctree-wrapper compound">
+<ul class="simple">
+</ul>
+</div>
+<span class="target" id="module-raytrace"></span><p>Created on Fri Nov 25 15:10:31 2016</p>
+<dl class="class">
+<dt id="raytrace.BuieDistribution">
+<em class="property">class </em><tt class="descclassname">raytrace.</tt><tt class="descname">BuieDistribution</tt><big>(</big><em>CircumSolarRatio</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#BuieDistribution"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.BuieDistribution" title="Permalink to this definition">¶</a></dt>
+<dd><p>A distribution for the direct light from the sun according to the Buie model:
+Buie, D., 2005. Corrigendum to &#8220;The effective size of the solar cone for 
+solar concentrating systems&#8221; [Solar Energy 74 (2003) 417-427]. 
+Solar Energy 79, 568-570. 5.2</p>
+<dl class="staticmethod">
+<dt id="raytrace.BuieDistribution.CDF_disk_region">
+<em class="property">static </em><tt class="descname">CDF_disk_region</tt><big>(</big><em>a1</em>, <em>SD</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#BuieDistribution.CDF_disk_region"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.BuieDistribution.CDF_disk_region" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cumulative Distribution Function in the solar disk region</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="raytrace.BuieDistribution.a1">
+<em class="property">static </em><tt class="descname">a1</tt><big>(</big><em>CSR</em>, <em>SD</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#BuieDistribution.a1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.BuieDistribution.a1" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parameter a1 needed for the normalization of the probability distribution in thedisk region</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="raytrace.BuieDistribution.a2">
+<em class="property">static </em><tt class="descname">a2</tt><big>(</big><em>CSR</em>, <em>SD</em>, <em>SS</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#BuieDistribution.a2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.BuieDistribution.a2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parameter a2 needed for the normalization of the probability distribution in the circumsolar region</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="raytrace.BuieDistribution.th_circumsolar_region">
+<em class="property">static </em><tt class="descname">th_circumsolar_region</tt><big>(</big><em>u</em>, <em>CSR</em>, <em>SD</em>, <em>SS</em>, <em>aa2</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#BuieDistribution.th_circumsolar_region"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.BuieDistribution.th_circumsolar_region" title="Permalink to this definition">¶</a></dt>
+<dd><p>Random angle based on the CDF in the circumsolar region</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="raytrace.BuieDistribution.th_solar_disk_region">
+<em class="property">static </em><tt class="descname">th_solar_disk_region</tt><big>(</big><em>u</em>, <em>a1</em>, <em>SD</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#BuieDistribution.th_solar_disk_region"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.BuieDistribution.th_solar_disk_region" title="Permalink to this definition">¶</a></dt>
+<dd><p>Random angle based on the probability distribution in the circumsolar region</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="raytrace.Experiment">
+<em class="property">class </em><tt class="descclassname">raytrace.</tt><tt class="descname">Experiment</tt><big>(</big><em>scene</em>, <em>light_source</em>, <em>number_of_rays</em>, <em>show_in_doc=None</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#Experiment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.Experiment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets up and runs and experiment in a given scene with a given light source.
+If show_in_doc is given, the emitting region is drawn in the FreeCAD active document.
+If show_in_doc is given, the rays could be drawn in the FreeCAD active document (using the run function).</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="raytrace.LightSource">
+<em class="property">class </em><tt class="descclassname">raytrace.</tt><tt class="descname">LightSource</tt><big>(</big><em>scene</em>, <em>emitting_region</em>, <em>light_spectrum</em>, <em>initial_energy</em>, <em>direction_distribution=None</em>, <em>polarization_vector=None</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#LightSource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.LightSource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets up a light source with a given scene, a given emitting region and a given light spectrum.
+The emitting region must provide the main direction.
+Light spectrum could be: a constant value (for a single wavelength in nanometers), or a spectrum distribution.
+The distribution (dispersion) for the main direction is provided in &#8220;direction_distribution&#8221;.
+The polarization_vector is a Base.Vector for polarized light. If is not given unpolarized light is generated.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="raytrace.Material">
+<em class="property">class </em><tt class="descclassname">raytrace.</tt><tt class="descname">Material</tt><big>(</big><em>name</em>, <em>properties</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#Material"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.Material" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class used to represent materials and their physical properties</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="raytrace.Ray">
+<em class="property">class </em><tt class="descclassname">raytrace.</tt><tt class="descname">Ray</tt><big>(</big><em>scene</em>, <em>origin</em>, <em>direction</em>, <em>properties</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#Ray"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.Ray" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class used to model a sun ray and its polarization vector. It keeps information of the path it 
+describes as it interacts with the scene and its energy.</p>
+<dl class="method">
+<dt id="raytrace.Ray.next_direction">
+<tt class="descname">next_direction</tt><big>(</big><em>face</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#Ray.next_direction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.Ray.next_direction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the next direction of the ray as it interacts with the scene,
+the material where the ray will be travelling next and
+a string representing the physical phenomenon that took place</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="raytrace.Ray.next_intersection">
+<tt class="descname">next_intersection</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/raytrace.html#Ray.next_intersection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.Ray.next_intersection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the next intersection of the ray with the scene. 
+Returns a pair (point,face), where point is the point of intersection
+and face is the face that intersects.
+If no intersection is found, it returns a &#8220;point at infinity&#8221; and None.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="raytrace.Ray.run">
+<tt class="descname">run</tt><big>(</big><em>max_hops=20</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#Ray.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.Ray.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes a sun ray propagate until it gets absorbed, it exits the scene,
+or gets caught in multiple (&gt; max_hops) reflections.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="raytrace.Scene">
+<em class="property">class </em><tt class="descclassname">raytrace.</tt><tt class="descname">Scene</tt><big>(</big><em>objects</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#Scene"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.Scene" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class used to define the Scene. It encodes all the objects 
+that interfere with light rays.</p>
+<dl class="method">
+<dt id="raytrace.Scene.face_at_point">
+<tt class="descname">face_at_point</tt><big>(</big><em>point</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#Scene.face_at_point"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.Scene.face_at_point" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the face that a point is inside.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="raytrace.Scene.solid_at_point">
+<tt class="descname">solid_at_point</tt><big>(</big><em>point</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#Scene.solid_at_point"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.Scene.solid_at_point" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the solid that a point is inside.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="raytrace.SunWindow">
+<em class="property">class </em><tt class="descclassname">raytrace.</tt><tt class="descname">SunWindow</tt><big>(</big><em>scene</em>, <em>direction</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#SunWindow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.SunWindow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class used to define a sun window, defined as a rectangle in space such
+that the projection of the scene on the plane is enclosed in the rectangle,
+the rectangle has an increase of 10% in each length</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.TW_absorptance_ratio">
+<tt class="descclassname">raytrace.</tt><tt class="descname">TW_absorptance_ratio</tt><big>(</big><em>normal</em>, <em>b_constant</em>, <em>c_constant</em>, <em>incident</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#TW_absorptance_ratio"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.TW_absorptance_ratio" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of the angular Solar Absorptance model for selective absorber material.
+1 - b * (1/cos - 1) ** c
+Model based on the study:
+Tesfamichael, T., and Wäckelgard, E., 2000, “Angular Solar Absorptance and
+Incident Angle Modifier of Selective Absorbers for Solar Thermal Collectors,”
+Sol. Energy, 68, pp. 335–341.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.calculate_reflectance">
+<tt class="descclassname">raytrace.</tt><tt class="descname">calculate_reflectance</tt><big>(</big><em>matrix_reflectance</em>, <em>angle</em>, <em>wavelength</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#calculate_reflectance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.calculate_reflectance" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>data_array: values needed for the interpolation </dt>
+<dd>We generate an interpolation to find the perpendicular and parallel reflectance depending on the angle and wavelength</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.create_CDF_from_PDF">
+<tt class="descclassname">raytrace.</tt><tt class="descname">create_CDF_from_PDF</tt><big>(</big><em>data_file</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#create_CDF_from_PDF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.create_CDF_from_PDF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a Cumulative Distribution Function from Probability Density Function data file (x,y)
+data_file: x,y values
+output: x_CDF, y_CDF</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.double_gaussian_dispersion">
+<tt class="descclassname">raytrace.</tt><tt class="descname">double_gaussian_dispersion</tt><big>(</big><em>normal</em>, <em>reflected</em>, <em>sigma_1</em>, <em>sigma_2</em>, <em>k</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#double_gaussian_dispersion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.double_gaussian_dispersion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of double gaussian dispersion based on the ideal reflected direction</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.lambertian_reflexion">
+<tt class="descclassname">raytrace.</tt><tt class="descname">lambertian_reflexion</tt><big>(</big><em>normal</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#lambertian_reflexion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.lambertian_reflexion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of lambertian reflection for diffusely reflecting surface</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.matrix_reflectance">
+<tt class="descclassname">raytrace.</tt><tt class="descname">matrix_reflectance</tt><big>(</big><em>data_material</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#matrix_reflectance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.matrix_reflectance" title="Permalink to this definition">¶</a></dt>
+<dd><p>data_material: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
+the values should be in the corresponding order columns</p>
+<blockquote>
+<div>We generate a matrix for the interpolation depending on the x=angle and y=wavelength values (lambda values)</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.myrandom">
+<tt class="descclassname">raytrace.</tt><tt class="descname">myrandom</tt><big>(</big><em>seed=None</em><big>)</big><a class="headerlink" href="#raytrace.myrandom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of a random Linear congruential generator based on the MTH$RANDOM</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.pick_random_from_CDF">
+<tt class="descclassname">raytrace.</tt><tt class="descname">pick_random_from_CDF</tt><big>(</big><em>cumulative_distribution_function</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#pick_random_from_CDF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.pick_random_from_CDF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Randomly generatting distribution acording to a Cumulative Distribution Function
+We apply the Inverse transform sampling: <a class="reference external" href="https://en.wikipedia.org/wiki/Inverse_transform_sampling">https://en.wikipedia.org/wiki/Inverse_transform_sampling</a></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.polar_to_cartesian">
+<tt class="descclassname">raytrace.</tt><tt class="descname">polar_to_cartesian</tt><big>(</big><em>phi</em>, <em>theta</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#polar_to_cartesian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.polar_to_cartesian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert polar coordinates (given in degrees) to cartesian
+:param phi:
+:param theta:
+:return:</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.random_congruential">
+<tt class="descclassname">raytrace.</tt><tt class="descname">random_congruential</tt><big>(</big><em>seed=None</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#random_congruential"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.random_congruential" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of a random Linear congruential generator based on the MTH$RANDOM</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.reflexion">
+<tt class="descclassname">raytrace.</tt><tt class="descname">reflexion</tt><big>(</big><em>incident</em>, <em>normal</em>, <em>polarization_vector</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#reflexion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.reflexion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of law of reflexion for incident and polarization vector</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.refraction">
+<tt class="descclassname">raytrace.</tt><tt class="descname">refraction</tt><big>(</big><em>incident</em>, <em>normal</em>, <em>n1</em>, <em>n2</em>, <em>polarization_vector</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#refraction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.refraction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of Snell&#8217;s law of refraction</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.shure_refraction">
+<tt class="descclassname">raytrace.</tt><tt class="descname">shure_refraction</tt><big>(</big><em>incident</em>, <em>normal</em>, <em>n1</em>, <em>n2</em>, <em>polarization_vector</em>, <em>perpendicular_polarized</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#shure_refraction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.shure_refraction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of Snell&#8217;s law of refraction</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="raytrace.single_gaussian_dispersion">
+<tt class="descclassname">raytrace.</tt><tt class="descname">single_gaussian_dispersion</tt><big>(</big><em>normal</em>, <em>reflected</em>, <em>sigma_1</em><big>)</big><a class="reference internal" href="_modules/raytrace.html#single_gaussian_dispersion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#raytrace.single_gaussian_dispersion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of single gaussian dispersion based on the ideal reflected direction</p>
+</dd></dl>
+
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to pySunScene&#8217;s documentation!</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="#">pySunScene 0.8 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2017, GC,RP.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

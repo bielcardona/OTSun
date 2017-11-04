@@ -10,4 +10,4 @@ tests/exec_test_Fresnel_Wavelength.py
 tests/freecad_script.py
 create_scene_testing_Fresnel-3.py
 kk.txt
-docs/_build
+dist
