@@ -1045,7 +1045,7 @@ class Ray:
                           key=lambda (pair): p0.distanceToPoint(pair[0]))
         return tuple(closestpair)
 
-    def next_direction(self, face):
+    def next_state_and_material(self, face):
         """
         Computes the next direction of the ray as it interacts with the scene,
         the material where the ray will be travelling next and
@@ -1123,7 +1123,7 @@ class Ray:
                 self.got_absorbed = False
                 break
             # polarization_vector, vector, material, phenomenon = self.next_direction(face)  # TODO polarization_vector
-            state, material = self.next_direction(face)  # TODO polarization_vector
+            state, material = self.next_state_and_material(face)  # TODO polarization_vector
             self.directions.append(state.direction)
             self.materials.append(material)
             self.polarization_vectors.append(state.polarization)
