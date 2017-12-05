@@ -10,23 +10,7 @@ import numpy as np
 import itertools
 import random
 import time
-from enum import Enum
 
-# Base class for optical phonomena
-
-class Phenomenon(Enum):
-    REFLEXION = 1
-    REFRACTION = 2
-    ABSORTION = 3
-    TRANSMITANCE = 4
-    GOT_ABSORBED = 5
-
-
-class OpticalState(object):
-    def __init__(self, polarization, direction, phenomenon):
-        self.polarization = polarization
-        self.direction = direction
-        self.phenomenon = phenomenon
 
 # ---
 # Helper functions for reflexion and refraction
@@ -44,7 +28,8 @@ def reflexion(incident, normal, polarization_vector):
         normal_parallel_plane = Base.Vector(1, 0, 0)
     rotation = Base.Rotation(normal_parallel_plane, angle)
     new_polarization_vector = rotation.multVec(polarization_vector)
-    return OpticalState(new_polarization_vector, reflected, Phenomenon.REFLEXION)
+    return new_polarization_vector, reflected, "Reflexion"
+
 
 
 def lambertian_reflexion(normal):
@@ -57,8 +42,7 @@ def lambertian_reflexion(normal):
         random_vector = Base.Vector(myrandom() - 0.5, myrandom() - 0.5, myrandom() - 0.5)
         random_vector.normalize()
         dot = normal.dot(random_vector)
-    random_polarization_vector = random_polarization(random_vector)
-    return OpticalState(random_polarization_vector, random_vector, Phenomenon.REFLEXION)
+    return random_vector, "Reflexion"
 
 
 def single_gaussian_dispersion(normal, reflected, sigma_1):
@@ -80,7 +64,7 @@ def single_gaussian_dispersion(normal, reflected, sigma_1):
     polarization_vector = reflected[0]
     new_pol_1 = rotation_1.multVec(polarization_vector)
     new_polarization_vector = rotation_2.multVec(new_pol_1)
-    return OpticalState(new_polarization_vector, new_v2, Phenomenon.REFLEXION)
+    return new_polarization_vector, new_v2, "Reflexion"
 
 
 def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
@@ -106,7 +90,7 @@ def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
     polarization_vector = reflected[0]
     new_pol_1 = rotation_1.multVec(polarization_vector)
     new_polarization_vector = rotation_2.multVec(new_pol_1)
-    return OpticalState(new_polarization_vector, new_v2, Phenomenon.REFLEXION)
+    return new_polarization_vector, new_v2, "Reflexion"
 
 
 def TW_absorptance_ratio(normal, b_constant, c_constant, incident):
@@ -176,10 +160,10 @@ def refraction(incident, normal, n1, n2, polarization_vector):
             perp_v = Base.Vector(1, 0, 0)
         para_v = refracted_direction.cross(perp_v)
         if perpendicular_polarized:
-            return OpticalState(perp_v, refracted_direction, Phenomenon.REFRACTION)
+            return perp_v, refracted_direction, "Refraction"
         else:
-            return OpticalState(para_v, refracted_direction, Phenomenon.REFRACTION)
-
+            return para_v, refracted_direction, "Refraction"
+			
 
 def calculate_probabilities_polarizaton_coating(incident, normal, n1, n2, polarization_vector, Matrix_Reflectance,wavelength):
     # returns probability of Reflexion, probability of Absortion, probability of Transmitance, polarization_vector
@@ -247,9 +231,9 @@ def shure_refraction(incident, normal, n1, n2, polarization_vector, perpendicula
         perp_v = Base.Vector(1, 0, 0)    
     para_v = refracted_direction.cross(perp_v)
     if perpendicular_polarized:
-        return OpticalState(perp_v, refracted_direction, Phenomenon.REFRACTION)
+        return perp_v, refracted_direction, "Refraction"			
     else:
-        return OpticalState(para_v, refracted_direction, Phenomenon.REFRACTION)
+	    return para_v, refracted_direction, "Refraction"
 
 
 def polar_to_cartesian(phi, theta):
@@ -505,11 +489,11 @@ class VolumeMaterial(Material, object):
         wavelength = ray.wavelength
         n1 = ray.current_medium.properties['index_of_refraction'](wavelength)
         n2 = self.properties['index_of_refraction'](wavelength)
-        optical_state = refraction(ray.directions[-1], normal_vector, n1, n2,
+        polarization_vector, direction, phenomenon = refraction(ray.directions[-1], normal_vector, n1, n2,
                                                                 ray.polarization_vectors[-1])
-        if optical_state.phenomenon == Phenomenon.REFRACTION:
+        if phenomenon == "Refraction":
             ray.current_medium = self
-        return optical_state
+        return polarization_vector, direction, phenomenon
         pass
 
 
@@ -564,7 +548,7 @@ class SurfaceMaterial(Material, object):
         _ = cls(name, properties_front, properties_back)
 
     def decide_phenomenon(self, ray, normal_vector, properties, nearby_material):
-        phenomena = [Phenomenon.REFLEXION, Phenomenon.ABSORTION, Phenomenon.TRANSMITANCE]
+        phenomena = ["Reflexion", "Absortion", "Transmitance"]
         polarization_vector = ray.polarization_vectors[-1]
         perpendicular_polarized = False
         if 'TW_model' in properties:
@@ -604,13 +588,13 @@ class SurfaceMaterial(Material, object):
 
     def change_of_direction_by_absortion(self, ray, normal_vector, properties):
         if properties['energy_collector']:
-            return OpticalState(Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), Phenomenon.GOT_ABSORBED)
+            return Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), "Got_Absorbed"
         else:
-            return OpticalState(Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), Phenomenon.ABSORTION)
+            return Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), "Absortion"
 
     def change_of_direction_by_reflexion(self, ray, normal_vector, properties):
         if 'specular_material' in properties:
-            state = reflexion(ray.directions[-1], normal_vector, ray.polarization_vectors[-1])
+            reflected = reflexion(ray.directions[-1], normal_vector, ray.polarization_vectors[-1])
             if 'sigma_1' in properties:
                 sigma_1 = properties['sigma_1']
                 if 'sigma_2' in properties:
@@ -618,25 +602,24 @@ class SurfaceMaterial(Material, object):
                     k = properties['k']
                     return double_gaussian_dispersion(normal_vector, reflected, sigma_1, sigma_2, k)
                 return single_gaussian_dispersion(normal_vector, reflected, sigma_1)
-            return state
+            return reflected
         if 'lambertian_material' in properties:
-            state = lambertian_reflexion(normal_vector)
-            #polarization_vector = random_polarization(
-            #    reflected[0])  # generates random polarization for lambertian reflection
-            #return polarization_vector, reflected[0], reflected[1]
-            return state
+            reflected = lambertian_reflexion(normal_vector)
+            polarization_vector = random_polarization(
+                reflected[0])  # generates random polarization for lambertian reflection
+            return polarization_vector, reflected[0], reflected[1]
         if 'Matrix_polarized_reflectance_coating' in properties: # polarized_coating_layer
-            state = reflexion(ray.directions[-1], normal_vector, ray.polarization_vectors[-1])
-            return state
+            reflected = reflexion(ray.directions[-1], normal_vector, ray.polarization_vectors[-1])
+            return reflected
 
     def change_of_direction_by_transmitance(self, ray, normal_vector, nearby_material, perpendicular_polarized):
         n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)  
         n2 = nearby_material.properties['index_of_refraction'](ray.wavelength)
-        state = shure_refraction(ray.directions[-1], normal_vector, n1, n2,
+        polarization_vector, direction, phenomenon = shure_refraction(ray.directions[-1], normal_vector, n1, n2,
                                                                 ray.polarization_vectors[-1],
                                                                 perpendicular_polarized)
         ray.current_medium = nearby_material
-        return state
+        return polarization_vector, direction, phenomenon
 
 
     def change_of_direction(self, ray, normal_vector, nearby_material):
@@ -653,11 +636,11 @@ class SurfaceMaterial(Material, object):
         ray.polarization_vectors[-1] = results[1]
         perpendicular_polarized = results[2] # True or False
 
-        if phenomenon == Phenomenon.REFLEXION:
+        if phenomenon == 'Reflexion':
             return self.change_of_direction_by_reflexion(ray, normal_vector, properties)
-        elif phenomenon == Phenomenon.ABSORTION:
+        elif phenomenon == 'Absortion':
             return self.change_of_direction_by_absortion(ray, normal_vector, properties)
-        elif phenomenon == Phenomenon.TRANSMITANCE:
+        elif phenomenon == 'Transmitance':
             return self.change_of_direction_by_transmitance(ray, normal_vector, nearby_material, perpendicular_polarized)
 
 
@@ -1045,7 +1028,7 @@ class Ray:
                           key=lambda (pair): p0.distanceToPoint(pair[0]))
         return tuple(closestpair)
 
-    def next_state_and_material(self, face):
+    def next_direction(self, face):
         """
         Computes the next direction of the ray as it interacts with the scene,
         the material where the ray will be travelling next and
@@ -1064,30 +1047,28 @@ class Ray:
             point_plus_delta = current_point + current_direction * self.scene.epsilon
             next_solid = self.scene.solid_at_point(point_plus_delta)
             nearby_material = self.scene.materials.get(next_solid, vacuum_medium)
-            state = material.change_of_direction(self,normal,nearby_material)
-            ### polarization_vector, direction, phenomenon = results[0], results[1], results[2]
+            results = material.change_of_direction(self,normal,nearby_material)			
+            polarization_vector, direction, phenomenon = results[0], results[1], results[2]
             # TODO polarization_vector
         else:
             # face is not active
             point_plus_delta = current_point + current_direction * self.scene.epsilon
             next_solid = self.scene.solid_at_point(point_plus_delta)
             nearby_material = self.scene.materials.get(next_solid, vacuum_medium)
-            state = nearby_material.change_of_direction(self, normal)
-            ### polarization_vector, direction, phenomenon = nearby_material.change_of_direction(self,
-            ###                                                                                 normal)
+            polarization_vector, direction, phenomenon = nearby_material.change_of_direction(self,
+                                                                                             normal)
             # TODO polarization_vector
         next_material = None
-        if state.phenomenon == Phenomenon.REFRACTION:
+        if phenomenon == 'Refraction':
             # noinspection PyUnboundLocalVariable
             next_material = nearby_material
-        elif state.phenomenon == Phenomenon.REFLEXION:
+        elif phenomenon == 'Reflexion':
             next_material = current_material
-        elif state.phenomenon == Phenomenon.ABSORTION:
+        elif phenomenon == 'Absortion':
             next_material = None
-        elif state.phenomenon == Phenomenon.GOT_ABSORBED:  # it is needed? Review
+        elif phenomenon == 'Got_Absorbed':  # it is needed? Review
             next_material = None
-        return state, next_material
-        ### polarization_vector, direction, next_material, phenomenon
+        return polarization_vector, direction, next_material, phenomenon
 
     def update_energy(self):
         # TODO: @Ramon
@@ -1122,11 +1103,10 @@ class Ray:
                 self.finished = True
                 self.got_absorbed = False
                 break
-            # polarization_vector, vector, material, phenomenon = self.next_direction(face)  # TODO polarization_vector
-            state, material = self.next_state_and_material(face)  # TODO polarization_vector
-            self.directions.append(state.direction)
+            polarization_vector, vector, material, phenomenon = self.next_direction(face)  # TODO polarization_vector
+            self.directions.append(vector)
             self.materials.append(material)
-            self.polarization_vectors.append(state.polarization)
+            self.polarization_vectors.append(polarization_vector)
             energy_before = self.energy
             self.update_energy()
             point_1 = self.points[-1]
@@ -1142,9 +1122,9 @@ class Ray:
                     self.PV_values.append((point_2.x,point_2.y,point_2.z,point_1.x,point_1.y,point_1.z,energy_before,self.energy,self.wavelength,alpha))
             if self.energy < 0.0001: # needed for PV calculations
                 self.finished = True
-            if state.phenomenon == Phenomenon.ABSORTION:
+            if phenomenon == 'Absortion':
                 self.finished = True
-            if state.phenomenon == Phenomenon.GOT_ABSORBED:
+            if phenomenon == 'Got_Absorbed':
                 self.got_absorbed = True
                 self.finished = True
 
@@ -1208,8 +1188,6 @@ class Experiment:
             self.light_source.emitting_region.add_to_document(show_in_doc)
         self.number_of_rays = number_of_rays
         self.captured_energy = 0
-        self.PV_energy = []
-        self.PV_wavelength = []
         random_congruential(time.time())  # TODO: change location
 
     def run(self, show_in_doc=None):
