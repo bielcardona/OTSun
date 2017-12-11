@@ -1211,15 +1211,20 @@ class Experiment:
         self.PV_energy = []
         self.PV_wavelength = []
         random_congruential(time.time())  # TODO: change location
+        self.wavelengths = []
+        self.PV_values = []
+        self.points_absorber = []
+        self.angles_Buie = []
 
     def run(self, show_in_doc=None):
-        for _ in xrange(self.number_of_rays):
+        for i in np.arange(0,self.number_of_rays,1):
             ray = self.light_source.emit_ray()
             ray.run()
             if show_in_doc:
                 ray.add_to_document(show_in_doc)
             if ray.got_absorbed:
                 self.captured_energy += ray.energy
+                self.points_absorber.append(ray.points[-1])
             if ray.in_PV:
                 self.PV_energy.append(ray.PV_energy)
                 self.PV_wavelength.append(ray.wavelength)

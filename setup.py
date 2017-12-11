@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='pySunScene',
-    version='0.9.1',
+    version='0.9.2',
     py_modules=['raytrace'],
     url='',
     license='MIT',
