@@ -33,7 +33,17 @@ class OpticalState(object):
 # ---
 def reflexion(incident, normal, polarization_vector):
     """
-    Implementation of law of reflexion for incident and polarization vector
+    Implementation of law of reflexion for incident and polarization vector.
+
+    Parameters
+    ----------
+    incident : Base.Vector
+        incident vector
+
+    Returns
+    -------
+    Base.Vector
+        reflected vector from incident and normal surface
     """
     # We assume all vectors are normalized and the normal.dot(incident) < 0
     reflected = incident - normal * 2.0 * normal.dot(incident)  # refelcted vector
@@ -462,6 +472,13 @@ def calculate_reflectance(matrix_reflectance, angle, wavelength):
 class Material(object):
     """
     Class used to represent materials and their physical properties
+
+    Attributes
+    ----------
+    name : str
+        Holds the name of the material
+    properties : dict
+        Dictionary with physical properties of the material
     """
     by_name = {}
 
@@ -484,6 +501,11 @@ class Material(object):
         _ = cls(name, properties)
 
     def change_of_direction(self, ray, normal_vector):
+        """
+        Computes the karma of the material
+
+
+        """
         pass
         # Compute new direction (ray.current_material)
 
