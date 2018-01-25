@@ -1,5 +1,6 @@
 # General modules
 
+import FreeCAD
 import Part
 from FreeCAD import Base
 import math
@@ -7,9 +8,9 @@ import numpy as np
 import os
 
 # Alias for active Document
-doc = App.activeDocument()
+doc = App.newDocument()
 # Alias for gui active Document
-gui = Gui.activeDocument()
+##gui = Gui.activeDocument()
 
 # create a Part object that is a Parabola in the XY plane (the parabola is infinite).
 p = Part.Parabola()
@@ -40,7 +41,7 @@ doc.Extruded_parabola.TaperAngle = (0.0)
 FreeCAD.ActiveDocument.recompute()
 
 # to change the color of the parabola
-gui.getObject("Extruded_parabola").ShapeColor = (0.0,0.67,1.00)
+##gui.getObject("Extruded_parabola").ShapeColor = (0.0,0.67,1.00)
 
 # create a generic circle for the absorber
 circle_abs = Part.makeCircle(34.0/2.0, Base.Vector(0.0,0.0,647.0), Base.Vector(0.0,1.0,0.0))
@@ -62,7 +63,7 @@ doc.Abs_circle_abs_Extrude.TaperAngle = (0.0)
 FreeCAD.ActiveDocument.recompute()
 
 # to change the color of the absorber tube
-gui.getObject("Abs_circle_abs_Extrude").ShapeColor = (1.0,0.0,0.0)
+##gui.getObject("Abs_circle_abs_Extrude").ShapeColor = (1.0,0.0,0.0)
 
 #create a FreeCAD object with Cylinder attributes
 cylinder_out = doc.addObject("Part::Cylinder","cylinder_out")
@@ -83,16 +84,18 @@ tube_glass = doc.addObject("Part::Cut","tube_glass")
 doc.tube_glass.Label = "tube_glass(Glass1)"
 doc.tube_glass.Base = doc.cylinder_out
 doc.tube_glass.Tool = doc.cylinder_in
-gui.hide("cylinder_out")
-gui.hide("cylinder_in")
+##gui.hide("cylinder_out")
+##gui.hide("cylinder_in")
 FreeCAD.ActiveDocument.recompute()
 
 # to make transparent the glass tube
-gui.getObject("tube_glass").Transparency = 80
+##gui.getObject("tube_glass").Transparency = 80
 
 FreeCAD.ActiveDocument.recompute()
-Gui.activeDocument().activeView().viewAxonometric()
-Gui.SendMsgToActiveView("ViewFit")
+##Gui.activeDocument().activeView().viewAxonometric()
+##Gui.SendMsgToActiveView("ViewFit")
 
 # execfile("H:Ramon_2015/RECERCA/RETOS-2015/Tareas/Proves-FreeCAD-1/create_scene_PTC.py")
 # execfile("H:Ramon_2015/RECERCA/RETOS-2015/Tareas/Proves-FreeCAD-1/raytrace.py")
+
+doc.saveAs('escena')

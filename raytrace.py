@@ -10,6 +10,8 @@ import numpy as np
 import itertools
 import random
 import time
+import dill
+import zipfile
 from enum import Enum
 
 # Base class for optical phonomena
@@ -499,6 +501,26 @@ class Material(object):
     @classmethod
     def create(cls, name, properties):
         _ = cls(name, properties)
+
+    @classmethod
+    def load_from_file(cls, filename):
+        try:
+            with open(filename,'rb') as f:
+                mat = dill.load(f)
+                cls.by_name[mat.name] = mat
+        except:
+            pass
+
+    @classmethod
+    def load_from_zipfile(cls, filename):
+        with zipfile.ZipFile(materials_file) as z:
+            for matfile in z.namelist():
+                with z.open(matfile) as f:
+                    try:
+                        mat = dill.load(f)
+                        raytrace.Material.by_name[mat.name] = mat
+                    except:
+                        pass
 
     def change_of_direction(self, ray, normal_vector):
         """
