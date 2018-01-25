@@ -513,12 +513,12 @@ class Material(object):
 
     @classmethod
     def load_from_zipfile(cls, filename):
-        with zipfile.ZipFile(materials_file) as z:
+        with zipfile.ZipFile(filename) as z:
             for matfile in z.namelist():
                 with z.open(matfile) as f:
                     try:
                         mat = dill.load(f)
-                        raytrace.Material.by_name[mat.name] = mat
+                        cls.by_name[mat.name] = mat
                     except:
                         pass
 
