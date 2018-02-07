@@ -1079,6 +1079,7 @@ class Ray:
         self.PV_energy = 0.0
         self.PV_values = []
         self.in_PV = False
+        self.PV_absorbed = []
 
     def next_intersection(self):
         """
@@ -1200,8 +1201,10 @@ class Ray:
                     self.PV_energy = energy_before
                     alpha = self.scene.materials[actual_solid].properties['extinction_coefficient'](
                     self.wavelength) * 4.0 * np.pi / (self.wavelength / 1000000000.0)/1000.0 # mm-1
-                    self.PV_values.append((point_2.x,point_2.y,point_2.z,point_1.x,point_1.y,point_1.z,energy_before,self.energy,self.wavelength,alpha))
-            if self.energy < 0.0001: # needed for PV calculations
+                    angle_incident = np.arccos (- self.normals[-2].dot(self.directions[-2])) * 180.0 / np.pi
+                    self.PV_values.append((point_2.x,point_2.y,point_2.z,point_1.x,point_1.y,point_1.z,energy_before,self.energy,self.wavelength,alpha,angle_incident))
+                    self.PV_absorbed.append(energy_before - self.energy)
+            if self.energy < 1.E-6: # needed for PV calculations
                 self.finished = True
             if state.phenomenon == Phenomenon.ABSORTION:
                 self.finished = True
@@ -1232,6 +1235,7 @@ class LightSource:
         self.initial_energy = initial_energy
         self.direction_distribution = direction_distribution
         self.polarization_vector = polarization_vector
+        self.wavelengths = []
 
     def emit_ray(self):
         point = self.emitting_region.random_point()
@@ -1268,30 +1272,44 @@ class Experiment:
         if show_in_doc:
             self.light_source.emitting_region.add_to_document(show_in_doc)
         self.number_of_rays = number_of_rays
-        self.captured_energy = 0
+        self.wavelengths = []
+        self.captured_energy_Th = 0
+        self.captured_energy_PV = 0
+        self.Th_energy = []
+        self.Th_wavelength = []
         self.PV_energy = []
         self.PV_wavelength = []
-        random_congruential(time.time())  # TODO: change location
-        self.wavelengths = []
         self.PV_values = []
-        self.points_absorber = []
-        self.angles_Buie = []
+        self.points_absorber_Th = []
+        random_congruential(time.time()) # TODO: change location
 
     def run(self, show_in_doc=None):
         for i in np.arange(0,self.number_of_rays,1):
             ray = self.light_source.emit_ray()
             ray.run()
+            self.wavelengths.append(ray.wavelength)
             if show_in_doc:
                 ray.add_to_document(show_in_doc)
             if ray.got_absorbed:
-                self.captured_energy += ray.energy
-                self.points_absorber.append(ray.points[-1])
+                self.captured_energy_Th += ray.energy
+                self.Th_energy.append(ray.energy)
+                self.Th_wavelength.append(ray.wavelength)
+                self.points_absorber_Th.append((ray.energy, 
+                                             ray.points[-1].x, ray.points[-1].y, ray.points[-1].z,
+                                             ray.points[-2].x, ray.points[-2].y, ray.points[-2].z,
+                                             ray.normals[-1].x, ray.normals[-1].y, ray.normals[-1].z))
+            else:
+                self.Th_energy.append(0.0)
+                self.Th_wavelength.append(ray.wavelength)
             if ray.in_PV:
-                self.PV_energy.append(ray.PV_energy)
+                PV_energy_absorbed = np.sum(ray.PV_absorbed)
+                self.captured_energy_PV += PV_energy_absorbed 
+                self.PV_energy.append(PV_energy_absorbed)
                 self.PV_wavelength.append(ray.wavelength)
                 length = len(ray.PV_values)
-                for z in np.arange(0,length,1):
-                    self.PV_values.append(ray.PV_values[z])
+                if length > 0:
+                    for z in np.arange(0,length,1):
+                        self.PV_values.append(ray.PV_values[z])
             else:
                 self.PV_energy.append(0.0)
                 self.PV_wavelength.append(ray.wavelength)
