@@ -193,7 +193,7 @@ def refraction(incident, normal, n1, n2, polarization_vector):
             return OpticalState(para_v, refracted_direction, Phenomenon.REFRACTION)
 
 
-def calculate_probabilities_polarizaton_coating(incident, normal, n1, n2, polarization_vector, Matrix_Reflectance,wavelength):
+def calculate_probabilities_polarizaton_coating(incident, normal, n1, n2, polarization_vector, properties,wavelength):
     # returns probability of Reflexion, probability of Absortion, probability of Transmitance, polarization_vector
     mynormal = normal * 1.0
     backside = False
@@ -225,6 +225,7 @@ def calculate_probabilities_polarizaton_coating(incident, normal, n1, n2, polari
         angle = np.arccos(c2) * 180.0 / np.pi	
     else:
         angle = np.arccos(c1) * 180.0 / np.pi	    
+    Matrix_Reflectance = properties['Matrix_polarized_reflectance_coating']
     Matrix_R = Matrix_Reflectance(angle,wavelength)
     if myrandom() < ref_per:
         R = calculate_reflectance(Matrix_R, angle, wavelength)[1] # reflectance for s-polarized (perpendicular) light
@@ -236,9 +237,11 @@ def calculate_probabilities_polarizaton_coating(incident, normal, n1, n2, polari
         polarization_vector = parallel_v.normalize()
     if myrandom() < R: # ray reflected    
         return 1, 0, 0, polarization_vector, perpendicular_polarized
-    else: # ray refracted		
-        return 0, 0, 1, polarization_vector, perpendicular_polarized
-			
+    else: # ray refracted or absorbed		
+        if not properties['energy_collector']: # transparent coating
+            return 0, 0, 1, polarization_vector, perpendicular_polarized
+        if properties['energy_collector']: # absorber coating
+            return 0, 1, 0, polarization_vector, perpendicular_polarized 
 			
 def shure_refraction(incident, normal, n1, n2, polarization_vector, perpendicular_polarized):
     """
@@ -415,9 +418,11 @@ def calculate_reflectance(matrix_reflectance, angle, wavelength):
     data_array: values needed for the interpolation 
 	We generate an interpolation to find the perpendicular and parallel reflectance depending on the angle and wavelength
     """
+    if len(matrix_reflectance) == 0: # wavelength experiments out of range of the data_material
+        return 'R_per',0.0,'R_par',0.0
     R_Matrix = np.mat(matrix_reflectance)
     if len(R_Matrix) == 1: # interpolation is not needed
-	    return 'R_per',R_Matrix[0,2],'R_par',R_Matrix[0,3]
+        return 'R_per',R_Matrix[0,2],'R_par',R_Matrix[0,3]
 
 
     if len(R_Matrix) == 2: # simple interpolation
@@ -621,10 +626,10 @@ class SurfaceMaterial(Material, object):
         if 'Matrix_polarized_reflectance_coating' in properties:  # polarized_coating_layer
             n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)  #  (ray.wavelength) is the same as (ray.properties['wavelength'])
             n2 = nearby_material.properties['index_of_refraction'](ray.wavelength)		
-            Matrix_Reflectance = properties['Matrix_polarized_reflectance_coating']
+#            Matrix_Reflectance = properties['Matrix_polarized_reflectance_coating']
             results = calculate_probabilities_polarizaton_coating(ray.directions[-1], normal_vector, n1, n2,
                                                                          ray.polarization_vectors[-1],
-                                                                         Matrix_Reflectance, ray.wavelength)
+                                                                         properties, ray.wavelength)
             probabilities = [results[0], results[1], results[2]]
             polarization_vector = results[3]
             perpendicular_polarized = results[4] 
@@ -721,7 +726,8 @@ def create_opaque_simple_material(name, por):
 def create_transparent_simple_material(name, por):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(0),
-                                  'probability_of_transmitance': constant_function(1 - por)})
+                                  'probability_of_transmitance': constant_function(1 - por),
+                                  'specular_material': True})
 
 
 def create_absorber_simple_material(name, por):
@@ -807,6 +813,15 @@ def create_polarized_coating_transparent_layer(name, coating_material):
     SurfaceMaterial.create(name, {'Matrix_polarized_reflectance_coating': matrix_reflectance(data_material),
                                   'probability_of_absortion': constant_function(0),
                                   'energy_collector': False})
+
+								   
+def create_polarized_coating_absorber_layer(name, coating_material):
+    # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
+    # the values in coating_material should be in the corresponding order columns
+    data_material = np.loadtxt(coating_material, usecols=(0,1,2,3))
+    SurfaceMaterial.create(name, {'Matrix_polarized_reflectance_coating': matrix_reflectance(data_material),
+                                  'probability_of_transmitance': constant_function(0),
+                                  'energy_collector': True})
 
 
 def create_two_layers_material(name, layer_front, layer_back):
@@ -1052,6 +1067,7 @@ class Ray:
         self.scene = scene
         self.points = [origin]
         self.directions = [direction]
+        self.normals = []
         self.materials = [vacuum_medium]
         self.properties = properties
         self.wavelength = properties['wavelength']
@@ -1063,6 +1079,7 @@ class Ray:
         self.PV_energy = 0.0
         self.PV_values = []
         self.in_PV = False
+        self.PV_absorbed = []
 
     def next_intersection(self):
         """
@@ -1130,7 +1147,7 @@ class Ray:
             next_material = None
         elif state.phenomenon == Phenomenon.GOT_ABSORBED:  # it is needed? Review
             next_material = None
-        return state, next_material
+        return state, next_material, normal
         ### polarization_vector, direction, next_material, phenomenon
 
     def update_energy(self):
@@ -1167,9 +1184,10 @@ class Ray:
                 self.got_absorbed = False
                 break
             # polarization_vector, vector, material, phenomenon = self.next_direction(face)  # TODO polarization_vector
-            state, material = self.next_state_and_material(face)  # TODO polarization_vector
+            state, material, normal = self.next_state_and_material(face)  # TODO polarization_vector
             self.directions.append(state.direction)
             self.materials.append(material)
+            self.normals.append(normal)
             self.polarization_vectors.append(state.polarization)
             energy_before = self.energy
             self.update_energy()
@@ -1183,8 +1201,10 @@ class Ray:
                     self.PV_energy = energy_before
                     alpha = self.scene.materials[actual_solid].properties['extinction_coefficient'](
                     self.wavelength) * 4.0 * np.pi / (self.wavelength / 1000000000.0)/1000.0 # mm-1
-                    self.PV_values.append((point_2.x,point_2.y,point_2.z,point_1.x,point_1.y,point_1.z,energy_before,self.energy,self.wavelength,alpha))
-            if self.energy < 0.0001: # needed for PV calculations
+                    angle_incident = np.arccos (- self.normals[-2].dot(self.directions[-2])) * 180.0 / np.pi
+                    self.PV_values.append((point_2.x,point_2.y,point_2.z,point_1.x,point_1.y,point_1.z,energy_before,self.energy,self.wavelength,alpha,angle_incident))
+                    self.PV_absorbed.append(energy_before - self.energy)
+            if self.energy < 1.E-6: # needed for PV calculations
                 self.finished = True
             if state.phenomenon == Phenomenon.ABSORTION:
                 self.finished = True
@@ -1215,6 +1235,7 @@ class LightSource:
         self.initial_energy = initial_energy
         self.direction_distribution = direction_distribution
         self.polarization_vector = polarization_vector
+        self.wavelengths = []
 
     def emit_ray(self):
         point = self.emitting_region.random_point()
@@ -1251,30 +1272,44 @@ class Experiment:
         if show_in_doc:
             self.light_source.emitting_region.add_to_document(show_in_doc)
         self.number_of_rays = number_of_rays
-        self.captured_energy = 0
+        self.wavelengths = []
+        self.captured_energy_Th = 0
+        self.captured_energy_PV = 0
+        self.Th_energy = []
+        self.Th_wavelength = []
         self.PV_energy = []
         self.PV_wavelength = []
-        random_congruential(time.time())  # TODO: change location
-        self.wavelengths = []
         self.PV_values = []
-        self.points_absorber = []
-        self.angles_Buie = []
+        self.points_absorber_Th = []
+        random_congruential(time.time()) # TODO: change location
 
     def run(self, show_in_doc=None):
         for i in np.arange(0,self.number_of_rays,1):
             ray = self.light_source.emit_ray()
             ray.run()
+            self.wavelengths.append(ray.wavelength)
             if show_in_doc:
                 ray.add_to_document(show_in_doc)
             if ray.got_absorbed:
-                self.captured_energy += ray.energy
-                self.points_absorber.append(ray.points[-1])
+                self.captured_energy_Th += ray.energy
+                self.Th_energy.append(ray.energy)
+                self.Th_wavelength.append(ray.wavelength)
+                self.points_absorber_Th.append((ray.energy, 
+                                             ray.points[-1].x, ray.points[-1].y, ray.points[-1].z,
+                                             ray.points[-2].x, ray.points[-2].y, ray.points[-2].z,
+                                             ray.normals[-1].x, ray.normals[-1].y, ray.normals[-1].z))
+            else:
+                self.Th_energy.append(0.0)
+                self.Th_wavelength.append(ray.wavelength)
             if ray.in_PV:
-                self.PV_energy.append(ray.PV_energy)
+                PV_energy_absorbed = np.sum(ray.PV_absorbed)
+                self.captured_energy_PV += PV_energy_absorbed 
+                self.PV_energy.append(PV_energy_absorbed)
                 self.PV_wavelength.append(ray.wavelength)
                 length = len(ray.PV_values)
-                for z in np.arange(0,length,1):
-                    self.PV_values.append(ray.PV_values[z])
+                if length > 0:
+                    for z in np.arange(0,length,1):
+                        self.PV_values.append(ray.PV_values[z])
             else:
                 self.PV_energy.append(0.0)
                 self.PV_wavelength.append(ray.wavelength)
