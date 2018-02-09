@@ -73,15 +73,15 @@ def lambertian_reflexion(normal):
     return OpticalState(random_polarization_vector, random_vector, Phenomenon.REFLEXION)
 
 
-def single_gaussian_dispersion(normal, reflected, sigma_1):
+def single_gaussian_dispersion(normal, state, sigma_1):
     """
     Implementation of single gaussian dispersion based on the ideal reflected direction
     """
     rad = np.pi / 180.0
     u = myrandom()
     theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
-    v = reflected[1]
-    axis_1 = normal.cross(reflected[1])
+    v = state.direction
+    axis_1 = normal.cross(state.direction)
     rotation_1 = Base.Rotation(axis_1, theta)
     new_v1 = rotation_1.multVec(v)
     u = myrandom()
@@ -89,13 +89,13 @@ def single_gaussian_dispersion(normal, reflected, sigma_1):
     axis_2 = v
     rotation_2 = Base.Rotation(axis_2, phi)
     new_v2 = rotation_2.multVec(new_v1)
-    polarization_vector = reflected[0]
+    polarization_vector = state.polarization
     new_pol_1 = rotation_1.multVec(polarization_vector)
-    new_polarization_vector = rotation_2.multVec(new_pol_1)
-    return OpticalState(new_polarization_vector, new_v2, Phenomenon.REFLEXION)
+    new_polarization_vector = rotation_2.multVec(new_pol_1)    
+    return OpticalState(new_polarization_vector, new_v2, Phenomenon.REFLEXION) 
 
-
-def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
+	
+def double_gaussian_dispersion(normal, state, sigma_1, sigma_2, k):
     """
     Implementation of double gaussian dispersion based on the ideal reflected direction
     """
@@ -105,9 +105,9 @@ def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
     if k_ran < k:
         theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
     else:
-        theta = (-2. * sigma_2 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
-    v = reflected[1]
-    axis_1 = normal.cross(reflected[1])
+	    theta = (-2. * sigma_2 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
+    v = state.direction
+    axis_1 = normal.cross(state.direction)
     rotation_1 = Base.Rotation(axis_1, theta)
     new_v1 = rotation_1.multVec(v)
     u = myrandom()
@@ -115,9 +115,9 @@ def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
     axis_2 = v
     rotation_2 = Base.Rotation(axis_2, phi)
     new_v2 = rotation_2.multVec(new_v1)
-    polarization_vector = reflected[0]
+    polarization_vector = state.polarization
     new_pol_1 = rotation_1.multVec(polarization_vector)
-    new_polarization_vector = rotation_2.multVec(new_pol_1)
+    new_polarization_vector = rotation_2.multVec(new_pol_1)    
     return OpticalState(new_polarization_vector, new_v2, Phenomenon.REFLEXION)
 
 
@@ -665,8 +665,8 @@ class SurfaceMaterial(Material, object):
                 if 'sigma_2' in properties:
                     sigma_2 = properties['sigma_2']
                     k = properties['k']
-                    return double_gaussian_dispersion(normal_vector, reflected, sigma_1, sigma_2, k)
-                return single_gaussian_dispersion(normal_vector, reflected, sigma_1)
+                    return double_gaussian_dispersion(normal_vector, state, sigma_1, sigma_2, k)
+                return single_gaussian_dispersion(normal_vector, state, sigma_1)
             return state
         if 'lambertian_material' in properties:
             state = lambertian_reflexion(normal_vector)
