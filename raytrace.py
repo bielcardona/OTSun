@@ -14,6 +14,72 @@ import dill
 import zipfile
 from enum import Enum
 
+# ---
+# Helper functions for outputs in Spectral Analysis
+# ---
+
+def spectrum_to_constant_step(file_in, wavelength_step, wavelength_min, wavelength_max):
+    data_array = np.loadtxt(file_in, usecols=(0,1))
+    wl_spectrum = data_array[:,0]
+    I_spectrum = data_array[:,1]
+    array_inter = [[x, np.interp(x,wl_spectrum,I_spectrum)] for x in np.arange(wavelength_min, wavelength_max + wavelength_step / 2.0, wavelength_step)]
+    return np.array(array_inter)	
+
+def make_histogram_from_experiment_results(reults_wavelength, resutls_energy, step_wavelength, aperture_collector, aperture_source):
+    y_energy = np.array(np.concatenate(resutls_energy))
+    y_energy = (y_energy / aperture_collector) / (1.0 / aperture_source)
+    x_wavelength = np.array(np.concatenate(reults_wavelength))
+    data_= np.array([x_wavelength, y_energy])
+    data_ = data_.T
+    bins_ = np.arange(int(np.amin(x_wavelength)), np.amax(x_wavelength)+step_wavelength*1.1, step_wavelength)
+    table_ = np.histogram(data_[:,0], bins = bins_, weights = data_[:,1])
+    norm = np.histogram(data_[:,0], bins = bins_)
+    u = np.divide(table_[0],norm[0])
+    bins = np.arange(int(np.amin(x_wavelength)), np.amax(x_wavelength)+step_wavelength, step_wavelength)
+    table_ = np.column_stack((bins, u))
+    return table_
+	
+def twoD_array_to_constant_step(twoD_array, step, wavelength_min, wavelength_max):
+    wl_spectrum = twoD_array[:,0]
+    I_spectrum = twoD_array[:,1]
+    array_inter = [[x, np.interp(x,wl_spectrum,I_spectrum)] for x in np.arange(wavelength_min,wavelength_max+step/2.0,step)]
+    return np.array(array_inter)
+	
+def spectral_response(optical_absortion_wavelength, iqe):
+    q_e = 1.60217662E-19
+    h = 6.62607E-34
+    c = 299792458.0
+    hc = h*c
+    SR = []
+    opt_wavelength = optical_absortion_wavelength	
+    if np.isreal(iqe):
+        SR = [[opt[0], iqe * opt[0] * opt[1] * q_e * 1E-9/ hc, ] for opt in opt_wavelength]
+    else:
+        data_array = np.loadtxt(iqe, usecols=(0,1))
+        wl_ = data_array[:,0]
+        iqe_ = data_array[:,1]        
+        SR = [[opt[0], np.interp(opt[0],wl_,iqe_) * opt[0] * opt[1] * q_e * 1E-9/ hc, ] for opt in opt_wavelength]		
+    return np.array(SR)
+
+def photo_current(spectral_response, source_spectrum):
+    wavelengths = source_spectrum[:,0]
+    SR_by_spectrum = spectral_response[:,1] * source_spectrum[:,1]
+    photo_current = np.trapz(SR_by_spectrum, x = wavelengths)
+    return photo_current
+	
+# end region
+
+# ---
+# Helper functions for outputs in Total Analysis
+# ---
+
+def integral_from_data_file(file_in):
+    source_spectrum = np.loadtxt(file_in, usecols=(0,1))
+    integral = np.trapz(source_spectrum[:,1], x = source_spectrum[:,0])
+    return integral	
+
+# end region
+
 # Base class for optical phonomena
 
 class Phenomenon(Enum):
@@ -73,15 +139,15 @@ def lambertian_reflexion(normal):
     return OpticalState(random_polarization_vector, random_vector, Phenomenon.REFLEXION)
 
 
-def single_gaussian_dispersion(normal, reflected, sigma_1):
+def single_gaussian_dispersion(normal, state, sigma_1):
     """
     Implementation of single gaussian dispersion based on the ideal reflected direction
     """
     rad = np.pi / 180.0
     u = myrandom()
     theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
-    v = reflected[1]
-    axis_1 = normal.cross(reflected[1])
+    v = state.direction
+    axis_1 = normal.cross(state.direction)
     rotation_1 = Base.Rotation(axis_1, theta)
     new_v1 = rotation_1.multVec(v)
     u = myrandom()
@@ -89,13 +155,13 @@ def single_gaussian_dispersion(normal, reflected, sigma_1):
     axis_2 = v
     rotation_2 = Base.Rotation(axis_2, phi)
     new_v2 = rotation_2.multVec(new_v1)
-    polarization_vector = reflected[0]
+    polarization_vector = state.polarization
     new_pol_1 = rotation_1.multVec(polarization_vector)
-    new_polarization_vector = rotation_2.multVec(new_pol_1)
-    return OpticalState(new_polarization_vector, new_v2, Phenomenon.REFLEXION)
+    new_polarization_vector = rotation_2.multVec(new_pol_1)    
+    return OpticalState(new_polarization_vector, new_v2, Phenomenon.REFLEXION) 
 
-
-def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
+	
+def double_gaussian_dispersion(normal, state, sigma_1, sigma_2, k):
     """
     Implementation of double gaussian dispersion based on the ideal reflected direction
     """
@@ -105,9 +171,9 @@ def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
     if k_ran < k:
         theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
     else:
-        theta = (-2. * sigma_2 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
-    v = reflected[1]
-    axis_1 = normal.cross(reflected[1])
+	    theta = (-2. * sigma_2 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
+    v = state.direction
+    axis_1 = normal.cross(state.direction)
     rotation_1 = Base.Rotation(axis_1, theta)
     new_v1 = rotation_1.multVec(v)
     u = myrandom()
@@ -115,9 +181,9 @@ def double_gaussian_dispersion(normal, reflected, sigma_1, sigma_2, k):
     axis_2 = v
     rotation_2 = Base.Rotation(axis_2, phi)
     new_v2 = rotation_2.multVec(new_v1)
-    polarization_vector = reflected[0]
+    polarization_vector = state.polarization
     new_pol_1 = rotation_1.multVec(polarization_vector)
-    new_polarization_vector = rotation_2.multVec(new_pol_1)
+    new_polarization_vector = rotation_2.multVec(new_pol_1)    
     return OpticalState(new_polarization_vector, new_v2, Phenomenon.REFLEXION)
 
 
@@ -665,8 +731,8 @@ class SurfaceMaterial(Material, object):
                 if 'sigma_2' in properties:
                     sigma_2 = properties['sigma_2']
                     k = properties['k']
-                    return double_gaussian_dispersion(normal_vector, reflected, sigma_1, sigma_2, k)
-                return single_gaussian_dispersion(normal_vector, reflected, sigma_1)
+                    return double_gaussian_dispersion(normal_vector, state, sigma_1, sigma_2, k)
+                return single_gaussian_dispersion(normal_vector, state, sigma_1)
             return state
         if 'lambertian_material' in properties:
             state = lambertian_reflexion(normal_vector)
