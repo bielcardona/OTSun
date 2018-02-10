@@ -1,3 +1,0 @@
-numpy==1.12
-enum==0.4.6
-# FreeCAD should also be installed manually
