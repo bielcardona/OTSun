@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pySunScene',
-    version='0.9.5b',
+    version='0.9.6',
     py_modules=['raytrace'],
     url='',
     install_requires=['numpy==1.12', 'enum', 'dill'],
