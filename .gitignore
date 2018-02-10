@@ -11,3 +11,5 @@ tests/freecad_script.py
 create_scene_testing_Fresnel-3.py
 kk.txt
 dist
+tests
+build
