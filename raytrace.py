@@ -781,29 +781,29 @@ class SurfaceMaterial(Material, object):
         pass
 
 
-def create_opaque_simple_material(name, por):
-    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
-                                  'probability_of_absortion': constant_function(1 - por),
-                                  'probability_of_transmitance': constant_function(0),
-                                  'energy_collector': False,
-                                  'specular_material': True}, None)
+def create_opaque_simple_layer(name):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(0.0),
+                                  'probability_of_absortion': constant_function(1.0),
+                                  'probability_of_transmitance': constant_function(0.0),
+                                  'energy_collector': False})
 
 
-def create_transparent_simple_material(name, por):
-    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
+def create_transparent_simple_layer(name, pot):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(1 - pot),
                                   'probability_of_absortion': constant_function(0),
-                                  'probability_of_transmitance': constant_function(1 - por),
+                                  'probability_of_transmitance': constant_function(pot),
+                                  'energy_collector': False,
                                   'specular_material': True})
 
-
-def create_absorber_simple_material(name, por):
-    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
-                                  'probability_of_absortion': constant_function(1 - por),
+								  
+def create_absorber_simple_layer(name, poa):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(1 - poa),
+                                  'probability_of_absortion': constant_function(poa),
                                   'probability_of_transmitance': constant_function(0),
                                   'energy_collector': True,
-                                  'lambertian_material': True})
+                                  'specular_material': True})
 
-
+								  
 def simple_reflector_twolayers(name, por_front, por_back):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por_front),
                                   'probability_of_absortion': constant_function(1 - por_front),
@@ -815,19 +815,19 @@ def simple_reflector_twolayers(name, por_front, por_back):
                                   'probability_of_transmitance': constant_function(0),
                                   'specular_material': True,
                                   'energy_collector': False})
-
-
-def create_absorber_lambertian_layer(name, por):
-    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
-                                  'probability_of_absortion': constant_function(1 - por),
+								  
+								  
+def create_absorber_lambertian_layer(name, poa):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(1 - poa),
+                                  'probability_of_absortion': constant_function(poa),
                                   'probability_of_transmitance': constant_function(0),
                                   'energy_collector': True,
                                   'lambertian_material': True})
+								  
 
-
-def create_absorber_TW_model_layer(name, por, b_constant, c_constant):
-    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
-                                  'probability_of_absortion': constant_function(1 - por),
+def create_absorber_TW_model_layer(name, poa, b_constant, c_constant):
+    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(1 - poa),
+                                  'probability_of_absortion': constant_function(poa),
                                   'probability_of_transmitance': constant_function(0),
                                   'energy_collector': True,
                                   'lambertian_material': True,
@@ -860,7 +860,7 @@ def create_reflector_onegaussian_layer(name, por, sigma):
                                   'specular_material': True,
                                   'sigma_1': sigma})
 
-
+								  
 def create_reflector_twogaussian_layer(name, por, sigma_1, sigma_2, k):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
                                   'probability_of_absortion': constant_function(1 - por),
@@ -869,30 +869,30 @@ def create_reflector_twogaussian_layer(name, por, sigma_1, sigma_2, k):
                                   'specular_material': True,
                                   'sigma_1': sigma_1,
                                   'sigma_2': sigma_2,
-                                  'k': k})
-								  
+                                  'k': k})								  
 
-def create_polarized_coating_transparent_layer(name, coating_material):
+
+def create_polarized_coating_transparent_layer(name, coating_file):
     # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
     # the values in coating_material should be in the corresponding order columns
-    data_material = np.loadtxt(coating_material, usecols=(0,1,2,3))
+    data_material = np.loadtxt(coating_file, usecols=(0,1,2,3))
     SurfaceMaterial.create(name, {'Matrix_polarized_reflectance_coating': matrix_reflectance(data_material),
                                   'probability_of_absortion': constant_function(0),
                                   'energy_collector': False})
 
 								   
-def create_polarized_coating_absorber_layer(name, coating_material):
+def create_polarized_coating_absorber_layer(name, coating_file):
     # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
     # the values in coating_material should be in the corresponding order columns
-    data_material = np.loadtxt(coating_material, usecols=(0,1,2,3))
+    data_material = np.loadtxt(coating_file, usecols=(0,1,2,3))
     SurfaceMaterial.create(name, {'Matrix_polarized_reflectance_coating': matrix_reflectance(data_material),
                                   'probability_of_transmitance': constant_function(0),
-                                  'energy_collector': True})
+                                  'energy_collector': True})								  
 
-
+								  
 def create_two_layers_material(name, layer_front, layer_back):
     SurfaceMaterial.create(name, Material.by_name[layer_front].properties,
-                           Material.by_name[layer_back].properties)
+	                       Material.by_name[layer_back].properties)
 
 
 # endregion
