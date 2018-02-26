@@ -767,7 +767,8 @@ class SurfaceMaterial(Material, object):
             probabilities = [results[0], results[1], results[2]]
             polarization_vector = results[3]
             perpendicular_polarized = results[4]
-		if not probabilities:
+
+        if probabilities is None:
             try:
                 por = properties['probability_of_reflexion'](ray.properties['wavelength'])
             except:
