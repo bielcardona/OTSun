@@ -628,6 +628,7 @@ class Material(object):
             with open(filename,'rb') as f:
                 mat = dill.load(f)
                 cls.by_name[mat.name] = mat
+                return mat.name
         except:
             pass
 
