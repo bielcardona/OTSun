@@ -114,12 +114,14 @@ def reflexion(incident, normal, polarization_vector, polarization_vector_calcula
     Base.Vector
         reflected vector from incident and normal surface
     """
-    # We assume all vectors are normalized and the normal.dot(incident) < 0
-    reflected = incident - normal * 2.0 * normal.dot(incident)  # refelcted vector
-    c1 = - normal.dot(incident)  # cos (incidence_angle)
+    mynormal = normal * 1.0
+    if mynormal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
+        mynormal = mynormal * (-1.0)
+    reflected = incident - mynormal * 2.0 * mynormal.dot(incident)  # refelcted vector
+    c1 = - mynormal.dot(incident)  # cos (incidence_angle)
     angle = 2.0 * (np.pi - np.arccos(c1)) * 180.0 / np.pi  # angle for make a rotation to the polarizacion vector
     if not polarization_vector_calculated_before:
-        normal_parallel_plane = incident.cross(normal)  # axis for the rotation, only parallel component must be rotated
+        normal_parallel_plane = incident.cross(mynormal)  # axis for the rotation, only parallel component must be rotated
         if normal_parallel_plane == Base.Vector(0, 0, 0):  # to avoid null vector in a common case
             normal_parallel_plane = Base.Vector(1, 0, 0)
         rotation = Base.Rotation(normal_parallel_plane, angle)
@@ -129,18 +131,21 @@ def reflexion(incident, normal, polarization_vector, polarization_vector_calcula
     return OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION)
 
 
-def lambertian_reflexion(normal):
+def lambertian_reflexion(incident, normal):
     """
     Implementation of lambertian reflection for diffusely reflecting surface
     """
-    # We assume the normal is normalized and the normal.dot(incident) < 0
+    mynormal = normal * 1.0
+    if mynormal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
+        mynormal = mynormal * (-1.0)
     dot = - 1.0
-    while (dot < 0.0):
+    while (dot <= 0.01):
         random_vector = Base.Vector(myrandom() - 0.5, myrandom() - 0.5, myrandom() - 0.5)
         random_vector.normalize()
-        dot = normal.dot(random_vector)
-    random_polarization_vector = random_polarization(random_vector)
-    return OpticalState(random_polarization_vector, random_vector, Phenomenon.REFLEXION)
+        dot = mynormal.dot(random_vector)
+    new_direction = random_vector		
+    random_polarization_vector = random_polarization(new_direction)  ## To be tested!!!!!
+    return OpticalState(random_polarization_vector, new_direction, Phenomenon.REFLEXION)
 
 
 def single_gaussian_dispersion(normal, state, sigma_1):
@@ -837,10 +842,8 @@ class SurfaceMaterial(Material, object):
     def change_of_direction(self, ray, normal_vector, nearby_material):
 
         if ray.directions[-1].dot(normal_vector) < 0:  # Ray intercepted on the frontside of the surface
-            normal = normal_vector  # not used
             properties = self.properties_front
         else:  # Ray intercepted on the backside of the surface
-            normal = normal_vector * (-1.0)  # not used
             properties = self.properties_back
 
         results = self.decide_phenomenon(ray, normal_vector, properties, nearby_material)
