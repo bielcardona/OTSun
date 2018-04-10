@@ -265,13 +265,12 @@ def refraction(incident, normal, n1, n2, polarization_vector):
     # https://en.wikipedia.org/wiki/Snell's_law#Vector_form
     mynormal = normal * 1.0
     if mynormal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
-        # noinspection PyAugmentAssignment
         mynormal = mynormal * (-1.0)
     r = n1 / n2
     c1 = - mynormal.dot(incident)  # cos (incidence_angle)
     c2sq = 1.0 - r * r * (1.0 - c1 * c1)  # cos (refracted_angle) ** 2
     if c2sq.real < 0:  # total internal reflection
-        return reflexion(incident, mynormal, polarization_vector)
+        return reflexion(incident, normal, polarization_vector)
     c2 = sqrt(c2sq)  # cos (refracted_angle)
     normal_parallel_plane = incident.cross(mynormal)  # normal vector of the parallel plane
     if normal_parallel_plane == Base.Vector(0, 0, 0):  # to avoid null vector at mynormal and incident parallel vectors
@@ -297,7 +296,7 @@ def refraction(incident, normal, n1, n2, polarization_vector):
         R = a * a.conjugate()  # reflectance for p-polarized (parallel) light
         polarization_vector = parallel_v.normalize()
     if myrandom() < R.real:  # ray reflected
-        return reflexion(incident, mynormal, polarization_vector, True)
+        return reflexion(incident, normal, polarization_vector, True)
     else:  # ray refracted
         refracted_direction = incident * r.real + mynormal * (r.real * c1.real - c2.real)
         perp_v = refracted_direction.cross(mynormal)
@@ -310,7 +309,7 @@ def refraction(incident, normal, n1, n2, polarization_vector):
             return OpticalState(para_v, refracted_direction, Phenomenon.REFRACTION)
 
 
-def calculate_probabilities_polarizaton_coating(incident, normal, n1, n2, polarization_vector, properties,wavelength):
+def calculate_probabilities_polarizaton_coating(incident, normal, n1, n2, polarization_vector, properties, wavelength):
     # returns probability of Reflexion, probability of Absortion, probability of Transmitance, polarization_vector
     mynormal = normal * 1.0
     backside = False
