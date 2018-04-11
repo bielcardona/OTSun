@@ -663,9 +663,7 @@ class VolumeMaterial(Material, object):
         Initializes a Volume Material. The properties parameter must be a dict with the physical properties
         describing the material. At least, the following must be provided:
         'index_of_refraction': index of refraction of the material, as a function of its wavelength, only real part.
-        'extinction_coefficient': imaginary part of the index of refraction of the material in nm-1, as a function of 
-        its wavelength.
-        'attenuation_coefficient': ettenuation coefficient of the material in m-1
+        'extinction_coefficient': imaginary part of the index of refraction of the material as a function of its wavelength.
         """
         super(VolumeMaterial, self).__init__(name, properties)
         self.kind = 'Volume'
@@ -862,11 +860,6 @@ class SurfaceMaterial(Material, object):
             return self.change_of_direction_by_transmitance(ray, normal_vector, nearby_material, perpendicular_polarized)
 
 
-    def scatter_direction(self, ray, direction):
-        # TODO: pensar
-        pass
-
-
 def create_opaque_simple_layer(name):
     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(0.0),
                                   'probability_of_absortion': constant_function(1.0),
@@ -939,26 +932,7 @@ def create_reflector_lambertian_layer(name, por):
                                   'probability_of_transmitance': constant_function(0),
                                   'energy_collector': False,
                                   'lambertian_material': True})
-
-
-# def create_reflector_onegaussian_layer(name, por, sigma):
-    # SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
-                                  # 'probability_of_absortion': constant_function(1 - por),
-                                  # 'probability_of_transmitance': constant_function(0),
-                                  # 'energy_collector': False,
-                                  # 'specular_material': True,
-                                  # 'sigma_1': sigma})
-
-								  
-# def create_reflector_twogaussian_layer(name, por, sigma_1, sigma_2, k):
-    # SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
-                                  # 'probability_of_absortion': constant_function(1 - por),
-                                  # 'probability_of_transmitance': constant_function(0),
-                                  # 'energy_collector': False,
-                                  # 'specular_material': True,
-                                  # 'sigma_1': sigma_1,
-                                  # 'sigma_2': sigma_2,
-                                  # 'k': k})								  
+							  
 
 def create_metallic_specular_layer(name, file_index_of_refraction, sigma_1 = None, sigma_2 = None, k = None):
     # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
@@ -969,12 +943,24 @@ def create_metallic_specular_layer(name, file_index_of_refraction, sigma_1 = Non
     SurfaceMaterial.create(name, {'index_of_refraction': tabulated_function(wavelength_values, n_values),
                                  'extinction_coefficient': tabulated_function(wavelength_values, k_values),
                                   'energy_collector': False,
-                                  'specular_material':True,
+                                  'specular_material': True,
                                   'metallic_material': True,
                                   'sigma_1': sigma_1,
                                   'sigma_2': sigma_2,
                                   'k': k})
-
+								  
+def create_metallic_lambertian_layer(name, file_index_of_refraction):
+    # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
+    data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
+    wavelength_values = data_refraction[:, 0]
+    n_values = data_refraction[:, 1]
+    k_values = data_refraction[:, 2]
+    SurfaceMaterial.create(name, {'index_of_refraction': tabulated_function(wavelength_values, n_values),
+                                 'extinction_coefficient': tabulated_function(wavelength_values, k_values),
+                                  'energy_collector': False,
+                                  'lambertian_material': True,
+                                  'metallic_material': True})
+								  
 								  
 def create_polarized_coating_reflector_layer(name, coating_file, sigma_1 = None, sigma_2 = None, k = None):
     # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
@@ -983,8 +969,8 @@ def create_polarized_coating_reflector_layer(name, coating_file, sigma_1 = None,
     SurfaceMaterial.create(name, {'Matrix_polarized_reflectance_coating': matrix_reflectance(data_material),
                                   'probability_of_absortion': constant_function(0),
                                   'energy_collector': False,
-                                  'specular_material':True,
-                                  'transparent_material':False,
+                                  'specular_material': True,
+                                  'transparent_material': False,
                                   'sigma_1': sigma_1,
                                   'sigma_2': sigma_2,
                                   'k': k})
@@ -997,8 +983,8 @@ def create_polarized_coating_transparent_layer(name, coating_file):
     SurfaceMaterial.create(name, {'Matrix_polarized_reflectance_coating': matrix_reflectance(data_material),
                                   'probability_of_absortion': constant_function(0),
                                   'energy_collector': False,
-                                  'specular_material':False,
-                                  'transparent_material':True})
+                                  'specular_material': False,
+                                  'transparent_material': True})
 
 								   
 def create_polarized_coating_absorber_layer(name, coating_file):
@@ -1008,9 +994,9 @@ def create_polarized_coating_absorber_layer(name, coating_file):
     SurfaceMaterial.create(name, {'Matrix_polarized_reflectance_coating': matrix_reflectance(data_material),
                                   'probability_of_transmitance': constant_function(0),
                                   'energy_collector': True,
-                                  'specular_material':False,
-                                  'transparent_material':False,
-                                  'lambertian_material':True})								  
+                                  'specular_material': False,
+                                  'transparent_material': False,
+                                  'lambertian_material': True})								  
 
 								  
 def create_two_layers_material(name, layer_front, layer_back):
@@ -1031,7 +1017,7 @@ class Scene:
         self.solids = []  # All the solids in the Scene
         self.materials = {}  # Assign the materials to objects
         # self.sum_energy = 0.0 # Energy of the Scene
-        self.epsilon = 0.00001  # Tolerance for solid containment
+        self.epsilon = 40 * 10.0 ** (-6.0)  # Tolerance for solid containment # 10 nm.
         self.boundbox = None
 
         for obj in objects:
@@ -1200,7 +1186,7 @@ class BuieDistribution:
 
     @staticmethod
     def a1(CSR, SD):
-        """ Parameter a1 needed for the normalization of the probability distribution in thedisk region"""
+        """ Parameter a1 needed for the normalization of the probability distribution in the disk region"""
         f = BuieDistribution.solar_disk__density_distribution
         th = np.arange(0.0, SD, 0.001)
         f_th = np.vectorize(f)
@@ -1346,11 +1332,6 @@ class Ray:
         middle_point = point_1.add(point_2) * 0.5
         actual_solid = self.scene.solid_at_point(middle_point)
         if actual_solid:
-            if 'attenuation_coefficient' in self.scene.materials[actual_solid].properties:
-                alpha = self.scene.materials[actual_solid].properties['attenuation_coefficient'](self.wavelength)
-                if alpha > 0: # is it needed?
-                    d = point_1.distanceToPoint(point_2)
-                    self.energy = self.energy * np.exp(- alpha * d / 1000.0)
             if 'extinction_coefficient' in self.scene.materials[actual_solid].properties:
                 alpha = self.scene.materials[actual_solid].properties['extinction_coefficient'](
                     self.wavelength) * 4.0 * np.pi / (self.wavelength / 1000000000.0)
@@ -1358,7 +1339,7 @@ class Ray:
                     d = point_1.distanceToPoint(point_2)
                     self.energy = self.energy * np.exp(- alpha * d / 1000.0)
 
-    def run(self, max_hops=20):
+    def run(self, max_hops=100):
         """
         Makes a sun ray propagate until it gets absorbed, it exits the scene,
         or gets caught in multiple (> max_hops) reflections.		
