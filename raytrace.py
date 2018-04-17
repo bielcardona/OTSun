@@ -998,19 +998,6 @@ def create_absorber_simple_layer(name, poa):
                                   'probability_of_transmitance': constant_function(0),
                                   'energy_collector': True,
                                   'specular_material': True})
-
-								  
-def simple_reflector_twolayers(name, por_front, por_back):
-    SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por_front),
-                                  'probability_of_absortion': constant_function(1 - por_front),
-                                  'probability_of_transmitance': constant_function(0),
-                                  'specular_material': True,
-                                  'energy_collector': False},
-                                 {'probability_of_reflexion': constant_function(por_back),
-                                  'probability_of_absortion': constant_function(1 - por_back),
-                                  'probability_of_transmitance': constant_function(0),
-                                  'specular_material': True,
-                                  'energy_collector': False})
 								  
 								  
 def create_absorber_lambertian_layer(name, poa):
