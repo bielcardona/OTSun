@@ -438,7 +438,7 @@ def calculate_state_thin_film(incident, normal, n1, n2, polarization_vector, pro
             T = calculate_reflectance(Matrix_T, angle, wavelength)[1]
         else:
             T = calculate_reflectance(Matrix_T, angle, wavelength)[3]
-        energy_absorbed_thin_film = 1.0 - R - T
+        energy_absorbed_thin_film = (1 - R - T) / (1 - R)
         refracted_direction = incident * r.real + mynormal * (r.real * c1.real - c2.real)
         return energy_absorbed_thin_film, OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION)
 
