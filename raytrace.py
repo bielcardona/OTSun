@@ -490,10 +490,10 @@ def random_congruential(seed=None):
 # ---
 # Define the random algorithm
 # ---
-# myrandom = random_congruential
+myrandom = random_congruential
 
 
-myrandom = random.random
+# myrandom = random.random
 
 
 # ---
@@ -795,8 +795,9 @@ def create_polarized_thin_film(name, file_thin_film, file_front, file_back):
     # thin film material calculated by TMM method, six columns:
 	# wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel),  transmittance s-polarized, transmittance p-polarized
     # the values in coating_material should be in the corresponding order columns
-    data_reflectance = np.loadtxt(file_thin_film, usecols=(0,1,2,3))
-    data_transmittance = np.loadtxt(file_thin_film, usecols=(0,1,4,5))
+    data = np.loadtxt(file_thin_film)
+    data_reflectance = data[:,[0,1,2,3]]
+    data_transmittance = data[:,[0,1,4,5]]
     if file_front is not 'Vacuum':
         data_refraction_front = np.loadtxt(file_front, usecols=(0, 1, 2))
         wavelength_values_front = data_refraction_front[:, 0]
@@ -1217,7 +1218,7 @@ class SunWindow(object):
                 best_length1 = length1
                 best_length2 = length2
             # noinspection PyUnboundLocalVariable
-            return best_origin, best_v1, best_v2, best_length1 * 1.1, best_length2 * 1.1
+            return best_origin, best_v1, best_v2, best_length1 * 1.0, best_length2 * 1.0
 
     def __init__(self, scene, direction):
         xs = [scene.boundbox.XMin, scene.boundbox.XMax]
@@ -1473,7 +1474,7 @@ class Ray:
             self.materials.append(material)
             self.normals.append(normal)
             self.polarization_vectors.append(state.polarization)
-            if self.energy < 1.E-6: # needed for PV calculations
+            if self.energy < 1E-4: # needed for PV calculations
                 self.finished = True
             if state.phenomenon == Phenomenon.ABSORTION:
                 self.finished = True
