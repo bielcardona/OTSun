@@ -206,7 +206,10 @@ def TW_absorptance_ratio(normal, b_constant, c_constant, incident):
     Sol. Energy, 68, pp. 335–341.
     """
     # We assume the normal is normalized.
-    incidence_angle = np.arccos(normal.dot(incident) * (-1.0))
+    mynormal = normal * 1.0
+    if mynormal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
+        mynormal = mynormal * (-1.0)
+    incidence_angle = np.arccos(mynormal.dot(incident) * (-1.0))
     incidence_angle_deg = incidence_angle * 180.0 / np.pi
     if incidence_angle_deg < 80.0:
         absortion_ratio = 1.0 - b_constant * (1.0 / np.cos(incidence_angle) - 1.0) ** c_constant
@@ -767,9 +770,9 @@ class VolumeMaterial(Material, object):
             return optical_state
 
 
-def create_simple_volume_material(name, index_of_refraction, extinction_coefficient=None):
+def create_simple_volume_material(name, index_of_refraction, attenuation_coefficient=None):
     VolumeMaterial.create(name, {'index_of_refraction': constant_function(index_of_refraction),
-                                 'extinction_coefficient': constant_function(extinction_coefficient)})
+                                 'attenuation_coefficient': constant_function(attenuation_coefficient)})
 
 
 def create_wavelength_volume_material(name, file_index_of_refraction):
@@ -1218,7 +1221,11 @@ class SunWindow(object):
                 best_length1 = length1
                 best_length2 = length2
             # noinspection PyUnboundLocalVariable
-            return best_origin, best_v1, best_v2, best_length1 * 1.0, best_length2 * 1.0
+            Length1 = best_length1 * 1.1
+            Length2 = best_length2 * 1.1
+            origin = best_origin - best_v1 * Length1 * 0.05 - best_v2 * Length2 * 0.05
+            print best_origin, origin			
+            return origin, best_v1, best_v2, Length1, Length2
 
     def __init__(self, scene, direction):
         xs = [scene.boundbox.XMin, scene.boundbox.XMax]
@@ -1438,6 +1445,10 @@ class Ray:
             alpha = material.properties['extinction_coefficient'](self.wavelength) * 4 * np.pi / (self.wavelength / 1E6) # mm-1
             d = point_1.distanceToPoint(point_2)
             self.energy = self.energy * np.exp(- alpha * d)
+        if 'attenuation_coefficient' in material.properties:
+            alpha = material.properties['attenuation_coefficient'](self.wavelength) # mm-1
+            d = point_1.distanceToPoint(point_2)
+            self.energy = self.energy * np.exp(- alpha * d)
 
     def run(self, max_hops=100):
         """
@@ -1486,6 +1497,8 @@ class Ray:
         lshape_wire = Part.makePolygon(self.points)
         my_shape_ray = doc.addObject("Part::Feature", "Ray")
         my_shape_ray.Shape = lshape_wire
+#        lshape_wire = Part.makePolygon(self.points)
+#        doc.addObject("Part::Feature", "Ray").Shape = lshape_wire
 
 
 class LightSource:
