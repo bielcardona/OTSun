@@ -1221,10 +1221,9 @@ class SunWindow(object):
                 best_length1 = length1
                 best_length2 = length2
             # noinspection PyUnboundLocalVariable
-            Length1 = best_length1 * 1.1
-            Length2 = best_length2 * 1.1
-            origin = best_origin - best_v1 * Length1 * 0.05 - best_v2 * Length2 * 0.05
-            print best_origin, origin			
+            Length1 = best_length1 * 1.04
+            Length2 = best_length2 * 1.04
+            origin = best_origin - best_v1 * Length1 * 0.02 - best_v2 * Length2 * 0.02			
             return origin, best_v1, best_v2, Length1, Length2
 
     def __init__(self, scene, direction):
