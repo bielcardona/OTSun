@@ -9,6 +9,10 @@ import numpy as np
 # Materials
 # ---
 
+MyProject = 'test_PTC.FCStd'
+FreeCAD.openDocument(MyProject)
+
+
 file_BK7 = 'BK7_Schott.txt' # change for your path
 raytrace.create_wavelength_volume_material("Glass1", file_BK7)
 raytrace.create_opaque_simple_layer("Opa1")
@@ -74,6 +78,9 @@ for ph in np.arange(phi_ini, phi_end, phi_step):
         else:
             efficiency_from_source_PV = 0.0
         results.append((ph, th, efficiency_from_source_Th, efficiency_from_source_PV))
+
+FreeCAD.closeDocument(FreeCAD.ActiveDocument.Name)
+
 
 def test_2():
     assert 0.9 > results[0][2] > 0.7 and 0.8 > results[1][2] > 0.5 and results[0][3] == 0.0 and results[1][3] == 0.0

@@ -6,6 +6,10 @@ from FreeCAD import Base
 import Part
 import numpy as np
 
+MyProject = 'Perovskite_Stack_200nm.FCStd'
+FreeCAD.openDocument(MyProject)
+
+
 doc = FreeCAD.ActiveDocument
 
 
@@ -129,6 +133,7 @@ if captured_energy_Th > 1E-9:
 # ---
 # Outputs for photovoltaic materials (PV) in Spectral Analysis
 # ---
+
 if captured_energy_PV > 1E-9:
 
     data_PV_values = np.array(np.concatenate(PV_values))
@@ -144,7 +149,8 @@ if captured_energy_PV > 1E-9:
 
 # --------- end
 
-def test_3():
+FreeCAD.closeDocument(FreeCAD.ActiveDocument.Name)
 
+def test_3():
     assert 0.1 > table_Th[0][1] > 0.0 and 0.1 > table_Th[1][1] > 0.0 and 0.98 > table_PV[0][1] > 0.75 and 0.98 > table_PV[1][1] > 0.75
 
