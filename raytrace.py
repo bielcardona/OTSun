@@ -1411,7 +1411,7 @@ class Ray:
             point_plus_delta = current_point + current_direction * self.scene.epsilon
             next_solid = self.scene.solid_at_point(point_plus_delta)
             nearby_material = self.scene.materials.get(next_solid, vacuum_medium)
-            state = material.change_of_direction(self,normal,nearby_material)
+            state = material.change_of_direction(self, normal, nearby_material)
             ### polarization_vector, direction, phenomenon = results[0], results[1], results[2]
             # TODO polarization_vector
         else:
@@ -1419,7 +1419,10 @@ class Ray:
             point_plus_delta = current_point + current_direction * self.scene.epsilon
             next_solid = self.scene.solid_at_point(point_plus_delta)
             nearby_material = self.scene.materials.get(next_solid, vacuum_medium)
-            state = nearby_material.change_of_direction(self, normal)
+            if nearby_material.kind == 'Surface': # solid with surface material on all faces
+                state = nearby_material.change_of_direction(self, normal, nearby_material)   			
+            else:
+                state = nearby_material.change_of_direction(self, normal)
             ### polarization_vector, direction, phenomenon = nearby_material.change_of_direction(self,
             ###                                                                                 normal)
             # TODO polarization_vector
