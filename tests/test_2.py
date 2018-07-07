@@ -1,6 +1,6 @@
 import sys
 ##### sys.path.append("D:Ramon_2015/RECERCA/RETOS-2015/Tareas/Proves-FreeCAD-2") # change for your path
-import raytrace
+import otsun
 import FreeCAD
 from FreeCAD import Base
 import Part
@@ -14,16 +14,16 @@ FreeCAD.openDocument(MyProject)
 
 
 file_BK7 = 'BK7_Schott.txt' # change for your path
-raytrace.create_wavelength_volume_material("Glass1", file_BK7)
-raytrace.create_opaque_simple_layer("Opa1")
+otsun.create_wavelength_volume_material("Glass1", file_BK7)
+otsun.create_opaque_simple_layer("Opa1")
 file_Ag = 'Ag_Yang.txt'
-raytrace.create_metallic_specular_layer("Mir", file_Ag, 4.4, 20, 0.9)
-raytrace.create_two_layers_material("Mir1", "Mir", "Mir")
+otsun.create_metallic_specular_layer("Mir", file_Ag, 4.4, 20, 0.9)
+otsun.create_two_layers_material("Mir1", "Mir", "Mir")
 file_AR1 = 'AR-J.txt'
-raytrace.create_polarized_coating_transparent_layer("file_AR1",file_AR1)
-raytrace.create_two_layers_material("AR1","file_AR1","file_AR1")
+otsun.create_polarized_coating_transparent_layer("file_AR1", file_AR1)
+otsun.create_two_layers_material("AR1", "file_AR1", "file_AR1")
 file_Abs_Coating = 'Si3N4Reflectancia.txt'
-raytrace.create_polarized_coating_absorber_layer("Abs1", file_Abs_Coating)
+otsun.create_polarized_coating_absorber_layer("Abs1", file_Abs_Coating)
 
 # ---
 # Inputs for Total Analysis
@@ -42,7 +42,7 @@ aperture_collector_PV = 0.0
 # for direction of the source two options: Buie model or main_direction 
 # direction_distribution = None # default option main_direction
 CSR = 0.05
-Buie_model = raytrace.BuieDistribution(CSR)
+Buie_model = otsun.BuieDistribution(CSR)
 direction_distribution = Buie_model
 # for integral results three options: ASTMG173-direct (default option), ASTMG173-total, upload data_file_spectrum
 data_file_spectrum = 'ASTMG173-direct.txt'
@@ -53,21 +53,21 @@ data_file_spectrum = 'ASTMG173-direct.txt'
 # ---
 show_in_doc = None
 polarization_vector = None
-light_spectrum = raytrace.create_CDF_from_PDF(data_file_spectrum)
+light_spectrum = otsun.create_CDF_from_PDF(data_file_spectrum)
 # --------- end
 
-power_emitted_by_m2 = raytrace.integral_from_data_file(data_file_spectrum)
+power_emitted_by_m2 = otsun.integral_from_data_file(data_file_spectrum)
 
 # objects for scene
 sel = doc.Objects
-current_scene = raytrace.Scene(sel)
+current_scene = otsun.Scene(sel)
 results = []
 for ph in np.arange(phi_ini, phi_end, phi_step):
     for th in np.arange(theta_ini, theta_end, theta_step):
-        main_direction = raytrace.polar_to_cartesian(ph, th) * -1.0 # Sun direction vector
-        emitting_region = raytrace.SunWindow(current_scene,main_direction)
-        l_s = raytrace.LightSource(current_scene, emitting_region, light_spectrum, 1.0, direction_distribution, polarization_vector)
-        exp = raytrace.Experiment(current_scene, l_s, number_of_rays, show_in_doc)
+        main_direction = otsun.polar_to_cartesian(ph, th) * -1.0 # Sun direction vector
+        emitting_region = otsun.SunWindow(current_scene, main_direction)
+        l_s = otsun.LightSource(current_scene, emitting_region, light_spectrum, 1.0, direction_distribution, polarization_vector)
+        exp = otsun.Experiment(current_scene, l_s, number_of_rays, show_in_doc)
         exp.run(show_in_doc)
         if aperture_collector_Th != 0.0:
             efficiency_from_source_Th = (exp.captured_energy_Th /aperture_collector_Th) / (exp.number_of_rays/exp.light_source.emitting_region.aperture)

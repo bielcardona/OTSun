@@ -1,5 +1,5 @@
 import sys
-import raytrace
+import otsun
 import os
 import FreeCAD
 from FreeCAD import Base
@@ -14,17 +14,17 @@ doc = FreeCAD.ActiveDocument
 
 
 # Materials Solar Cell Stack
-raytrace.create_transparent_simple_layer("Trans", 1.0)
-raytrace.create_absorber_simple_layer("Abs",1.0)
-raytrace.create_two_layers_material("Trans_Abs","Trans","Abs")
+otsun.create_transparent_simple_layer("Trans", 1.0)
+otsun.create_absorber_simple_layer("Abs", 1.0)
+otsun.create_two_layers_material("Trans_Abs", "Trans", "Abs")
 file_thin_film = 'Fitxer_OTSun_Exp1a_theta0_90.txt'
 file_Perovskite = 'Perovskite_Leguy.txt'
-raytrace.create_polarized_thin_film("ThinFilm", file_thin_film, "Vacuum", file_Perovskite)
-raytrace.create_PV_material("PV", file_Perovskite)
+otsun.create_polarized_thin_film("ThinFilm", file_thin_film, "Vacuum", file_Perovskite)
+otsun.create_PV_material("PV", file_Perovskite)
 file_Spiro = 'Spiro_.txt'
-raytrace.create_wavelength_volume_material("Spiro", file_Spiro)
+otsun.create_wavelength_volume_material("Spiro", file_Spiro)
 file_Ag = 'Ag_Yang.txt'
-raytrace.create_metallic_lambertian_layer("Ag", file_Ag)
+otsun.create_metallic_lambertian_layer("Ag", file_Ag)
 
 
 # ---
@@ -78,14 +78,14 @@ PV_values = []
 
 # objects for scene
 sel = doc.Objects
-current_scene = raytrace.Scene(sel)
+current_scene = otsun.Scene(sel)
 
 for w in np.arange(wavelength_ini, wavelength_end , wavelength_step):
     light_spectrum = w
-    main_direction = raytrace.polar_to_cartesian(phi, theta) * -1.0 # Sun direction vector
-    emitting_region = raytrace.SunWindow(current_scene,main_direction)
-    l_s = raytrace.LightSource(current_scene, emitting_region, light_spectrum, 1.0, direction_distribution, polarization_vector)
-    exp = raytrace.Experiment(current_scene, l_s, number_of_rays, show_in_doc)
+    main_direction = otsun.polar_to_cartesian(phi, theta) * -1.0 # Sun direction vector
+    emitting_region = otsun.SunWindow(current_scene, main_direction)
+    l_s = otsun.LightSource(current_scene, emitting_region, light_spectrum, 1.0, direction_distribution, polarization_vector)
+    exp = otsun.Experiment(current_scene, l_s, number_of_rays, show_in_doc)
     exp.run(show_in_doc)
     print ("%s" % (w)+ '\n')
     Th_energy.append(exp.Th_energy)
@@ -111,7 +111,7 @@ data_source_wavelength = data_source_wavelength.T
 # ---
 # Output source spectrum for calculation and total energy emitted
 # ---
-source_spectrum = raytrace.spectrum_to_constant_step(data_file_spectrum, wavelength_step, wavelength_ini, wavelength_end)
+source_spectrum = otsun.spectrum_to_constant_step(data_file_spectrum, wavelength_step, wavelength_ini, wavelength_end)
 energy_emitted = np.trapz(source_spectrum[:,1], x = source_spectrum[:,0])
 # --------- end
 
@@ -121,7 +121,7 @@ energy_emitted = np.trapz(source_spectrum[:,1], x = source_spectrum[:,0])
 # ---
 if captured_energy_Th > 1E-9:
     data_Th_points_absorber = np.array(np.concatenate(Th_points_absorber))
-    table_Th = raytrace.make_histogram_from_experiment_results(Th_wavelength, Th_energy, wavelength_step, aperture_collector_Th, exp.light_source.emitting_region.aperture)
+    table_Th = otsun.make_histogram_from_experiment_results(Th_wavelength, Th_energy, wavelength_step, aperture_collector_Th, exp.light_source.emitting_region.aperture)
     spectrum_by_table_Th = source_spectrum[:,1] * table_Th[:,1]		
     power_absorbed_from_source_Th = np.trapz(spectrum_by_table_Th, x = source_spectrum[:,0])
     efficiency_from_source_Th = power_absorbed_from_source_Th / energy_emitted
@@ -137,13 +137,13 @@ if captured_energy_Th > 1E-9:
 if captured_energy_PV > 1E-9:
 
     data_PV_values = np.array(np.concatenate(PV_values))
-    table_PV = raytrace.make_histogram_from_experiment_results(PV_wavelength, PV_energy, wavelength_step, aperture_collector_PV, exp.light_source.emitting_region.aperture)
+    table_PV = otsun.make_histogram_from_experiment_results(PV_wavelength, PV_energy, wavelength_step, aperture_collector_PV, exp.light_source.emitting_region.aperture)
     spectrum_by_table_PV = source_spectrum[:,1] * table_PV[:,1]		
     power_absorbed_from_source_PV = np.trapz(spectrum_by_table_PV, x = source_spectrum[:,0])
     efficiency_from_source_PV = power_absorbed_from_source_PV / energy_emitted
     iqe = internal_quantum_efficiency
-    SR = raytrace.spectral_response(table_PV, iqe)
-    ph_cu = raytrace.photo_current(SR, source_spectrum)
+    SR = otsun.spectral_response(table_PV, iqe)
+    ph_cu = otsun.photo_current(SR, source_spectrum)
 
     # print power_absorbed_from_source_PV * aperture_collector_PV * 1E-6, energy_emitted * exp.light_source.emitting_region.aperture * 1E-6, efficiency_from_source_PV, ph_cu
 
