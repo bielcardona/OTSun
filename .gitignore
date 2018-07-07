@@ -16,3 +16,5 @@ old_tests
 build
 pySunScene.egg-info
 .pytest_cache
+*.txt
+OTSun.egg-info
