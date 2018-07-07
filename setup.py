@@ -1,9 +1,9 @@
 from setuptools import setup
 
 setup(
-    name='pySunScene',
-    version='0.9.8.3',
-    py_modules=['raytrace'],
+    name='OTSun',
+    version='1.0.0',
+    py_modules=['otsun'],
     url='',
     install_requires=['numpy==1.12', 'enum', 'dill'],
     license='MIT',

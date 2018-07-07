@@ -2,7 +2,7 @@ import sys
 ## sys.path.append("D:Ramon_2015/RECERCA/RETOS-2015/Tareas/Proves-FreeCAD-2") # change for your path
 #sys.path.append("")
 #sys.path.append("/usr/lib/freecad/lib")
-import raytrace
+import otsun
 ## import my_materials
 import FreeCAD
 from FreeCAD import Base
@@ -19,10 +19,10 @@ FreeCAD.openDocument(MyProject)
 # ---
 # Materials
 # ---
-raytrace.create_simple_volume_material("Glass1", 1.473, 0.015)
-raytrace.create_reflector_specular_layer("Mir", 0.885, 4.4)
-raytrace.create_two_layers_material("Mir1", "Mir", "Mir")
-raytrace.create_absorber_TW_model_layer("Abs1", 0.9427, 0.017, 1.8)
+otsun.create_simple_volume_material("Glass1", 1.473, 0.015)
+otsun.create_reflector_specular_layer("Mir", 0.885, 4.4)
+otsun.create_two_layers_material("Mir1", "Mir", "Mir")
+otsun.create_absorber_TW_model_layer("Abs1", 0.9427, 0.017, 1.8)
 
 # ---
 # Inputs for Total Analysis
@@ -41,7 +41,7 @@ aperture_collector_PV = 0.0
 # for direction of the source two options: Buie model or main_direction 
 # direction_distribution = None # default option main_direction
 CSR = 0.05
-Buie_model = raytrace.BuieDistribution(CSR)
+Buie_model = otsun.BuieDistribution(CSR)
 direction_distribution = Buie_model
 # for integral results three options: ASTMG173-direct (default option), ASTMG173-total, upload data_file_spectrum
 data_file_spectrum = 'ASTMG173-direct.txt'
@@ -52,21 +52,21 @@ data_file_spectrum = 'ASTMG173-direct.txt'
 # ---
 show_in_doc = None
 polarization_vector = None
-light_spectrum = raytrace.create_CDF_from_PDF(data_file_spectrum)
+light_spectrum = otsun.create_CDF_from_PDF(data_file_spectrum)
 # --------- end
 
-power_emitted_by_m2 = raytrace.integral_from_data_file(data_file_spectrum)
+power_emitted_by_m2 = otsun.integral_from_data_file(data_file_spectrum)
 
 # objects for scene
 sel = doc.Objects
-current_scene = raytrace.Scene(sel)
+current_scene = otsun.Scene(sel)
 results = []
 for ph in np.arange(phi_ini, phi_end, phi_step):
     for th in np.arange(theta_ini, theta_end, theta_step):
-        main_direction = raytrace.polar_to_cartesian(ph, th) * -1.0 # Sun direction vector
-        emitting_region = raytrace.SunWindow(current_scene,main_direction)
-        l_s = raytrace.LightSource(current_scene, emitting_region, light_spectrum, 1.0, direction_distribution, polarization_vector)
-        exp = raytrace.Experiment(current_scene, l_s, number_of_rays, show_in_doc)
+        main_direction = otsun.polar_to_cartesian(ph, th) * -1.0 # Sun direction vector
+        emitting_region = otsun.SunWindow(current_scene, main_direction)
+        l_s = otsun.LightSource(current_scene, emitting_region, light_spectrum, 1.0, direction_distribution, polarization_vector)
+        exp = otsun.Experiment(current_scene, l_s, number_of_rays, show_in_doc)
         exp.run(show_in_doc)
         t1 = time.time()
         if aperture_collector_Th != 0.0:
