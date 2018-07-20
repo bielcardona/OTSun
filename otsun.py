@@ -14,6 +14,9 @@ import dill
 import zipfile
 from enum import Enum
 from numpy.lib.scimath import sqrt
+import logging
+logger = logging.getLogger(__name__)
+
 
 # ---
 # Helper functions for outputs in Spectral Analysis
@@ -1132,6 +1135,7 @@ class Scene:
             # noinspection PyNoneFunctionAssignment
             material = Material.get_from_label(obj.Label)
             if not material:
+                logger.info("Material not found for object %s", obj.Label)
                 continue
             solids = obj.Shape.Solids
             faces = obj.Shape.Faces
