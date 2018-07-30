@@ -1556,6 +1556,7 @@ class Experiment:
     """
 
     def __init__(self, scene, light_source, number_of_rays, show_in_doc=None):
+        logger.info("Defining experiment with %d rays", number_of_rays)
         self.scene = scene
         self.light_source = light_source
         if show_in_doc:
@@ -1573,6 +1574,7 @@ class Experiment:
         random_congruential(time.time()) # TODO: change location
 
     def run(self, show_in_doc=None):
+        logger.info("Running experiment")
         for i in np.arange(0,self.number_of_rays,1):
             ray = self.light_source.emit_ray()
             ray.run()
