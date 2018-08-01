@@ -17,6 +17,7 @@ from numpy.lib.scimath import sqrt
 import logging
 logger = logging.getLogger(__name__)
 
+from autologging import traced
 
 # ---
 # Helper functions for outputs in Spectral Analysis
@@ -664,6 +665,7 @@ def calculate_reflectance(matrix_reflectance, angle, wavelength):
 
 # region Materials
 
+@traced(logger)
 class Material(object):
     """
     Class used to represent materials and their physical properties
@@ -703,7 +705,7 @@ class Material(object):
                 cls.by_name[mat.name] = mat
                 return mat.name
         except:
-            pass
+            logger.exception("error in processing file %s", filename)
 
     @classmethod
     def load_from_zipfile(cls, filename):
@@ -714,7 +716,7 @@ class Material(object):
                         mat = dill.load(f)
                         cls.by_name[mat.name] = mat
                     except:
-                        pass
+                        logger.exception("error in processing file %s", matfile)
 
     def change_of_direction(self, ray, normal_vector):
         """
@@ -726,6 +728,7 @@ class Material(object):
         # Compute new direction (ray.current_material)
 
 
+@traced(logger)
 class VolumeMaterial(Material, object):
     def __init__(self, name, properties):
         """
@@ -837,6 +840,7 @@ create_simple_volume_material("Vacuum", 1.0, 0.0)
 vacuum_medium = VolumeMaterial.by_name["Vacuum"]
 
 
+@traced(logger)
 class SurfaceMaterial(Material, object):
     def __init__(self, name, properties_front, properties_back=None):
         """
@@ -1347,6 +1351,7 @@ class BuieDistribution:
         return th_u
 
 
+@traced(logger)
 class Ray:
     """
     Class used to model a sun ray and its polarization vector. It keeps information of the path it 
@@ -1556,7 +1561,6 @@ class Experiment:
     """
 
     def __init__(self, scene, light_source, number_of_rays, show_in_doc=None):
-        logger.info("Defining experiment with %d rays", number_of_rays)
         self.scene = scene
         self.light_source = light_source
         if show_in_doc:
@@ -1574,7 +1578,6 @@ class Experiment:
         random_congruential(time.time()) # TODO: change location
 
     def run(self, show_in_doc=None):
-        logger.info("Running experiment")
         for i in np.arange(0,self.number_of_rays,1):
             ray = self.light_source.emit_ray()
             ray.run()
