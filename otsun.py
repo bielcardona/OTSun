@@ -102,6 +102,12 @@ class OpticalState(object):
         self.direction = direction
         self.phenomenon = phenomenon
 
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
 # ---
 # Helper functions for reflexion and refraction
 # ---
@@ -675,9 +681,9 @@ def plain_properties_to_properties(plain_properties):
         if prop_type == 'constant':
             properties[key] = constant_function(prop_value)
         if prop_type == 'tabulated':
-            properties[key] = tabulated_function(prop_value[0], prop_value[1])
+            properties[key] = tabulated_function(np.array(prop_value[0]), np.array(prop_value[1]))
         if prop_type == 'matrix':
-            properties[key] = matrix_reflectance(prop_value)
+            properties[key] = matrix_reflectance(np.array(prop_value))
     properties['plain_properties'] = plain_properties
     return properties
 
@@ -733,7 +739,8 @@ class Material(object):
                     if kind == 'Volume':
                         mat = VolumeMaterial(name, {})
                         plain_properties = mat_spec['plain_properties']
-                        mat.properties = plain_properties_to_properties(plain_properties)
+                        properties = plain_properties_to_properties(plain_properties)
+                        mat.properties = properties
                     if kind == 'Surface':
                         mat = SurfaceMaterial(name, {})
                         plain_properties_back = mat_spec['plain_properties_back']
@@ -827,7 +834,7 @@ class VolumeMaterial(Material, object):
                 'name': self.name,
                 'kind': self.kind,
                 'plain_properties' : self.properties.get('plain_properties',None)
-            }
+            }, cls=NumpyEncoder
         )
 
 # def create_simple_volume_material(name, index_of_refraction, attenuation_coefficient=None):
@@ -1188,7 +1195,7 @@ class SurfaceMaterial(Material, object):
                 'kind': self.kind,
                 'plain_properties_back' : self.properties_back.get('plain_properties',None),
                 'plain_properties_front': self.properties_front.get('plain_properties', None),
-            }
+            }, cls=NumpyEncoder
         )
 
 
