@@ -727,26 +727,41 @@ class Material(object):
         _ = cls(name, properties)
 
     @classmethod
-    def load_from_json(cls, filename):
+    def load_from_json_fileobject(cls, f):
+        info = json.load(f)
+        if type(info).__name__ == 'dict':
+            info = [info]
+        for mat_spec in info:
+            kind = mat_spec['kind']
+            name = mat_spec['name']
+            if kind == 'Volume':
+                mat = VolumeMaterial(name, {})
+                plain_properties = mat_spec['plain_properties']
+                properties = plain_properties_to_properties(plain_properties)
+                mat.properties = properties
+            if kind == 'Surface':
+                mat = SurfaceMaterial(name, {})
+                plain_properties_back = mat_spec['plain_properties_back']
+                mat.properties_back = plain_properties_to_properties(plain_properties_back)
+                plain_properties_front = mat_spec['plain_properties_front']
+                mat.properties_front = plain_properties_to_properties(plain_properties_front)
+        return name
+
+    @classmethod
+    def load_from_json_file(cls, filename):
         try:
             with open(filename, 'rb') as f:
-                info = json.load(f)
-                if type(info).__name__ == 'dict':
-                    info = [info]
-                for mat_spec in info:
-                    kind = mat_spec['kind']
-                    name = mat_spec['name']
-                    if kind == 'Volume':
-                        mat = VolumeMaterial(name, {})
-                        plain_properties = mat_spec['plain_properties']
-                        properties = plain_properties_to_properties(plain_properties)
-                        mat.properties = properties
-                    if kind == 'Surface':
-                        mat = SurfaceMaterial(name, {})
-                        plain_properties_back = mat_spec['plain_properties_back']
-                        mat.properties_back = plain_properties_to_properties(plain_properties_back)
-                        plain_properties_front = mat_spec['plain_properties_front']
-                        mat.properties_front = plain_properties_to_properties(plain_properties_front)
+                return cls.load_from_json_fileobject(f)
+        except:
+            logger.exception("error in processing file %s", filename)
+
+    @classmethod
+    def load_from_json_zip(cls, filename):
+        try:
+            with zipfile.ZipFile(filename) as z:
+                for matfile in z.namelist():
+                    with z.open(matfile) as f:
+                        cls.load_from_json_fileobject(f)
         except:
             logger.exception("error in processing file %s", filename)
 
@@ -779,6 +794,10 @@ class Material(object):
         """
         pass
         # Compute new direction (ray.current_material)
+
+    def save_to_json_file(self, filename):
+        with open(filename,'w') as f:
+            f.write(self.to_json())
 
 
 @traced(logger)
@@ -834,7 +853,7 @@ class VolumeMaterial(Material, object):
                 'name': self.name,
                 'kind': self.kind,
                 'plain_properties' : self.properties.get('plain_properties',None)
-            }, cls=NumpyEncoder
+            }, cls=NumpyEncoder, indent=4
         )
 
 # def create_simple_volume_material(name, index_of_refraction, attenuation_coefficient=None):
@@ -1197,7 +1216,6 @@ class SurfaceMaterial(Material, object):
                 'plain_properties_front': self.properties_front.get('plain_properties', None),
             }, cls=NumpyEncoder
         )
-
 
 # def create_opaque_simple_layer(name):
 #     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(0.0),
@@ -1707,8 +1725,8 @@ def create_polarized_coating_absorber_layer(name, coating_file):
 
 								  
 def create_two_layers_material(name, layer_front, layer_back):
-    SurfaceMaterial.create(name, Material.by_name[layer_front].properties,
-	                       Material.by_name[layer_back].properties)
+    SurfaceMaterial.create(name, Material.by_name[layer_front].properties_front,
+	                       Material.by_name[layer_back].properties_back)
 
 
 # endregion
