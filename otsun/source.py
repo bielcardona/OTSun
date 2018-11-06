@@ -34,14 +34,12 @@ class SunWindow(object):
             length2 = maxy - miny
             area = length1 * length2
             if not min_area or area < min_area:
-                # noinspection PyUnusedLocal
                 min_area = area
                 best_origin = p + v1 * minx + v2 * miny
                 best_v1 = v1
                 best_v2 = v2
                 best_length1 = length1
                 best_length2 = length2
-            # noinspection PyUnboundLocalVariable
             Length1 = best_length1 * 1.04
             Length2 = best_length2 * 1.04
             origin = best_origin - best_v1 * Length1 * 0.02 - best_v2 * Length2 * 0.02

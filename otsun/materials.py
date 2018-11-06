@@ -15,8 +15,6 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-# region Materials
-
 # ---
 # Classes for materials
 # ---
@@ -208,10 +206,6 @@ class VolumeMaterial(Material, object):
         )
 
 
-# def create_simple_volume_material(name, index_of_refraction, attenuation_coefficient=None):
-#     VolumeMaterial.create(name, {'index_of_refraction': constant_function(index_of_refraction),
-#                                  'attenuation_coefficient': constant_function(attenuation_coefficient)})
-
 def create_simple_volume_material(name, index_of_refraction, attenuation_coefficient=None):
     plain_properties = {
         'index_of_refraction': {
@@ -227,15 +221,6 @@ def create_simple_volume_material(name, index_of_refraction, attenuation_coeffic
     material.properties = plain_properties_to_properties(plain_properties)
     return material
 
-
-# def create_wavelength_volume_material(name, file_index_of_refraction):
-#     # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
-#     data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
-#     wavelength_values = data_refraction[:, 0]
-#     n_values = data_refraction[:, 1]
-#     k_values = data_refraction[:, 2]
-#     VolumeMaterial.create(name, {'index_of_refraction': tabulated_function(wavelength_values, n_values),
-#                                  'extinction_coefficient': tabulated_function(wavelength_values, k_values)})
 
 def create_wavelength_volume_material(name, file_index_of_refraction):
     # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
@@ -257,16 +242,6 @@ def create_wavelength_volume_material(name, file_index_of_refraction):
     material.properties = plain_properties_to_properties(plain_properties)
     return material
 
-
-# def create_PV_material(name, file_index_of_refraction):
-#     # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
-#     data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
-#     wavelength_values = data_refraction[:, 0]
-#     n_values = data_refraction[:, 1]
-#     k_values = data_refraction[:, 2]
-#     VolumeMaterial.create(name, {'index_of_refraction': tabulated_function(wavelength_values, n_values),
-#                                  'extinction_coefficient': tabulated_function(wavelength_values, k_values),
-#                                  'PV_material' : True})
 
 def create_PV_material(name, file_index_of_refraction):
     # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
@@ -293,41 +268,6 @@ def create_PV_material(name, file_index_of_refraction):
     return material
 
 
-# def create_polarized_thin_film(name, file_thin_film, file_front, file_back):
-#     # thin film material calculated by TMM method, six columns:
-# 	# wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel),  transmittance s-polarized, transmittance p-polarized
-#     # the values in coating_material should be in the corresponding order columns
-#     data = np.loadtxt(file_thin_film)
-#     data_reflectance = data[:,[0,1,2,3]]
-#     data_transmittance = data[:,[0,1,4,5]]
-#     if file_front is not 'Vacuum':
-#         data_refraction_front = np.loadtxt(file_front, usecols=(0, 1, 2))
-#         wavelength_values_front = data_refraction_front[:, 0]
-#         n_values_front = data_refraction_front[:, 1]
-#         k_values_front = data_refraction_front[:, 2]
-#         index_of_refraction_front = tabulated_function(wavelength_values_front, n_values_front)
-#         extinction_coefficient_front = tabulated_function(wavelength_values_front, k_values_front)
-#     else:
-#         index_of_refraction_front = constant_function(1.0)
-#         extinction_coefficient_front = constant_function(0.0)
-#     if file_back is not 'Vacuum':
-#         data_refraction_back = np.loadtxt(file_back, usecols=(0, 1, 2))
-#         wavelength_values_back = data_refraction_back[:, 0]
-#         n_values_back = data_refraction_back[:, 1]
-#         k_values_back = data_refraction_back[:, 2]
-#         index_of_refraction_back = tabulated_function(wavelength_values_back, n_values_back)
-#         extinction_coefficient_back = tabulated_function(wavelength_values_back, k_values_back)
-#     else:
-#         index_of_refraction_back = constant_function(1.0)
-#         extinction_coefficient_back = constant_function(0.0)
-#     VolumeMaterial.create(name, {'Matrix_reflectance_thin_film': matrix_reflectance(data_reflectance),
-#                                  'Matrix_transmittance_thin_film': matrix_reflectance(data_transmittance),
-#                                  'index_of_refraction_front': index_of_refraction_front,
-#                                  'extinction_coefficient_front': extinction_coefficient_front,
-#                                  'index_of_refraction_back': index_of_refraction_back,
-#                                  'extinction_coefficient_back': extinction_coefficient_back,
-#                                  'thin_film' : True})
-
 def create_polarized_thin_film(name, file_thin_film, file_front, file_back):
     # thin film material calculated by TMM method, six columns:
     # wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel),  transmittance s-polarized, transmittance p-polarized
@@ -348,8 +288,6 @@ def create_polarized_thin_film(name, file_thin_film, file_front, file_back):
             'type': 'tabulated',
             'value': [wavelength_values_front, k_values_front]
         }
-        # index_of_refraction_front = tabulated_function(wavelength_values_front, n_values_front)
-        # extinction_coefficient_front = tabulated_function(wavelength_values_front, k_values_front)
     else:
         index_of_refraction_front = {
             'type': 'constant',
@@ -359,8 +297,6 @@ def create_polarized_thin_film(name, file_thin_film, file_front, file_back):
             'type': 'constant',
             'value': 0.0
         }
-        # index_of_refraction_front = constant_function(1.0)
-        # extinction_coefficient_front = constant_function(0.0)
     if file_back is not 'Vacuum':
         data_refraction_back = np.loadtxt(file_back, usecols=(0, 1, 2))
         wavelength_values_back = data_refraction_back[:, 0]
@@ -374,8 +310,6 @@ def create_polarized_thin_film(name, file_thin_film, file_front, file_back):
             'type': 'tabulated',
             'value': [wavelength_values_back, k_values_back]
         }
-        # index_of_refraction_back = tabulated_function(wavelength_values_back, n_values_back)
-        # extinction_coefficient_back = tabulated_function(wavelength_values_back, k_values_back)
     else:
         index_of_refraction_back = {
             'type': 'constant',
@@ -385,8 +319,6 @@ def create_polarized_thin_film(name, file_thin_film, file_front, file_back):
             'type': 'constant',
             'value': 0.0
         }
-        # index_of_refraction_back = constant_function(1.0)
-        # extinction_coefficient_back = constant_function(0.0)
     plain_properties = {
         'Matrix_reflectance_thin_film': {
             'type': 'matrix',
@@ -411,7 +343,6 @@ def create_polarized_thin_film(name, file_thin_film, file_front, file_back):
 
 
 create_simple_volume_material("Vacuum", 1.0, 0.0)
-# noinspection PyNoneFunctionAssignment
 vacuum_medium = VolumeMaterial.by_name["Vacuum"]
 
 
@@ -580,12 +511,6 @@ class SurfaceMaterial(Material, object):
         )
 
 
-# def create_opaque_simple_layer(name):
-#     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(0.0),
-#                                   'probability_of_absortion': constant_function(1.0),
-#                                   'probability_of_transmitance': constant_function(0.0),
-#                                   'energy_collector': False})
-
 def create_opaque_simple_layer(name):
     plain_properties = {
         'probability_of_reflexion': {
@@ -609,13 +534,6 @@ def create_opaque_simple_layer(name):
     material = SurfaceMaterial(name, properties, properties)
     return material
 
-
-# def create_transparent_simple_layer(name, pot):
-#     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(1 - pot),
-#                                   'probability_of_absortion': constant_function(0),
-#                                   'probability_of_transmitance': constant_function(pot),
-#                                   'energy_collector': False,
-#                                   'specular_material': True})
 
 def create_transparent_simple_layer(name, pot):
     plain_properties = {
@@ -645,13 +563,6 @@ def create_transparent_simple_layer(name, pot):
     return material
 
 
-# def create_absorber_simple_layer(name, poa):
-#     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(1 - poa),
-#                                   'probability_of_absortion': constant_function(poa),
-#                                   'probability_of_transmitance': constant_function(0),
-#                                   'energy_collector': True,
-#                                   'specular_material': True})
-
 def create_absorber_simple_layer(name, poa):
     plain_properties = {
         'probability_of_reflexion': {
@@ -680,13 +591,6 @@ def create_absorber_simple_layer(name, poa):
     return material
 
 
-# def create_absorber_lambertian_layer(name, poa):
-#     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(1 - poa),
-#                                   'probability_of_absortion': constant_function(poa),
-#                                   'probability_of_transmitance': constant_function(0),
-#                                   'energy_collector': True,
-#                                   'lambertian_material': True})
-
 def create_absorber_lambertian_layer(name, poa):
     plain_properties = {
         'probability_of_reflexion': {
@@ -714,16 +618,6 @@ def create_absorber_lambertian_layer(name, poa):
     material = SurfaceMaterial(name, properties, properties)
     return material
 
-
-# def create_absorber_TW_model_layer(name, poa, b_constant, c_constant):
-#     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(1 - poa),
-#                                   'probability_of_absortion': constant_function(poa),
-#                                   'probability_of_transmitance': constant_function(0),
-#                                   'energy_collector': True,
-#                                   'lambertian_material': True,
-#                                   'TW_model': True,
-#                                   'b_constant': b_constant,
-#                                   'c_constant': c_constant})
 
 def create_absorber_TW_model_layer(name, poa, b_constant, c_constant):
     plain_properties = {
@@ -765,16 +659,6 @@ def create_absorber_TW_model_layer(name, poa, b_constant, c_constant):
     return material
 
 
-# def create_reflector_specular_layer(name, por, sigma_1 = None, sigma_2 = None, k = None):
-#     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
-#                                   'probability_of_absortion': constant_function(1 - por),
-#                                   'probability_of_transmitance': constant_function(0),
-#                                   'energy_collector': False,
-#                                   'specular_material': True,
-#                                   'sigma_1': sigma_1,
-#                                   'sigma_2': sigma_2,
-#                                   'k': k})
-
 def create_reflector_specular_layer(name, por, sigma_1=None, sigma_2=None, k=None):
     plain_properties = {
         'probability_of_reflexion': {
@@ -815,13 +699,6 @@ def create_reflector_specular_layer(name, por, sigma_1=None, sigma_2=None, k=Non
     return material
 
 
-# def create_reflector_lambertian_layer(name, por):
-#     SurfaceMaterial.create(name, {'probability_of_reflexion': constant_function(por),
-#                                   'probability_of_absortion': constant_function(1 - por),
-#                                   'probability_of_transmitance': constant_function(0),
-#                                   'energy_collector': False,
-#                                   'lambertian_material': True})
-
 def create_reflector_lambertian_layer(name, por):
     plain_properties = {
         'probability_of_reflexion': {
@@ -849,21 +726,6 @@ def create_reflector_lambertian_layer(name, por):
     material = SurfaceMaterial(name, properties, properties)
     return material
 
-
-# def create_metallic_specular_layer(name, file_index_of_refraction, sigma_1 = None, sigma_2 = None, k = None):
-#     # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
-#     data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
-#     wavelength_values = data_refraction[:, 0]
-#     n_values = data_refraction[:, 1]
-#     k_values = data_refraction[:, 2]
-#     SurfaceMaterial.create(name, {'index_of_refraction': tabulated_function(wavelength_values, n_values),
-#                                  'extinction_coefficient': tabulated_function(wavelength_values, k_values),
-#                                   'energy_collector': False,
-#                                   'specular_material': True,
-#                                   'metallic_material': True,
-#                                   'sigma_1': sigma_1,
-#                                   'sigma_2': sigma_2,
-#                                   'k': k})
 
 def create_metallic_specular_layer(name, file_index_of_refraction, sigma_1=None, sigma_2=None, k=None):
     # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
@@ -910,18 +772,6 @@ def create_metallic_specular_layer(name, file_index_of_refraction, sigma_1=None,
     return material
 
 
-# def create_metallic_lambertian_layer(name, file_index_of_refraction):
-#     # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
-#     data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
-#     wavelength_values = data_refraction[:, 0]
-#     n_values = data_refraction[:, 1]
-#     k_values = data_refraction[:, 2]
-#     SurfaceMaterial.create(name, {'index_of_refraction': tabulated_function(wavelength_values, n_values),
-#                                  'extinction_coefficient': tabulated_function(wavelength_values, k_values),
-#                                   'energy_collector': False,
-#                                   'lambertian_material': True,
-#                                   'metallic_material': True})
-
 def create_metallic_lambertian_layer(name, file_index_of_refraction):
     # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
     data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
@@ -954,19 +804,6 @@ def create_metallic_lambertian_layer(name, file_index_of_refraction):
     material = SurfaceMaterial(name, properties, properties)
     return material
 
-
-# def create_polarized_coating_reflector_layer(name, coating_file, sigma_1 = None, sigma_2 = None, k = None):
-#     # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
-#     # the values in coating_material should be in the corresponding order columns
-#     data_material = np.loadtxt(coating_file, usecols=(0,1,2,3))
-#     SurfaceMaterial.create(name, {'Matrix_polarized_reflectance_coating': matrix_reflectance(data_material),
-#                                   'probability_of_absortion': constant_function(0),
-#                                   'energy_collector': False,
-#                                   'specular_material': True,
-#                                   'transparent_material': False,
-#                                   'sigma_1': sigma_1,
-#                                   'sigma_2': sigma_2,
-#                                   'k': k})
 
 def create_polarized_coating_reflector_layer(name, coating_file, sigma_1=None, sigma_2=None, k=None):
     # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
@@ -1011,16 +848,6 @@ def create_polarized_coating_reflector_layer(name, coating_file, sigma_1=None, s
     return material
 
 
-# def create_polarized_coating_transparent_layer(name, coating_file):
-#     # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
-#     # the values in coating_material should be in the corresponding order columns
-#     data_material = np.loadtxt(coating_file, usecols=(0,1,2,3))
-#     SurfaceMaterial.create(name, {'Matrix_polarized_reflectance_coating': matrix_reflectance(data_material),
-#                                   'probability_of_absortion': constant_function(0),
-#                                   'energy_collector': False,
-#                                   'specular_material': False,
-#                                   'transparent_material': True})
-
 def create_polarized_coating_transparent_layer(name, coating_file):
     # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
     # the values in coating_material should be in the corresponding order columns
@@ -1051,17 +878,6 @@ def create_polarized_coating_transparent_layer(name, coating_file):
     material = SurfaceMaterial(name, properties, properties)
     return material
 
-
-# def create_polarized_coating_absorber_layer(name, coating_file):
-#     # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
-#     # the values in coating_material should be in the corresponding order columns
-#     data_material = np.loadtxt(coating_file, usecols=(0,1,2,3))
-#     SurfaceMaterial.create(name, {'Matrix_polarized_reflectance_coating': matrix_reflectance(data_material),
-#                                   'probability_of_transmitance': constant_function(0),
-#                                   'energy_collector': True,
-#                                   'specular_material': False,
-#                                   'transparent_material': False,
-#                                   'lambertian_material': True})
 
 def create_polarized_coating_absorber_layer(name, coating_file):
     # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
@@ -1102,4 +918,3 @@ def create_two_layers_material(name, layer_front, layer_back):
     SurfaceMaterial.create(name, Material.by_name[layer_front].properties_front,
                            Material.by_name[layer_back].properties_back)
 
-# endregion
