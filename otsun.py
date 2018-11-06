@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 from autologging import traced
 
+# region helper functions for output
+
 # ---
 # Helper functions for outputs in Spectral Analysis
 # ---
@@ -73,7 +75,6 @@ def photo_current(spectral_response, source_spectrum):
     photo_current = np.trapz(SR_by_spectrum, x = wavelengths)
     return photo_current
 	
-# end region
 
 # ---
 # Helper functions for outputs in Total Analysis
@@ -84,7 +85,7 @@ def integral_from_data_file(file_in):
     integral = np.trapz(source_spectrum[:,1], x = source_spectrum[:,0])
     return integral	
 
-# end region
+# endregion
 
 # Base class for optical phonomena
 
@@ -107,6 +108,8 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
+
+# region Helper functions for optical phenomena
 
 # ---
 # Helper functions for reflexion and refraction
@@ -456,7 +459,132 @@ def calculate_state_thin_film(incident, normal, n1, n2, polarization_vector, pro
         refracted_direction = incident * r.real + mynormal * (r.real * c1.real - c2.real)
         return energy_absorbed_thin_film, OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION)
 
-		
+# ---
+# Helper function for dispersions and polarization vector
+# ---
+def dispersion_from_main_direction(main_direction, theta, phi):
+    v = main_direction
+    v_p = Base.Vector(v[1], -v[0], 0)
+    if v_p == Base.Vector(0, 0, 0):  # to avoid null vector at mynormal and incident parallel vectors
+        v_p = Base.Vector(1, 0, 0)
+    v_p.normalize()
+    rotation_1 = Base.Rotation(v_p, theta)
+    new_v1 = rotation_1.multVec(v)
+    axis_2 = main_direction
+    rotation_2 = Base.Rotation(axis_2, phi)
+    new_v2 = rotation_2.multVec(new_v1)
+    return new_v2
+
+
+def dispersion_polarization(main_direction, polarization_vector, theta, phi):
+    v = main_direction
+    v_p = Base.Vector(v[1], -v[0], 0)
+    if v_p == Base.Vector(0, 0, 0):  # to avoid null vector at mynormal and incident parallel vectors
+        v_p = Base.Vector(1, 0, 0)
+    v_p.normalize()
+    rotation_1 = Base.Rotation(v_p, theta)
+    new_v1 = rotation_1.multVec(polarization_vector)
+    axis_2 = main_direction
+    rotation_2 = Base.Rotation(axis_2, phi)
+    new_v2 = rotation_2.multVec(new_v1)
+    return new_v2
+
+
+def random_polarization(direction):
+    v_p = Base.Vector(direction[1], -direction[0], 0)
+    if v_p == Base.Vector(0, 0, 0):
+        v_p = Base.Vector(1, 0, 0)
+    v_p.normalize()
+    phi = 360.0 * myrandom()
+    rotation = Base.Rotation(direction, phi)
+    new_v_p = rotation.multVec(v_p)
+    return new_v_p
+
+
+# ---
+# Helper function for reflectance depending on the wavelength for coatings layers.
+# ---
+
+def matrix_reflectance(data_material):
+    """
+    data_material: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
+    the values should be in the corresponding order columns with constants steps
+	We generate a matrix for the interpolation depending on the x=angle and y=wavelength values (lambda values)
+    """
+    steps = np.diff(data_material[:, 1])
+    try:
+        a = min(steps[steps > 0.0])
+    except:
+        a = 1E-4
+    steps = np.diff(data_material[:, 0])
+    try:
+        w = min(steps[steps > 0.0])
+    except:
+        w = 1E-4
+    return lambda x, y: [row for row in data_material if
+                         (x + a > row[1] and x - a < row[1]) and (y + w > row[0] and y - w < row[0])]
+
+
+def calculate_reflectance(matrix_reflectance, angle, wavelength):
+    """
+    data_array: values needed for the interpolation
+	We generate an interpolation to find the perpendicular and parallel reflectance depending on the angle and wavelength
+    """
+    if len(matrix_reflectance) == 0:  # wavelength experiments out of range of the data_material
+        return 'R_per', 0.0, 'R_par', 0.0
+    R_Matrix = np.mat(matrix_reflectance)
+    if len(R_Matrix) == 1:  # interpolation is not needed
+        return 'R_per', R_Matrix[0, 2], 'R_par', R_Matrix[0, 3]
+
+    if len(R_Matrix) == 2:  # simple interpolation
+        if R_Matrix[0, 0] == R_Matrix[1, 0]:  # identical wavelengths; hence angle interpolation (column 1)
+            xvalues = [R_Matrix[0, 1], R_Matrix[1, 1]]
+            yvalues = [R_Matrix[0, 2], R_Matrix[1, 2]]
+            R_per = np.interp(angle, xvalues, yvalues)
+
+            xvalues = [R_Matrix[0, 1], R_Matrix[1, 1]]
+            yvalues = [R_Matrix[0, 3], R_Matrix[1, 3]]
+            R_par = np.interp(angle, xvalues, yvalues)
+            return 'R_per', R_per, 'R_par', R_par
+
+        if R_Matrix[0, 1] == R_Matrix[1, 1]:  # identical angles; hence wavelength interpolation (column 0)
+            xvalues = [R_Matrix[0, 0], R_Matrix[1, 0]]
+            yvalues = [R_Matrix[0, 2], R_Matrix[1, 2]]
+            R_per = np.interp(wavelength, xvalues, yvalues)
+
+            xvalues = [R_Matrix[0, 0], R_Matrix[1, 0]]
+            yvalues = [R_Matrix[0, 3], R_Matrix[1, 3]]
+            R_par = np.interp(wavelength, xvalues, yvalues)
+            return 'R_per', R_per, 'R_par', R_par
+
+    if len(R_Matrix) == 4:  # double interpolation
+        xvalues = [R_Matrix[0, 1], R_Matrix[1, 1]]
+        yvalues = [R_Matrix[0, 2], R_Matrix[1, 2]]
+        R1 = np.interp(angle, xvalues, yvalues)
+        xvalues = [R_Matrix[2, 1], R_Matrix[3, 1]]
+        yvalues = [R_Matrix[2, 2], R_Matrix[3, 2]]
+        R2 = np.interp(angle, xvalues, yvalues)
+        xvalues = [R_Matrix[0, 0], R_Matrix[3, 0]]
+        yvalues = [R1, R2]
+        R_per = np.interp(wavelength, xvalues, yvalues)
+
+        xvalues = [R_Matrix[0, 1], R_Matrix[1, 1]]
+        yvalues = [R_Matrix[0, 3], R_Matrix[1, 3]]
+        R1 = np.interp(angle, xvalues, yvalues)
+        xvalues = [R_Matrix[2, 1], R_Matrix[3, 1]]
+        yvalues = [R_Matrix[2, 3], R_Matrix[3, 3]]
+        R2 = np.interp(angle, xvalues, yvalues)
+        xvalues = [R_Matrix[0, 0], R_Matrix[3, 0]]
+        yvalues = [R1, R2]
+        R_par = np.interp(wavelength, xvalues, yvalues)
+        return 'R_per', R_per, 'R_par', R_par
+
+
+# endregion
+
+
+# region Helper functions for mathematical functions
+
 def polar_to_cartesian(phi, theta):
     """
     Convert polar coordinates (given in degrees) to cartesian
@@ -509,51 +637,8 @@ myrandom = random_congruential
 
 # myrandom = random.random
 
-
 # ---
-# Helper function for dispersions and polarization vector  
-# ---	
-def dispersion_from_main_direction(main_direction, theta, phi):
-    v = main_direction
-    v_p = Base.Vector(v[1], -v[0], 0)
-    if v_p == Base.Vector(0, 0, 0):  # to avoid null vector at mynormal and incident parallel vectors
-        v_p = Base.Vector(1, 0, 0)
-    v_p.normalize()
-    rotation_1 = Base.Rotation(v_p, theta)
-    new_v1 = rotation_1.multVec(v)
-    axis_2 = main_direction
-    rotation_2 = Base.Rotation(axis_2, phi)
-    new_v2 = rotation_2.multVec(new_v1)
-    return new_v2
-
-
-def dispersion_polarization(main_direction, polarization_vector, theta, phi):
-    v = main_direction
-    v_p = Base.Vector(v[1], -v[0], 0)
-    if v_p == Base.Vector(0, 0, 0):  # to avoid null vector at mynormal and incident parallel vectors
-        v_p = Base.Vector(1, 0, 0)
-    v_p.normalize()
-    rotation_1 = Base.Rotation(v_p, theta)
-    new_v1 = rotation_1.multVec(polarization_vector)
-    axis_2 = main_direction
-    rotation_2 = Base.Rotation(axis_2, phi)
-    new_v2 = rotation_2.multVec(new_v1)
-    return new_v2
-
-
-def random_polarization(direction):
-    v_p = Base.Vector(direction[1], -direction[0], 0)
-    if v_p == Base.Vector(0, 0, 0):
-        v_p = Base.Vector(1, 0, 0)
-    v_p.normalize()
-    phi = 360.0 * myrandom()
-    rotation = Base.Rotation(direction, phi)
-    new_v_p = rotation.multVec(v_p)
-    return new_v_p
-
-
-# ---
-# Helper function for Cumulative Function Distribution and Randomly generatting distribution 
+# Helper function for Cumulative Function Distribution and Randomly generatting distribution
 # ---
 
 def create_CDF_from_PDF(data_file):
@@ -586,86 +671,13 @@ def pick_random_from_CDF(cumulative_distribution_function):
     return np.interp(random.random(), CDF[1], CDF[0])
 
 
-# ---
-# Helper function for reflectance depending on the wavelength for coatings layers.
-# ---	
-
-def matrix_reflectance(data_material):
-    """
-    data_material: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
-    the values should be in the corresponding order columns with constants steps
-	We generate a matrix for the interpolation depending on the x=angle and y=wavelength values (lambda values) 
-    """
-    steps = np.diff(data_material[:,1])
-    try:
-        a = min(steps[steps>0.0])
-    except:
-        a = 1E-4
-    steps = np.diff(data_material[:,0])
-    try:
-        w = min(steps[steps>0.0])
-    except:
-        w = 1E-4
-    return lambda x,y: [row for row in data_material if (x+a > row[1] and x-a < row[1]) and (y+w > row[0] and y-w < row[0])]
 
 
-def calculate_reflectance(matrix_reflectance, angle, wavelength):
-    """
-    data_array: values needed for the interpolation 
-	We generate an interpolation to find the perpendicular and parallel reflectance depending on the angle and wavelength
-    """
-    if len(matrix_reflectance) == 0: # wavelength experiments out of range of the data_material
-        return 'R_per',0.0,'R_par',0.0
-    R_Matrix = np.mat(matrix_reflectance)
-    if len(R_Matrix) == 1: # interpolation is not needed
-        return 'R_per',R_Matrix[0,2],'R_par',R_Matrix[0,3]
+# endregion
 
-
-    if len(R_Matrix) == 2: # simple interpolation
-        if R_Matrix[0,0] == R_Matrix[1,0]: # identical wavelengths; hence angle interpolation (column 1)
-            xvalues = [R_Matrix[0,1],R_Matrix[1,1]]
-            yvalues = [R_Matrix[0,2],R_Matrix[1,2]]
-            R_per = np.interp(angle, xvalues, yvalues)
-
-            xvalues = [R_Matrix[0,1],R_Matrix[1,1]]
-            yvalues = [R_Matrix[0,3],R_Matrix[1,3]]
-            R_par = np.interp(angle, xvalues, yvalues)
-            return 'R_per',R_per,'R_par',R_par
-			
-        if R_Matrix[0,1] == R_Matrix[1,1]: # identical angles; hence wavelength interpolation (column 0)
-            xvalues = [R_Matrix[0,0],R_Matrix[1,0]]
-            yvalues = [R_Matrix[0,2],R_Matrix[1,2]]
-            R_per = np.interp(wavelength, xvalues, yvalues)
-
-            xvalues = [R_Matrix[0,0],R_Matrix[1,0]]
-            yvalues = [R_Matrix[0,3],R_Matrix[1,3]]
-            R_par = np.interp(wavelength, xvalues, yvalues)
-            return 'R_per',R_per,'R_par',R_par
-
-			
-    if len(R_Matrix) == 4: # double interpolation
-        xvalues = [R_Matrix[0,1],R_Matrix[1,1]]
-        yvalues = [R_Matrix[0,2],R_Matrix[1,2]]
-        R1 = np.interp(angle, xvalues, yvalues)
-        xvalues = [R_Matrix[2,1],R_Matrix[3,1]]
-        yvalues = [R_Matrix[2,2],R_Matrix[3,2]]
-        R2 = np.interp(angle, xvalues, yvalues)
-        xvalues = [R_Matrix[0,0],R_Matrix[3,0]]
-        yvalues = [R1,R2]
-        R_per = np.interp(wavelength, xvalues, yvalues)
-        
-        xvalues = [R_Matrix[0,1],R_Matrix[1,1]]
-        yvalues = [R_Matrix[0,3],R_Matrix[1,3]]
-        R1 = np.interp(angle, xvalues, yvalues)
-        xvalues = [R_Matrix[2,1],R_Matrix[3,1]]
-        yvalues = [R_Matrix[2,3],R_Matrix[3,3]]
-        R2 = np.interp(angle, xvalues, yvalues)
-        xvalues = [R_Matrix[0,0],R_Matrix[3,0]]
-        yvalues = [R1,R2]
-        R_par = np.interp(wavelength, xvalues, yvalues)
-        return 'R_per',R_per,'R_par',R_par
 	
-	
+# region Materials
+
 # ---
 # Classes for materials
 # ---
@@ -691,8 +703,6 @@ def properties_to_plain_properties(properties):
     return properties.get('plain_properties', None)
 
 
-
-# region Materials
 
 @traced(logger)
 class Material(object):
