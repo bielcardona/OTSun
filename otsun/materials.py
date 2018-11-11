@@ -369,14 +369,14 @@ class SurfaceMaterial(Material, object):
         _ = cls(name, properties_front, properties_back)
 
     def decide_phenomenon(self, ray, normal_vector, properties, nearby_material):
-        phenomena = [Phenomenon.REFLEXION, Phenomenon.ABSORTION, Phenomenon.TRANSMITANCE]
+        phenomena = [Phenomenon.REFLEXION, Phenomenon.ABSORPTION, Phenomenon.TRANSMITTANCE]
         polarization_vector = ray.polarization_vectors[-1]
         perpendicular_polarized = False
         probabilities = None
         if 'TW_model' in properties:
             b_constant = properties['b_constant']
             c_constant = properties['c_constant']
-            absortion_ratio = TW_absorptance_ratio(normal_vector, b_constant, c_constant, ray.directions[-1])
+            absortion_ratio = tw_absorptance_ratio(normal_vector, b_constant, c_constant, ray.directions[-1])
             absortion = properties['probability_of_absortion'](ray.properties['wavelength']) * absortion_ratio
             por = 1.0 - absortion
             probabilities = [por, absortion, 0]  # Here I assume no transmitance
@@ -431,7 +431,7 @@ class SurfaceMaterial(Material, object):
         if properties['energy_collector']:
             return OpticalState(Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), Phenomenon.GOT_ABSORBED)
         else:
-            return OpticalState(Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), Phenomenon.ABSORTION)
+            return OpticalState(Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), Phenomenon.ABSORPTION)
 
     def change_of_direction_by_reflexion(self, ray, normal_vector, properties, polarization_vector_calculated_before):
         if 'specular_material' in properties:
@@ -494,9 +494,9 @@ class SurfaceMaterial(Material, object):
         if phenomenon == Phenomenon.REFLEXION:
             return self.change_of_direction_by_reflexion(ray, normal_vector, properties,
                                                          polarization_vector_calculated_before)
-        elif phenomenon == Phenomenon.ABSORTION:
+        elif phenomenon == Phenomenon.ABSORPTION:
             return self.change_of_direction_by_absortion(ray, normal_vector, properties)
-        elif phenomenon == Phenomenon.TRANSMITANCE:
+        elif phenomenon == Phenomenon.TRANSMITTANCE:
             return self.change_of_direction_by_transmitance(ray, normal_vector, nearby_material,
                                                             perpendicular_polarized)
 

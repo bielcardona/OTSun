@@ -52,7 +52,7 @@ data_file_spectrum = 'ASTMG173-direct.txt'
 # ---
 show_in_doc = None
 polarization_vector = None
-light_spectrum = otsun.create_CDF_from_PDF(data_file_spectrum)
+light_spectrum = otsun.cdf_from_pdf_file(data_file_spectrum)
 # --------- end
 
 power_emitted_by_m2 = otsun.integral_from_data_file(data_file_spectrum)

@@ -1,13 +1,22 @@
 import numpy as np
 from FreeCAD import Base
 import random
+import time
 
 def polar_to_cartesian(phi, theta):
-    """
-    Convert polar coordinates (given in degrees) to cartesian
-    :param phi:
-    :param theta:
-    :return:
+    """Convert polar coordinates of unit vector to cartesian
+
+    Parameters
+    ----------
+    phi : float
+        phi angle (ISO 31-11) in degrees
+    theta : float
+        theta angle (ISO 31-11) in degrees
+
+    Returns
+    -------
+    Base.Vector
+
     """
     rad = np.pi / 180.0
     x = np.sin(theta * rad) * np.cos(phi * rad)
@@ -20,10 +29,35 @@ def polar_to_cartesian(phi, theta):
 # Helper functions for input of functions
 # ---
 def constant_function(c):
+    """Create a constant function
+
+    Parameters
+    ----------
+    c : float
+        constant to return
+    Returns
+    -------
+    function
+        Constant function equal to `c`
+    """
     return lambda x: c
 
 
 def tabulated_function(xvalues, yvalues):
+    """Create a linear interpolating function from tabulated values
+
+    Parameters
+    ----------
+    xvalues : list of float
+        x coordinates of the tabulated values
+    yvalues : list of float
+        y coordinates of the tabulated values
+
+    Returns
+    -------
+    function
+        Function that interpolates by straight line segments the input data
+    """
     return lambda x: np.interp(x, xvalues, yvalues)
 
 
@@ -31,8 +65,17 @@ def tabulated_function(xvalues, yvalues):
 # Helper function for random Linear congruential generator
 # ---
 def random_congruential(seed=None):
-    """
-    Implementation of a random Linear congruential generator based on the MTH$RANDOM
+    """Random Linear congruential generator based on  MTH$RANDOM
+
+    Parameters
+    ----------
+    seed : float
+        seed to use in the generation of random numbers
+
+    Returns
+    -------
+    float
+
     """
     # http://daviddeley.com/random/random4.htm
     a = 69069.0
@@ -41,6 +84,8 @@ def random_congruential(seed=None):
     rm = 1.0 / m
     if seed is not None:
         random_congruential.previous = seed
+    else:
+        random_congruential.previous = time.time() # TODO: @Ramon OK?
     seed = np.remainder(random_congruential.previous * a + c, m)
     random_congruential.previous = seed
     return seed * rm
@@ -50,39 +95,53 @@ def random_congruential(seed=None):
 # Define the random algorithm
 # ---
 myrandom = random_congruential
-
-
 # myrandom = random.random
 
 # ---
 # Helper function for Cumulative Function Distribution and Randomly generatting distribution
 # ---
 
-def create_CDF_from_PDF(data_file):
+def cdf_from_pdf_file(data_file):
     """
-    Creates a Cumulative Distribution Function from Probability Density Function data file (x,y)
-    data_file: x,y values
-    output: x_CDF, y_CDF
+    Computes CDF from PDF values stored in a file
+
+    Creates a Cumulative Distribution Function from Probability Density
+    Function data file. Each line must be a pair of numbers x y=pdf(x).
+    It returns the CDF as two lists; first on is the list of x-values,
+    second one is the list of corresponding CDF values.
+
+    data_file: file or str
+        file or filename where PDF values are stored
+    output: list of float, list of float
     """
     data_array = np.loadtxt(data_file, usecols=(0, 1))
     x = data_array[:, 0]
     y = data_array[:, 1]
-    x_CDF = x
+    x_cdf = x
     n = np.size(y)
     y_ii = []
     for i in np.arange(n - 1):
         y_i = (y[i + 1] + y[i]) / 2.0 * (x[i + 1] - x[i])
         y_ii = np.append(y_ii, y_i)
     y_ii = np.append(y_ii, y_ii[-1])
-    k_integration = np.trapz(y_ii, x_CDF)
-    y_CDF = np.cumsum(y_ii) / k_integration
-    return x_CDF, y_CDF / y_CDF[-1]
+    k_integration = np.trapz(y_ii, x_cdf)
+    y_cdf = np.cumsum(y_ii) / k_integration
+    return x_cdf, y_cdf / y_cdf[-1]
 
 
-def pick_random_from_CDF(cumulative_distribution_function):
+def pick_random_from_cdf(cdf):
     """
-    Randomly generatting distribution acording to a Cumulative Distribution Function
+    Pick a random value according to a given CDF.
+
     We apply the Inverse transform sampling: https://en.wikipedia.org/wiki/Inverse_transform_sampling
+
+    Parameters
+    ----------
+    cdf : tuple of list of float
+        First list is list of x-values; second one is list of values of CDF
+
+    Returns
+    -------
+    float
     """
-    CDF = cumulative_distribution_function
-    return np.interp(random.random(), CDF[1], CDF[0])
+    return np.interp(random.random(), cdf[1], cdf[0])

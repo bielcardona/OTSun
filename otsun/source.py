@@ -2,7 +2,7 @@ import itertools
 import Part
 from .materials import vacuum_medium
 from .optics import *
-from .math import pick_random_from_CDF
+from .math import pick_random_from_cdf
 from .logging_unit import logger
 from autologging import traced
 
@@ -252,7 +252,7 @@ class Ray:
             next_material = nearby_material
         elif state.phenomenon == Phenomenon.REFLEXION:
             next_material = current_material
-        elif state.phenomenon == Phenomenon.ABSORTION:
+        elif state.phenomenon == Phenomenon.ABSORPTION:
             next_material = None
         elif state.phenomenon == Phenomenon.GOT_ABSORBED:  # it is needed? Review
             next_material = None
@@ -309,7 +309,7 @@ class Ray:
             self.polarization_vectors.append(state.polarization)
             if self.energy < 1E-4: # needed for PV calculations
                 self.finished = True
-            if state.phenomenon == Phenomenon.ABSORTION:
+            if state.phenomenon == Phenomenon.ABSORPTION:
                 self.finished = True
             if state.phenomenon == Phenomenon.GOT_ABSORBED:
                 self.got_absorbed = True
@@ -357,7 +357,7 @@ class LightSource:
         if np.isscalar(self.light_spectrum):
             wavelength = self.light_spectrum  # experiment with a single wavelength (nanometers)
         else:
-            wavelength = pick_random_from_CDF(self.light_spectrum)  # light spectrum is active (nanometers)
+            wavelength = pick_random_from_cdf(self.light_spectrum)  # light spectrum is active (nanometers)
         ray = Ray(self.scene, point, direction, {'wavelength': wavelength,
                                                  'energy': self.initial_energy,
                                                  'polarization_vector': polarization_vector})
