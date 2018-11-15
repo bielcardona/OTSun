@@ -5,7 +5,8 @@ import numpy as np
 from .math import myrandom
 from enum import Enum
 from numpy.lib.scimath import sqrt
-
+from autologging import traced
+from .logging_unit import logger
 
 
 class Phenomenon(Enum):
@@ -48,6 +49,7 @@ class OpticalState(object):
 # ---
 # Helper functions for reflexion and refraction
 # ---
+@traced(logger)
 def reflexion(incident, normal, polarization_vector, polarization_vector_calculated_before=False):
     """
     Implementation of law of reflexion for incident and polarization vector.
@@ -84,6 +86,7 @@ def reflexion(incident, normal, polarization_vector, polarization_vector_calcula
     return OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION)
 
 
+@traced(logger)
 def lambertian_reflexion(incident, normal):
     """
     Implementation of lambertian reflection for diffusely reflecting surface
@@ -112,6 +115,7 @@ def lambertian_reflexion(incident, normal):
     return OpticalState(random_polarization_vector, new_direction, Phenomenon.REFLEXION)
 
 
+@traced(logger)
 def single_gaussian_dispersion(normal, state, sigma_1):
     """
     Single gaussian dispersion based on the ideal reflected direction
@@ -151,6 +155,7 @@ def single_gaussian_dispersion(normal, state, sigma_1):
     return OpticalState(new_polarization_vector, new_v2, Phenomenon.REFLEXION)
 
 
+@traced(logger)
 def double_gaussian_dispersion(normal, state, sigma_1, sigma_2, k):
     """
     Double gaussian dispersion based on the ideal reflected direction
@@ -197,6 +202,7 @@ def double_gaussian_dispersion(normal, state, sigma_1, sigma_2, k):
     return OpticalState(new_polarization_vector, new_v2, Phenomenon.REFLEXION)
 
 
+@traced(logger)
 def tw_absorptance_ratio(normal, b_constant, c_constant, incident):
     """Angular Solar Absorptance model for selective absorber material.
 
@@ -234,6 +240,7 @@ def tw_absorptance_ratio(normal, b_constant, c_constant, incident):
     return absorption_ratio
 
 
+@traced(logger)
 def calculate_reflexion_metallic(incident, normal, n1, n2, polarization_vector):
     """Implementation of Fresnel equations for metallic materials
 
@@ -287,6 +294,7 @@ def calculate_reflexion_metallic(incident, normal, n1, n2, polarization_vector):
         return 0, 1, 0, polarization_vector, perpendicular_polarized, True
 
 
+@traced(logger)
 def refraction(incident, normal, n1, n2, polarization_vector):
     """Implementation of Snell's law of refraction
 
@@ -350,6 +358,7 @@ def refraction(incident, normal, n1, n2, polarization_vector):
             return OpticalState(para_v, refracted_direction, Phenomenon.REFRACTION)
 
 
+@traced(logger)
 def calculate_probabilities_polarizaton_coating(incident, normal, n1, n2, polarization_vector, properties, wavelength):
     """
 
@@ -422,6 +431,7 @@ def calculate_probabilities_polarizaton_coating(incident, normal, n1, n2, polari
             return 0, 0, 1, polarization_vector, perpendicular_polarized
 
 
+@traced(logger)
 def shure_refraction(incident, normal, n1, n2, polarization_vector, perpendicular_polarized):
     """Implementation of Snell's law of refraction
 
@@ -460,6 +470,7 @@ def shure_refraction(incident, normal, n1, n2, polarization_vector, perpendicula
         return OpticalState(para_v, refracted_direction, Phenomenon.REFRACTION)
 
 
+@traced(logger)
 def calculate_state_thin_film(incident, normal, n1, n2, polarization_vector, properties, wavelength):
     """
 
@@ -537,6 +548,7 @@ def calculate_state_thin_film(incident, normal, n1, n2, polarization_vector, pro
 # ---
 # Helper function for dispersions and polarization vector
 # ---
+@traced(logger)
 def dispersion_from_main_direction(main_direction, theta, phi):
     """
 
@@ -564,6 +576,7 @@ def dispersion_from_main_direction(main_direction, theta, phi):
     return new_v2
 
 
+@traced(logger)
 def dispersion_polarization(main_direction, polarization_vector, theta, phi):
     """
 
@@ -592,6 +605,7 @@ def dispersion_polarization(main_direction, polarization_vector, theta, phi):
     return new_v2
 
 
+@traced(logger)
 def random_polarization(direction):
     """
 
@@ -618,6 +632,7 @@ def random_polarization(direction):
 # Helper function for reflectance depending on the wavelength for coatings layers.
 # ---
 
+@traced(logger)
 def matrix_reflectance(data_material):
     """
     data_material: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
@@ -647,6 +662,7 @@ def matrix_reflectance(data_material):
                          (x + a > row[1] > x - a) and (y + w > row[0] > y - w)]
 
 
+@traced(logger)
 def calculate_reflectance(m_reflectance, angle, wavelength):
     """Compute perpendicular and parallel components of reflectance
 

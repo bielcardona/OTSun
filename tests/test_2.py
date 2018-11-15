@@ -14,16 +14,16 @@ FreeCAD.openDocument(MyProject)
 
 
 file_BK7 = 'BK7_Schott.txt' # change for your path
-otsun.create_wavelength_volume_material("Glass1", file_BK7)
-otsun.create_opaque_simple_layer("Opa1")
+otsun.WavelengthVolumeMaterial("Glass1", file_BK7)
+otsun.OpaqueSimpleLayer("Opa1")
 file_Ag = 'Ag_Yang.txt'
-otsun.create_metallic_specular_layer("Mir", file_Ag, 4.4, 20, 0.9)
-otsun.create_two_layers_material("Mir1", "Mir", "Mir")
+otsun.MetallicSpecularLayer("Mir", file_Ag, 4.4, 20, 0.9)
+otsun.TwoLayerMaterial("Mir1", "Mir", "Mir")
 file_AR1 = 'AR-J.txt'
-otsun.create_polarized_coating_transparent_layer("file_AR1", file_AR1)
-otsun.create_two_layers_material("AR1", "file_AR1", "file_AR1")
+otsun.PolarizedCoatingTransparentLayer("file_AR1", file_AR1)
+otsun.TwoLayerMaterial("AR1", "file_AR1", "file_AR1")
 file_Abs_Coating = 'Si3N4Reflectancia.txt'
-otsun.create_polarized_coating_absorber_layer("Abs1", file_Abs_Coating)
+otsun.PolarizedCoatingAbsorberLayer("Abs1", file_Abs_Coating)
 
 # ---
 # Inputs for Total Analysis

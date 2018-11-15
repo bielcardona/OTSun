@@ -40,10 +40,10 @@ class SunWindow(object):
                 best_v2 = v2
                 best_length1 = length1
                 best_length2 = length2
-            Length1 = best_length1 * 1.04
-            Length2 = best_length2 * 1.04
-            origin = best_origin - best_v1 * Length1 * 0.02 - best_v2 * Length2 * 0.02
-            return origin, best_v1, best_v2, Length1, Length2
+        length1 = best_length1 * 1.04
+        length2 = best_length2 * 1.04
+        origin = best_origin - best_v1 * length1 * 0.02 - best_v2 * length2 * 0.02
+        return origin, best_v1, best_v2, length1, length2
 
     def __init__(self, scene, direction):
         xs = [scene.boundbox.XMin, scene.boundbox.XMax]
@@ -163,7 +163,7 @@ class BuieDistribution:
 
 
 @traced(logger)
-class Ray:
+class Ray(object):
     """
     Class used to model a sun ray and its polarization vector. It keeps information of the path it
     describes as it interacts with the scene and its energy.

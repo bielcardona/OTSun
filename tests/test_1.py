@@ -14,15 +14,23 @@ import numpy as np
 MyProject = 'test_PTC.FCStd'
 FreeCAD.openDocument(MyProject)
 
-
+# import logging
+# from autologging import TRACE
+# logger = logging.root
+# logger.setLevel(TRACE)
+# handler = logging.StreamHandler(sys.stdout)
+# handler.setLevel(TRACE)
+# formatter = logging.Formatter('%(levelname)s:%(name)s:%(funcName)s:%(message)s')
+# handler.setFormatter(formatter)
+# logger.addHandler(handler)
 
 # ---
 # Materials
 # ---
-otsun.create_simple_volume_material("Glass1", 1.473, 0.015)
-otsun.create_reflector_specular_layer("Mir", 0.885, 4.4)
-otsun.create_two_layers_material("Mir1", "Mir", "Mir")
-otsun.create_absorber_TW_model_layer("Abs1", 0.9427, 0.017, 1.8)
+otsun.SimpleVolumeMaterial("Glass1", 1.473, 0.015)
+otsun.ReflectorSpecularLayer("Mir", 0.885, 4.4)
+otsun.TwoLayerMaterial("Mir1", "Mir", "Mir")
+otsun.AbsorberTWModelLayer("Abs1", 0.9427, 0.017, 1.8)
 
 # ---
 # Inputs for Total Analysis
