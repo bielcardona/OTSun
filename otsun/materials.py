@@ -163,18 +163,20 @@ class Material(object):
             kind = mat_spec['kind']
             name = mat_spec['name']
             if kind == 'Volume':
-                the_class = globals()[classname]
-                mat = the_class(name, {})
+                mat = VolumeMaterial(name, {})
                 plain_properties = mat_spec['plain_properties']
-                properties = plain_properties_to_properties(plain_properties)
+                properties = Material.plain_properties_to_properties(plain_properties)
                 mat.properties = properties
-            if kind == 'Surface':
                 the_class = globals()[classname]
-                mat = the_class(name, {})
+                mat.__class__ = the_class
+            if kind == 'Surface':
+                mat = SurfaceMaterial(name, {})
                 plain_properties_back = mat_spec['plain_properties_back']
-                mat.properties_back = plain_properties_to_properties(plain_properties_back)
+                mat.properties_back = Material.plain_properties_to_properties(plain_properties_back)
                 plain_properties_front = mat_spec['plain_properties_front']
-                mat.properties_front = plain_properties_to_properties(plain_properties_front)
+                mat.properties_front = Material.plain_properties_to_properties(plain_properties_front)
+                the_class = globals()[classname]
+                mat.__class__ = the_class
         return name
 
     @classmethod
