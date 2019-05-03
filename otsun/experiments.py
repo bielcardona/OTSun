@@ -28,7 +28,7 @@ class Experiment:
         random_congruential(time.time()) # TODO: change location
 
     def run(self, show_in_doc=None):
-        for i in np.arange(0,self.number_of_rays,1):
+        for _ in np.arange(0,self.number_of_rays,1):
             ray = self.light_source.emit_ray()
             ray.run()
             self.wavelengths.append(ray.wavelength)
