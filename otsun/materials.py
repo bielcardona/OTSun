@@ -97,10 +97,12 @@ class Material(object):
     """
     by_name = {}
 
-    def __init__(self, name, properties={}):
+    def __init__(self, name, properties=None):
         self.by_name[name] = self
         self.name = name
         self.kind = ""
+        if properties is None:
+            properties = {}
         self.properties = properties
 
     @classmethod
@@ -312,7 +314,7 @@ class VolumeMaterial(Material, object):
     TODO: comment on properties
 
     """
-    def __init__(self, name, properties={}):
+    def __init__(self, name, properties=None):
         """
         Initializes a Volume Material.
 
@@ -564,7 +566,174 @@ class SurfaceMaterial(Material, object):
     def create(cls, name, properties_front, properties_back=None):
         _ = cls(name, properties_front, properties_back)
 
-    def decide_phenomenon(self, ray, normal_vector, properties, nearby_material):
+    @staticmethod
+    def tw_absorptance_ratio(normal, b_constant, c_constant, incident):
+        """Angular Solar Absorptance model for selective absorber material.
+
+        Given by the formula 1 - b * (1/cos - 1) ** c, based on:
+        Tesfamichael, T., and Wackelgard, E., 2000, "Angular Solar Absorptance and
+        Incident Angle Modifier of Selective Absorbers for Solar Thermal Collectors,"
+        Sol. Energy, 68, pp. 335-341.
+
+        Parameters
+        ----------
+        normal : Base.Vector
+            normal vector of the surface at the point of incidence
+        b_constant : float
+        c_constant : float
+        incident : Base.Vector
+            direction vector of the incident ray
+
+        Returns
+        -------
+        float
+
+        """
+        # We assume the normal is normalized.
+        my_normal = normal * 1.0
+        if my_normal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
+            my_normal = my_normal * (-1.0)
+        incidence_angle = np.arccos(my_normal.dot(incident) * (-1.0))
+        incidence_angle_deg = incidence_angle * 180.0 / np.pi
+        if incidence_angle_deg < 80.0:
+            absorption_ratio = 1.0 - b_constant * (1.0 / np.cos(incidence_angle) - 1.0) ** c_constant
+        else:
+            y0 = 1.0 - b_constant * (1.0 / np.cos(80.0 * np.pi / 180.0) - 1.0) ** c_constant
+            m = y0 / 10.0
+            absorption_ratio = y0 - m * (incidence_angle_deg - 80.0)
+        return absorption_ratio
+
+    @staticmethod
+    def calculate_reflexion_metallic(incident, normal, n1, n2, polarization_vector):
+        """Implementation of Fresnel equations for metallic materials
+
+        Parameters
+        ----------
+        incident
+        normal
+        n1
+        n2
+        polarization_vector
+
+        Returns
+        -------
+
+        """
+        # TODO: document
+        mynormal = normal * 1.0
+        if mynormal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
+            # noinspection PyAugmentAssignment
+            mynormal = mynormal * (-1.0)
+        r = n1 / n2
+        c1 = - mynormal.dot(incident)  # cos (incidence_angle)
+        c2 = sqrt(1.0 - r * r * (1.0 - c1 * c1))  # cos (refracted_angle)
+
+        normal_parallel_plane = incident.cross(mynormal)  # normal vector of the parallel plane
+        if normal_parallel_plane == Base.Vector(0, 0,
+                                                0):  # to avoid null vector at mynormal and incident parallel vectors
+            normal_parallel_plane = Base.Vector(1, 0, 0)
+        normal_parallel_plane.normalize()
+        normal_perpendicular_plane = normal_parallel_plane.cross(incident)  # normal vector of the perpendicular plane
+        # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
+        parallel_v = polarization_vector - normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+        parallel_component = parallel_v.Length
+        perpendicular_v = polarization_vector - normal_perpendicular_plane * polarization_vector.dot(
+            normal_perpendicular_plane)
+        perpendicular_component = perpendicular_v.Length
+        ref_per = perpendicular_component / (perpendicular_component + parallel_component)
+        perpendicular_polarized = False
+
+        if myrandom() < ref_per:
+            a = (n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)
+            r = a * a.conjugate()  # reflectance for s-polarized (perpendicular) light
+            perpendicular_polarized = True
+            polarization_vector = perpendicular_v.normalize()
+        else:
+            a = (n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)
+            r = a * a.conjugate()  # reflectance for p-polarized (parallel) light
+            polarization_vector = parallel_v.normalize()
+        if myrandom() < r.real:  # ray reflected
+            return 1, 0, 0, polarization_vector, perpendicular_polarized, True
+        else:  # ray refracted
+            return 0, 1, 0, polarization_vector, perpendicular_polarized, True
+
+    @staticmethod
+    def calculate_probabilities_polarizaton_coating(incident, normal, n1, n2, polarization_vector, properties,
+                                                    wavelength):
+        """
+
+        Parameters
+        ----------
+        incident
+        normal
+        n1
+        n2
+        polarization_vector
+        properties
+        wavelength
+
+        Returns
+        -------
+
+        """
+        # TODO: document
+        # returns probability of Reflexion, probability of Absortion, probability of Transmitance, polarization_vector
+        mynormal = normal * 1.0
+        backside = False
+        if mynormal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
+            # noinspection PyAugmentAssignment
+            mynormal = mynormal * (-1.0)
+            backside = True
+        r = n1 / n2
+        c1 = - mynormal.dot(incident)  # cos (incidence_angle)
+        c2sq = 1.0 - r * r * (1.0 - c1 * c1)  # cos (refracted_angle) ** 2
+        if properties['transparent_material']:  # transparent coating
+            if c2sq.real < 0:  # total internal reflection
+                return reflexion(incident, normal, polarization_vector)
+        c2 = sqrt(c2sq)  # cos (refracted_angle)
+        normal_parallel_plane = incident.cross(mynormal)  # normal vector of the parallel plane
+        if normal_parallel_plane == Base.Vector(0, 0,
+                                                0):  # to avoid null vector at mynormal and incident parallel vectors
+            normal_parallel_plane = Base.Vector(1, 0, 0)
+        normal_parallel_plane.normalize()
+        normal_perpendicular_plane = normal_parallel_plane.cross(incident)  # normal vector of the perpendicular plane
+        # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
+        parallel_v = polarization_vector - normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+        parallel_component = parallel_v.Length
+        perpendicular_v = polarization_vector - normal_perpendicular_plane * polarization_vector.dot(
+            normal_perpendicular_plane)
+        perpendicular_component = perpendicular_v.Length
+        ref_per = perpendicular_component / (perpendicular_component + parallel_component)
+        perpendicular_polarized = False
+        # https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
+
+        if backside == True and properties['transparent_material']:  # Ray intercepted on the backside of the surface
+            angle = np.arccos(c2.real) * 180.0 / np.pi
+        else:
+            angle = np.arccos(c1) * 180.0 / np.pi
+        reflectance_matrix = properties['Matrix_polarized_reflectance_coating']
+        r_matrix = reflectance_matrix(angle, wavelength)
+        if myrandom() < ref_per:
+            r = calculate_reflectance(r_matrix, angle, wavelength)[
+                0]  # reflectance for s-polarized (perpendicular) light
+            perpendicular_polarized = True
+            polarization_vector = perpendicular_v.normalize()
+        else:
+            angle = np.arccos(c1) * 180.0 / np.pi
+            r = calculate_reflectance(r_matrix, angle, wavelength)[1]  # reflectance for p-polarized (parallel) light
+            polarization_vector = parallel_v.normalize()
+        if myrandom() < r:  # ray reflected
+            return 1, 0, 0, polarization_vector, perpendicular_polarized
+        else:  # ray refracted or absorbed
+            if properties['energy_collector']:  # absorber coating
+                return 0, 1, 0, polarization_vector, perpendicular_polarized
+            if properties['specular_material']:  # reflector coating
+                return 0, 1, 0, polarization_vector, perpendicular_polarized
+            if properties['transparent_material']:  # transparent coating
+                return 0, 0, 1, polarization_vector, perpendicular_polarized
+
+    @staticmethod
+    def decide_phenomenon(ray, normal_vector, properties, nearby_material):
         # TODO : Humanize
         phenomena = [Phenomenon.REFLEXION, Phenomenon.ABSORPTION, Phenomenon.TRANSMITTANCE]
         polarization_vector = ray.polarization_vectors[-1]
@@ -573,7 +742,7 @@ class SurfaceMaterial(Material, object):
         if 'TW_model' in properties:
             b_constant = properties['b_constant']
             c_constant = properties['c_constant']
-            absortion_ratio = tw_absorptance_ratio(normal_vector, b_constant, c_constant, ray.directions[-1])
+            absortion_ratio = SurfaceMaterial.tw_absorptance_ratio(normal_vector, b_constant, c_constant, ray.directions[-1])
             absortion = properties['probability_of_absortion'](ray.properties['wavelength']) * absortion_ratio
             por = 1.0 - absortion
             probabilities = [por, absortion, 0]  # Here I assume no transmitance
@@ -586,7 +755,7 @@ class SurfaceMaterial(Material, object):
             if 'extinction_coefficient' in nearby_material.properties:
                 n2 = nearby_material.properties['index_of_refraction'](ray.wavelength) + 1j * \
                      nearby_material.properties['extinction_coefficient'](ray.wavelength)
-            results = calculate_probabilities_polarizaton_coating(ray.directions[-1], normal_vector, n1, n2,
+            results = SurfaceMaterial.calculate_probabilities_polarizaton_coating(ray.directions[-1], normal_vector, n1, n2,
                                                                   ray.polarization_vectors[-1],
                                                                   properties, ray.wavelength)
             probabilities = [results[0], results[1], results[2]]
@@ -601,7 +770,7 @@ class SurfaceMaterial(Material, object):
             if 'extinction_coefficient' in properties:
                 n2 = properties['index_of_refraction'](ray.wavelength) + 1j * properties['extinction_coefficient'](
                     ray.wavelength)
-            results = calculate_reflexion_metallic(ray.directions[-1], normal_vector, n1, n2, polarization_vector)
+            results = SurfaceMaterial.calculate_reflexion_metallic(ray.directions[-1], normal_vector, n1, n2, polarization_vector)
             probabilities = [results[0], results[1], results[2]]
             polarization_vector = results[3]
             perpendicular_polarized = results[4]
@@ -609,28 +778,30 @@ class SurfaceMaterial(Material, object):
         if probabilities is None:
             try:
                 por = properties['probability_of_reflexion'](ray.properties['wavelength'])
-            except:
+            except KeyError:
                 por = 1.0
             try:
                 poa = properties['probability_of_absortion'](ray.properties['wavelength'])
-            except:
+            except KeyError:
                 poa = 1 - por
             try:
                 pot = properties['probability_of_transmitance'](ray.properties['wavelength'])
-            except:
+            except KeyError:
                 pot = 0.0
 
             probabilities = [por, poa, pot]
         phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
         return phenomenon, polarization_vector, perpendicular_polarized
 
-    def change_of_direction_by_absortion(self, ray, normal_vector, properties):
+    @staticmethod
+    def change_of_direction_by_absortion(ray, normal_vector, properties):
         if properties['energy_collector']:
             return OpticalState(Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), Phenomenon.GOT_ABSORBED)
         else:
             return OpticalState(Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), Phenomenon.ABSORPTION)
 
-    def change_of_direction_by_reflexion(self, ray, normal_vector, properties, polarization_vector_calculated_before):
+    @staticmethod
+    def change_of_direction_by_reflexion(ray, normal_vector, properties, polarization_vector_calculated_before):
         if 'specular_material' in properties:
             state = reflexion(ray.directions[-1], normal_vector, ray.polarization_vectors[-1],
                               polarization_vector_calculated_before)
@@ -646,7 +817,8 @@ class SurfaceMaterial(Material, object):
             state = lambertian_reflexion(ray.directions[-1], normal_vector)
             return state
 
-    def change_of_direction_by_transmitance(self, ray, normal_vector, nearby_material, perpendicular_polarized):
+    @staticmethod
+    def change_of_direction_by_transmitance(ray, normal_vector, nearby_material, perpendicular_polarized):
         n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
         if 'extinction_coefficient' in ray.current_medium.properties:
             n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength) + 1j * \
