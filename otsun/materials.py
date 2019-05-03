@@ -27,50 +27,6 @@ class NumpyEncoder(json.JSONEncoder):
 # Classes for materials
 # ---
 
-def plain_properties_to_properties(plain_properties):
-    """
-    Converts properties of a material in plain format (dict from json) to the internal format
-
-    Parameters
-    ----------
-    plain_properties : dict
-
-    Returns
-    -------
-    dict
-    """
-    properties = {}
-    for key in plain_properties:
-        plain_property = plain_properties[key]
-        prop_type = plain_property['type']
-        prop_value = plain_property['value']
-        if prop_type == 'scalar':
-            properties[key] = prop_value
-        if prop_type == 'constant':
-            properties[key] = constant_function(prop_value)
-        if prop_type == 'tabulated':
-            properties[key] = tabulated_function(np.array(prop_value[0]), np.array(prop_value[1]))
-        if prop_type == 'matrix':
-            properties[key] = matrix_reflectance(np.array(prop_value))
-    properties['plain_properties'] = plain_properties
-    return properties
-
-
-def properties_to_plain_properties(properties):
-    """
-    Converts properties of a material in internal format to plain (json ready) format
-
-    Since the plain properties are stored in the internal format, no need for conversions
-    
-    Parameters
-    ----------
-    properties : dict
-
-    Returns
-    -------
-    dict
-    """
-    return properties.get('plain_properties', None)
 
 
 @traced(logger)
@@ -133,6 +89,52 @@ class Material(object):
         """Wrapper to create a material"""
         _ = cls(name, properties)
 
+    @staticmethod
+    def plain_properties_to_properties(plain_properties):
+        """
+        Converts properties of a material in plain format (dict from json) to the internal format
+
+        Parameters
+        ----------
+        plain_properties : dict
+
+        Returns
+        -------
+        dict
+        """
+        properties = {}
+        for key in plain_properties:
+            plain_property = plain_properties[key]
+            prop_type = plain_property['type']
+            prop_value = plain_property['value']
+            if prop_type == 'scalar':
+                properties[key] = prop_value
+            if prop_type == 'constant':
+                properties[key] = constant_function(prop_value)
+            if prop_type == 'tabulated':
+                properties[key] = tabulated_function(np.array(prop_value[0]), np.array(prop_value[1]))
+            if prop_type == 'matrix':
+                properties[key] = SurfaceMaterial.matrix_reflectance(np.array(prop_value))
+        properties['plain_properties'] = plain_properties
+        return properties
+
+    @staticmethod
+    def properties_to_plain_properties(properties):
+        """
+        Converts properties of a material in internal format to plain (json ready) format
+
+        Since the plain properties are stored in the internal format, no need for conversions
+
+        Parameters
+        ----------
+        properties : dict
+
+        Returns
+        -------
+        dict
+        """
+        return properties.get('plain_properties', None)
+
     @classmethod
     def load_from_json_fileobject(cls, f):
         """
@@ -193,7 +195,7 @@ class Material(object):
         try:
             with open(filename, 'rb') as f:
                 return cls.load_from_json_fileobject(f)
-        except:
+        except IOError:
             logger.exception("error in processing file %s", filename)
 
     @classmethod
@@ -213,7 +215,7 @@ class Material(object):
                 for matfile in z.namelist():
                     with z.open(matfile) as f:
                         cls.load_from_json_fileobject(f)
-        except:
+        except IOError:
             logger.exception("error in processing file %s", filename)
 
     @classmethod
@@ -239,7 +241,7 @@ class Material(object):
                 mat = dill.load(f)
                 cls.by_name[mat.name] = mat
                 return mat.name
-        except:
+        except IOError:
             logger.exception("error in processing file %s", filename)
 
     @classmethod
@@ -264,7 +266,7 @@ class Material(object):
                     try:
                         mat = dill.load(f)
                         cls.by_name[mat.name] = mat
-                    except:
+                    except IOError:
                         logger.exception("error in processing file %s", matfile)
 
     def change_of_direction(self, ray, normal_vector, *args):
@@ -288,7 +290,7 @@ class Material(object):
 
     def to_json(self):
         """Converts material to json. MUST be subclassed"""
-        pass
+        return ""
 
     def save_to_json_file(self, filename):
         """
@@ -397,7 +399,7 @@ class SimpleVolumeMaterial(VolumeMaterial):
             }
         }
         super(SimpleVolumeMaterial,self).__init__(name, {})
-        self.properties = plain_properties_to_properties(plain_properties)
+        self.properties = Material.plain_properties_to_properties(plain_properties)
 
 
 class WavelengthVolumeMaterial(VolumeMaterial):
@@ -417,7 +419,7 @@ class WavelengthVolumeMaterial(VolumeMaterial):
             }
         }
         super(WavelengthVolumeMaterial,self).__init__(name)
-        self.properties = plain_properties_to_properties(plain_properties)
+        self.properties = Material.plain_properties_to_properties(plain_properties)
 
 
 class PVMaterial(VolumeMaterial):
@@ -442,7 +444,7 @@ class PVMaterial(VolumeMaterial):
             }
         }
         super(PVMaterial,self).__init__(name)
-        self.properties = plain_properties_to_properties(plain_properties)
+        self.properties = Material.plain_properties_to_properties(plain_properties)
 
 
 class PolarizedThinFilm(VolumeMaterial):
@@ -516,7 +518,84 @@ class PolarizedThinFilm(VolumeMaterial):
             },
         }
         super(PolarizedThinFilm,self).__init__(name)
-        self.properties = plain_properties_to_properties(plain_properties)
+        self.properties = Material.plain_properties_to_properties(plain_properties)
+
+    @staticmethod
+    def calculate_state_thin_film(incident, normal, n1, n2, polarization_vector, properties, wavelength):
+        """
+
+        Parameters
+        ----------
+        incident
+        normal
+        n1
+        n2
+        polarization_vector
+        properties
+        wavelength
+
+        Returns
+        -------
+
+        """
+        # TODO: document
+        # returns optical state of the ray in thin film material
+        mynormal = normal * 1.0
+        backside = False
+        if mynormal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
+            mynormal = mynormal * (-1.0)
+            backside = True
+        r = n1.real / n2.real
+        c1 = - mynormal.dot(incident)  # cos (incidence_angle)
+        c2sq = 1.0 - r * r * (1.0 - c1 * c1)  # cos (refracted_angle) ** 2
+        if c2sq.real < 0:  # total internal reflection
+            return 0.0, reflexion(incident, normal, polarization_vector)
+        c2 = sqrt(c2sq)  # cos (refracted_angle)
+
+        normal_parallel_plane = incident.cross(mynormal)  # normal vector of the parallel plane
+        if normal_parallel_plane == Base.Vector(0, 0,
+                                                0):  # to avoid null vector at mynormal and incident parallel vectors
+            normal_parallel_plane = Base.Vector(1, 0, 0)
+        normal_parallel_plane.normalize()
+        normal_perpendicular_plane = normal_parallel_plane.cross(incident)  # normal vector of the perpendicular plane
+        # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
+        parallel_v = polarization_vector - normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+        parallel_component = parallel_v.Length
+        perpendicular_v = polarization_vector - normal_perpendicular_plane * polarization_vector.dot(
+            normal_perpendicular_plane)
+        perpendicular_component = perpendicular_v.Length
+        ref_per = perpendicular_component / (perpendicular_component + parallel_component)
+        perpendicular_polarized = False
+        # https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
+
+        if backside:  # Ray intercepted on the backside of the transparent surface
+            angle = np.arccos(c2.real) * 180.0 / np.pi
+        else:
+            angle = np.arccos(c1) * 180.0 / np.pi
+        reflectance_matrix = properties['Matrix_reflectance_thin_film']
+        r_matrix = reflectance_matrix(angle, wavelength)
+        if myrandom() < ref_per:
+            r = SurfaceMaterial.calculate_reflectance(r_matrix, angle, wavelength)[
+                0]  # reflectance for s-polarized (perpendicular) light
+            perpendicular_polarized = True
+            polarization_vector = perpendicular_v.normalize()
+        else:
+            angle = np.arccos(c1) * 180.0 / np.pi
+            r = SurfaceMaterial.calculate_reflectance(r_matrix, angle, wavelength)[1]  # reflectance for p-polarized (parallel) light
+            polarization_vector = parallel_v.normalize()
+        if myrandom() < r:  # ray reflected
+            return 0.0, reflexion(incident, normal, polarization_vector)
+        else:
+            transmittance_matrix = properties['Matrix_transmittance_thin_film']
+            t_matrix = transmittance_matrix(angle, wavelength)
+            if perpendicular_polarized:
+                t = SurfaceMaterial.calculate_reflectance(t_matrix, angle, wavelength)[0]
+            else:
+                t = SurfaceMaterial.calculate_reflectance(t_matrix, angle, wavelength)[1]
+            energy_absorbed_thin_film = (1 - r - t) / (1 - r)
+            refracted_direction = incident * r.real + mynormal * (r.real * c1.real - c2.real)
+            return energy_absorbed_thin_film, OpticalState(polarization_vector, refracted_direction,
+                                                           Phenomenon.REFRACTION)
 
     def change_of_direction(self, ray, normal_vector):
         #here we assume 'Matrix_reflectance_thin_film' in self.properties:
@@ -531,7 +610,7 @@ class PolarizedThinFilm(VolumeMaterial):
             n2 = n_back
         else:
             n2 = n_front
-        energy_absorbed_thin_film, optical_state = calculate_state_thin_film(ray.directions[-1], normal_vector, n1,
+        energy_absorbed_thin_film, optical_state = self.calculate_state_thin_film(ray.directions[-1], normal_vector, n1,
                                                                              n2,
                                                                              ray.polarization_vectors[-1],
                                                                              self.properties, ray.wavelength)
@@ -657,6 +736,105 @@ class SurfaceMaterial(Material, object):
         else:  # ray refracted
             return 0, 1, 0, polarization_vector, perpendicular_polarized, True
 
+    # ---
+    # Helper function for reflectance depending on the wavelength for coatings layers.
+    # ---
+
+    @staticmethod
+    def matrix_reflectance(data_material):
+        """
+        data_material: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
+        the values should be in the corresponding order columns with constants steps
+    	We generate a matrix for the interpolation depending on the x=angle and y=wavelength values (lambda values)
+
+        Parameters
+        ----------
+        data_material
+
+        Returns
+        -------
+
+        """
+        # TODO: document
+        steps = np.diff(data_material[:, 1])
+        try:
+            a = min(steps[steps > 0.0])
+        except ValueError:
+            a = 1E-4
+        steps = np.diff(data_material[:, 0])
+        try:
+            w = min(steps[steps > 0.0])
+        except ValueError:
+            w = 1E-4
+        return lambda x, y: [row for row in data_material if
+                             (x + a > row[1] > x - a) and (y + w > row[0] > y - w)]
+
+    @staticmethod
+    def calculate_reflectance(m_reflectance, angle, wavelength):
+        """Compute perpendicular and parallel components of reflectance
+
+        Interpolates the value of the perperdicular and parallel reflectance from
+        the matrix of values, depending on the angle and the wavelength
+
+        Parameters
+        ----------
+        m_reflectance : float or tuple of list of floats
+        angle : float
+        wavelength : float
+
+        Returns
+        -------
+        tuple of float or tuple of np.complex
+        """
+        if len(m_reflectance) == 0:  # wavelength experiments out of range of the data_material
+            return 0.0, 0.0
+        r_matrix = np.mat(m_reflectance)
+        if len(r_matrix) == 1:  # interpolation is not needed
+            return r_matrix[0, 2], r_matrix[0, 3]
+
+        if len(r_matrix) == 2:  # simple interpolation
+            if r_matrix[0, 0] == r_matrix[1, 0]:  # identical wavelengths; hence angle interpolation (column 1)
+                x_values = [r_matrix[0, 1], r_matrix[1, 1]]
+                y_values = [r_matrix[0, 2], r_matrix[1, 2]]
+                r_per = np.interp(angle, x_values, y_values)
+
+                x_values = [r_matrix[0, 1], r_matrix[1, 1]]
+                y_values = [r_matrix[0, 3], r_matrix[1, 3]]
+                r_par = np.interp(angle, x_values, y_values)
+                return r_per, r_par
+
+            if r_matrix[0, 1] == r_matrix[1, 1]:  # identical angles; hence wavelength interpolation (column 0)
+                x_values = [r_matrix[0, 0], r_matrix[1, 0]]
+                y_values = [r_matrix[0, 2], r_matrix[1, 2]]
+                r_per = np.interp(wavelength, x_values, y_values)
+
+                x_values = [r_matrix[0, 0], r_matrix[1, 0]]
+                y_values = [r_matrix[0, 3], r_matrix[1, 3]]
+                r_par = np.interp(wavelength, x_values, y_values)
+                return r_per, r_par
+
+        if len(r_matrix) == 4:  # double interpolation
+            x_values = [r_matrix[0, 1], r_matrix[1, 1]]
+            y_values = [r_matrix[0, 2], r_matrix[1, 2]]
+            r1 = np.interp(angle, x_values, y_values)
+            x_values = [r_matrix[2, 1], r_matrix[3, 1]]
+            y_values = [r_matrix[2, 2], r_matrix[3, 2]]
+            r2 = np.interp(angle, x_values, y_values)
+            x_values = [r_matrix[0, 0], r_matrix[3, 0]]
+            y_values = [r1, r2]
+            r_per = np.interp(wavelength, x_values, y_values)
+
+            x_values = [r_matrix[0, 1], r_matrix[1, 1]]
+            y_values = [r_matrix[0, 3], r_matrix[1, 3]]
+            r1 = np.interp(angle, x_values, y_values)
+            x_values = [r_matrix[2, 1], r_matrix[3, 1]]
+            y_values = [r_matrix[2, 3], r_matrix[3, 3]]
+            r2 = np.interp(angle, x_values, y_values)
+            x_values = [r_matrix[0, 0], r_matrix[3, 0]]
+            y_values = [r1, r2]
+            r_par = np.interp(wavelength, x_values, y_values)
+            return r_per, r_par
+
     @staticmethod
     def calculate_probabilities_polarizaton_coating(incident, normal, n1, n2, polarization_vector, properties,
                                                     wavelength):
@@ -714,13 +892,13 @@ class SurfaceMaterial(Material, object):
         reflectance_matrix = properties['Matrix_polarized_reflectance_coating']
         r_matrix = reflectance_matrix(angle, wavelength)
         if myrandom() < ref_per:
-            r = calculate_reflectance(r_matrix, angle, wavelength)[
+            r = SurfaceMaterial.calculate_reflectance(r_matrix, angle, wavelength)[
                 0]  # reflectance for s-polarized (perpendicular) light
             perpendicular_polarized = True
             polarization_vector = perpendicular_v.normalize()
         else:
             angle = np.arccos(c1) * 180.0 / np.pi
-            r = calculate_reflectance(r_matrix, angle, wavelength)[1]  # reflectance for p-polarized (parallel) light
+            r = SurfaceMaterial.calculate_reflectance(r_matrix, angle, wavelength)[1]  # reflectance for p-polarized (parallel) light
             polarization_vector = parallel_v.normalize()
         if myrandom() < r:  # ray reflected
             return 1, 0, 0, polarization_vector, perpendicular_polarized
@@ -861,7 +1039,7 @@ class SurfaceMaterial(Material, object):
 
     @classmethod
     def from_plain_properties(cls, plain_properties):
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         material = cls(properties,properties)
         return material
 
@@ -898,7 +1076,7 @@ class OpaqueSimpleLayer(SurfaceMaterial):
                 'value': False
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(OpaqueSimpleLayer, self).__init__(name, properties, properties)
 
 
@@ -927,7 +1105,7 @@ class TransparentSimpleLayer(SurfaceMaterial):
                 'value': True
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(TransparentSimpleLayer, self).__init__(name, properties, properties)
 
 
@@ -956,7 +1134,7 @@ class AbsorberSimpleLayer(SurfaceMaterial):
                 'value': True
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(AbsorberSimpleLayer, self).__init__(name, properties, properties)
 
 
@@ -985,7 +1163,7 @@ class AbsorberLambertianLayer(SurfaceMaterial):
                 'value': True
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(AbsorberLambertianLayer,self).__init__(name, properties, properties)
 
 
@@ -1026,7 +1204,7 @@ class AbsorberTWModelLayer(SurfaceMaterial):
                 'value': c_constant
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(AbsorberTWModelLayer,self).__init__(name, properties, properties)
 
 
@@ -1067,7 +1245,7 @@ class ReflectorSpecularLayer(SurfaceMaterial):
                 'value': k
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(ReflectorSpecularLayer,self).__init__(name, properties, properties)
 
 
@@ -1096,7 +1274,7 @@ class ReflectorLambertianLayer(SurfaceMaterial):
                 'value': True
             },
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(ReflectorLambertianLayer,self).__init__(name, properties, properties)
 
 
@@ -1142,7 +1320,7 @@ class MetallicSpecularLayer(SurfaceMaterial):
                 'value': k
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(MetallicSpecularLayer,self).__init__(name, properties, properties)
 
 
@@ -1176,7 +1354,7 @@ class MetallicLambertianLayer(SurfaceMaterial):
                 'value': True
             },
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(MetallicLambertianLayer,self).__init__(name, properties, properties)
 
 
@@ -1220,7 +1398,7 @@ class PolarizedCoatingReflectorLayer(SurfaceMaterial):
                 'value': k
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(PolarizedCoatingReflectorLayer,self).__init__(name, properties, properties)
 
 
@@ -1250,7 +1428,7 @@ class PolarizedCoatingTransparentLayer(SurfaceMaterial):
                 'value': True
             },
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(PolarizedCoatingTransparentLayer,self).__init__(name, properties, properties)
 
 
@@ -1286,7 +1464,7 @@ class PolarizedCoatingAbsorberLayer(SurfaceMaterial):
                 'value': True
             },
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(PolarizedCoatingAbsorberLayer,self).__init__(name, properties, properties)
 
 
