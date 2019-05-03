@@ -11,8 +11,8 @@ import zipfile
 import dill
 from .optics import *
 from .math import *
-from .source import Ray
-from .optics import OpticalState
+#from .source import Ray
+#from .optics import OpticalState
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -155,15 +155,18 @@ class Material(object):
             info = [info]
         name = ""
         for mat_spec in info:
+            classname = mat_spec['classname']
             kind = mat_spec['kind']
             name = mat_spec['name']
             if kind == 'Volume':
-                mat = VolumeMaterial(name, {})
+                the_class = globals()[classname]
+                mat = the_class(name, {})
                 plain_properties = mat_spec['plain_properties']
                 properties = plain_properties_to_properties(plain_properties)
                 mat.properties = properties
             if kind == 'Surface':
-                mat = SurfaceMaterial(name, {})
+                the_class = globals()[classname]
+                mat = the_class(name, {})
                 plain_properties_back = mat_spec['plain_properties_back']
                 mat.properties_back = plain_properties_to_properties(plain_properties_back)
                 plain_properties_front = mat_spec['plain_properties_front']
@@ -334,44 +337,46 @@ class VolumeMaterial(Material, object):
             # the ray is traveling inside thin film material and then it will certainly refract
             ray.current_medium = self
             return OpticalState(ray.polarization_vectors[-1], ray.directions[-1], Phenomenon.REFRACTION)
-        if 'Matrix_reflectance_thin_film' in self.properties:
-            # the ray impacts on thin film material
-            n1 = ray.materials[-1].properties['index_of_refraction'](ray.wavelength)
-            if 'extinction_coefficient' in ray.current_medium.properties:
-                n1 = n1 + 1j * ray.materials[-1].properties['extinction_coefficient'](ray.wavelength)
-            n_front = self.properties['index_of_refraction_front'](ray.wavelength)
-            n_back = self.properties['index_of_refraction_back'](ray.wavelength)
-            if n_front == ray.materials[-1].properties['index_of_refraction'](ray.wavelength):
-                # impacts on front material
-                n2 = n_back
-            else:
-                n2 = n_front
-            energy_absorbed_thin_film, optical_state = calculate_state_thin_film(ray.directions[-1], normal_vector, n1,
-                                                                                 n2,
-                                                                                 ray.polarization_vectors[-1],
-                                                                                 self.properties, ray.wavelength)
-            ray.energy = ray.energy * (1.0 - energy_absorbed_thin_film)
-            if optical_state.phenomenon == Phenomenon.REFRACTION:
-                ray.current_medium = self
-            return optical_state
-        else:
-            n1 = ray.current_medium.properties['index_of_refraction'](wavelength)
-            if 'extinction_coefficient' in ray.current_medium.properties:
-                n1 = n1 + 1j * ray.current_medium.properties['extinction_coefficient'](wavelength)
-            n2 = self.properties['index_of_refraction'](wavelength)
-            if 'extinction_coefficient' in self.properties:
-                n2 = n2 + 1j * self.properties['extinction_coefficient'](wavelength)
-            optical_state = refraction(ray.directions[-1], normal_vector, n1, n2,
-                                       ray.polarization_vectors[-1])
-            if optical_state.phenomenon == Phenomenon.REFRACTION:
-                ray.current_medium = self
-            return optical_state
+        # The next code has been moved to subclass
+        # if 'Matrix_reflectance_thin_film' in self.properties:
+        #     # the ray impacts on thin film material
+        #     n1 = ray.materials[-1].properties['index_of_refraction'](ray.wavelength)
+        #     if 'extinction_coefficient' in ray.current_medium.properties:
+        #         n1 = n1 + 1j * ray.materials[-1].properties['extinction_coefficient'](ray.wavelength)
+        #     n_front = self.properties['index_of_refraction_front'](ray.wavelength)
+        #     n_back = self.properties['index_of_refraction_back'](ray.wavelength)
+        #     if n_front == ray.materials[-1].properties['index_of_refraction'](ray.wavelength):
+        #         # impacts on front material
+        #         n2 = n_back
+        #     else:
+        #         n2 = n_front
+        #     energy_absorbed_thin_film, optical_state = calculate_state_thin_film(ray.directions[-1], normal_vector, n1,
+        #                                                                          n2,
+        #                                                                          ray.polarization_vectors[-1],
+        #                                                                          self.properties, ray.wavelength)
+        #     ray.energy = ray.energy * (1.0 - energy_absorbed_thin_film)
+        #     if optical_state.phenomenon == Phenomenon.REFRACTION:
+        #         ray.current_medium = self
+        #     return optical_state
+        # else:
+        n1 = ray.current_medium.properties['index_of_refraction'](wavelength)
+        if 'extinction_coefficient' in ray.current_medium.properties:
+            n1 = n1 + 1j * ray.current_medium.properties['extinction_coefficient'](wavelength)
+        n2 = self.properties['index_of_refraction'](wavelength)
+        if 'extinction_coefficient' in self.properties:
+            n2 = n2 + 1j * self.properties['extinction_coefficient'](wavelength)
+        optical_state = refraction(ray.directions[-1], normal_vector, n1, n2,
+                                   ray.polarization_vectors[-1])
+        if optical_state.phenomenon == Phenomenon.REFRACTION:
+            ray.current_medium = self
+        return optical_state
 
     def to_json(self):
         return json.dumps(
             {
                 'name': self.name,
                 'kind': self.kind,
+                'classname': self.__class__.__name__,
                 'plain_properties': self.properties.get('plain_properties', None)
             }, cls=NumpyEncoder, indent=4
         )
@@ -510,6 +515,28 @@ class PolarizedThinFilm(VolumeMaterial):
         }
         super(PolarizedThinFilm,self).__init__(name)
         self.properties = plain_properties_to_properties(plain_properties)
+
+    def change_of_direction(self, ray, normal_vector):
+        #here we assume 'Matrix_reflectance_thin_film' in self.properties:
+        # the ray impacts on thin film material
+        n1 = ray.materials[-1].properties['index_of_refraction'](ray.wavelength)
+        if 'extinction_coefficient' in ray.current_medium.properties:
+            n1 = n1 + 1j * ray.materials[-1].properties['extinction_coefficient'](ray.wavelength)
+        n_front = self.properties['index_of_refraction_front'](ray.wavelength)
+        n_back = self.properties['index_of_refraction_back'](ray.wavelength)
+        if n_front == ray.materials[-1].properties['index_of_refraction'](ray.wavelength):
+            # impacts on front material
+            n2 = n_back
+        else:
+            n2 = n_front
+        energy_absorbed_thin_film, optical_state = calculate_state_thin_film(ray.directions[-1], normal_vector, n1,
+                                                                             n2,
+                                                                             ray.polarization_vectors[-1],
+                                                                             self.properties, ray.wavelength)
+        ray.energy = ray.energy * (1.0 - energy_absorbed_thin_film)
+        if optical_state.phenomenon == Phenomenon.REFRACTION:
+            ray.current_medium = self
+        return optical_state
 
 
 vacuum_medium = SimpleVolumeMaterial("Vacuum", 1.0, 0.0)
@@ -671,6 +698,7 @@ class SurfaceMaterial(Material, object):
             {
                 'name': self.name,
                 'kind': self.kind,
+                'classname': self.__class__.__name__,
                 'plain_properties_back': self.properties_back.get('plain_properties', None),
                 'plain_properties_front': self.properties_front.get('plain_properties', None),
             }, cls=NumpyEncoder
