@@ -882,7 +882,6 @@ class SurfaceMaterial(Material, object):
     def compute_polarizations(ray, normal_vector, properties, nearby_material):
         polarization_vector = ray.polarization_vectors[-1]
         perpendicular_polarized = False
-        probabilities = None
         if 'Matrix_polarized_reflectance_coating' in properties:  # polarized_coating_layer
             n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
             if 'extinction_coefficient' in ray.current_medium.properties:
@@ -896,10 +895,9 @@ class SurfaceMaterial(Material, object):
                 ray.directions[-1], normal_vector, n1, n2,
                 ray.polarization_vectors[-1],
                 properties, ray.wavelength)
-            probabilities = [results[0], results[1], results[2]]
             polarization_vector = results[3]
             perpendicular_polarized = results[4]
-        if 'metallic_material' in properties:
+        elif 'metallic_material' in properties:
             n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
             if 'extinction_coefficient' in ray.current_medium.properties:
                 n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength) + 1j * \
@@ -909,23 +907,11 @@ class SurfaceMaterial(Material, object):
                 n2 = properties['index_of_refraction'](ray.wavelength) + 1j * properties['extinction_coefficient'](
                     ray.wavelength)
             results = SurfaceMaterial.calculate_reflexion_metallic(ray.directions[-1], normal_vector, n1, n2, polarization_vector)
-            probabilities = [results[0], results[1], results[2]]
             polarization_vector = results[3]
             perpendicular_polarized = results[4]
 
-        if probabilities is None:
-            try:
-                por = properties['probability_of_reflexion'](ray.properties['wavelength'])
-            except KeyError:
-                por = 1.0
-            try:
-                poa = properties['probability_of_absortion'](ray.properties['wavelength'])
-            except KeyError:
-                poa = 1 - por
-            try:
-                pot = properties['probability_of_transmitance'](ray.properties['wavelength'])
-            except KeyError:
-                pot = 0.0
+        else:
+            pass
 
         return polarization_vector, perpendicular_polarized
 
@@ -956,8 +942,6 @@ class SurfaceMaterial(Material, object):
                 ray.polarization_vectors[-1],
                 properties, ray.wavelength)
             probabilities = [results[0], results[1], results[2]]
-            polarization_vector = results[3]
-            perpendicular_polarized = results[4]
         if 'metallic_material' in properties:
             n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
             if 'extinction_coefficient' in ray.current_medium.properties:
@@ -969,8 +953,6 @@ class SurfaceMaterial(Material, object):
                     ray.wavelength)
             results = SurfaceMaterial.calculate_reflexion_metallic(ray.directions[-1], normal_vector, n1, n2, polarization_vector)
             probabilities = [results[0], results[1], results[2]]
-            polarization_vector = results[3]
-            perpendicular_polarized = results[4]
 
         if probabilities is None:
             try:
