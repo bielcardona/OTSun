@@ -933,13 +933,13 @@ class SurfaceMaterial(Material, object):
 
         return [por, poa, pot]
 
-    @staticmethod
-    def decide_phenomenon(ray, normal_vector, properties, nearby_material):
+    @classmethod
+    def decide_phenomenon(cls, ray, normal_vector, properties, nearby_material):
         # TODO : Humanize
         phenomena = [Phenomenon.REFLEXION, Phenomenon.ABSORPTION, Phenomenon.TRANSMITTANCE]
-        probabilities = SurfaceMaterial.compute_probabilities(
+        probabilities = cls.compute_probabilities(
             ray, normal_vector, properties, nearby_material)
-        polarization_vector, perpendicular_polarized = SurfaceMaterial.compute_polarizations(
+        polarization_vector, perpendicular_polarized = cls.compute_polarizations(
             ray, normal_vector, properties, nearby_material)
 
         phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
@@ -1306,6 +1306,7 @@ class MetallicLayer(SurfaceMaterial):
     def __init__(self, *args):
         super(MetallicLayer, self).__init__(*args)
 
+    @staticmethod
     def compute_probabilities(ray, normal_vector, properties, nearby_material):
         n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
         if 'extinction_coefficient' in ray.current_medium.properties:
@@ -1316,8 +1317,9 @@ class MetallicLayer(SurfaceMaterial):
             n2 = properties['index_of_refraction'](ray.wavelength) + 1j * properties['extinction_coefficient'](
                 ray.wavelength)
         polarization_vector = ray.polarization_vectors[-1]
-        results = SurfaceMaterial.calculate_reflexion_metallic(ray.directions[-1], normal_vector, n1, n2,
-                                                               polarization_vector)
+        results = SurfaceMaterial.calculate_reflexion_metallic(
+            ray.directions[-1], normal_vector, n1, n2,
+            polarization_vector)
         return [results[0], results[1], results[2]]
 
 
@@ -1406,6 +1408,7 @@ class PolarizedCoatingLayer(SurfaceMaterial):
     def __init__(self,*args):
         super(PolarizedCoatingLayer, self).__init__(*args)
 
+    @staticmethod
     def compute_probabilities(ray, normal_vector, properties, nearby_material):
         print "in subclass"
         #if 'Matrix_polarized_reflectance_coating' in properties:  # polarized_coating_layer

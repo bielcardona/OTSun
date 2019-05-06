@@ -8,6 +8,8 @@ import numpy as np
 # ---
 # Materials
 # ---
+import random
+random.seed(12341234123451)
 
 MyProject = 'test_PTC.FCStd'
 FreeCAD.openDocument(MyProject)
@@ -81,6 +83,6 @@ for ph in np.arange(phi_ini, phi_end, phi_step):
 
 FreeCAD.closeDocument(FreeCAD.ActiveDocument.Name)
 
-
+print results
 def test_2():
     assert 0.9 > results[0][2] > 0.7 and 0.8 > results[1][2] > 0.5 and results[0][3] == 0.0 and results[1][3] == 0.0
