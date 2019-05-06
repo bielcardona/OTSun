@@ -11,8 +11,8 @@ import zipfile
 import dill
 from .optics import *
 from .math import *
-from .source import Ray
-from .optics import OpticalState
+#from .source import Ray
+#from .optics import OpticalState
 
 
 class NumpyEncoder(json.JSONEncoder):
