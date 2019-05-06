@@ -160,21 +160,25 @@ class Material(object):
             kind = mat_spec['kind']
             name = mat_spec['name']
             if kind == 'Volume':
-                # mat = VolumeMaterial(name, {})
-                the_class = globals()[classname]
-                mat = the_class(name, {})
+                mat = VolumeMaterial(name, {})
                 plain_properties = mat_spec['plain_properties']
                 properties = plain_properties_to_properties(plain_properties)
                 mat.properties = properties
-            if kind == 'Surface':
-                # TODO: Adapt for TwoLayer
                 the_class = globals()[classname]
-                mat = the_class(name, {})
-                #mat = SurfaceMaterial(name, {})
-                #plain_properties_back = mat_spec['plain_properties_back']
-                #mat.properties_back = plain_properties_to_properties(plain_properties_back)
-                plain_properties_front = mat_spec['plain_properties_front']
-                mat.properties_front = plain_properties_to_properties(plain_properties_front)
+                mat.__class__ = the_class
+            if kind == 'Surface':
+                if classname == "TwoLayerMaterial":
+                    # TODO: Adapt for TwoLayer
+                    name_front_layer = mat_spec['name_front_layer']
+                    name_back_layer = mat_spec['name_back_layer']
+                    mat = TwoLayerMaterial(name, name_front_layer, name_back_layer)
+                else:
+                    mat = SurfaceMaterial(name, {})
+                    plain_properties = mat_spec['plain_properties']
+                    properties = plain_properties_to_properties(plain_properties)
+                    mat.properties = properties
+                    the_class = globals()[classname]
+                    mat.__class__ = the_class
         return name
 
     @classmethod
@@ -307,6 +311,22 @@ class Material(object):
         with open(filename, 'w') as f:
             f.write(self.to_json())
 
+    @staticmethod
+    def all_to_json():
+        materials = Material.by_name.values()
+        simple_mats = [material for material in materials if
+                       not isinstance(material, TwoLayerMaterial)]
+        composite_mats = [material for material in materials if
+                          isinstance(material, TwoLayerMaterial)]
+        all_mats = simple_mats + composite_mats
+        return [mat.to_json() for mat in all_mats]
+
+    @staticmethod
+    def save_all_to_json_file(filename):
+        with open(filename, 'w') as f:
+            f.write('[\n')
+            f.write(',\n'.join(Material.all_to_json()))
+            f.write('\n]')
 
 @traced(logger)
 class VolumeMaterial(Material):
@@ -379,6 +399,7 @@ class VolumeMaterial(Material):
             {
                 'name': self.name,
                 'kind': self.kind,
+                'classname': self.__class__.__name__,
                 'plain_properties': self.properties.get('plain_properties', None)
             }, cls=NumpyEncoder, indent=4
         )
@@ -524,7 +545,7 @@ vacuum_medium = SimpleVolumeMaterial("Vacuum", 1.0, 0.0)
 
 @traced(logger)
 class SurfaceMaterial(Material):
-    def __init__(self, name, properties_front):
+    def __init__(self, name, properties):
         """
         Initializes a Surface Material. The properties parameter must be a dict with the physical properties
         describing the material. At least, the following must be provided:
@@ -532,8 +553,8 @@ class SurfaceMaterial(Material):
         'probability_of_absortion': probability that a photon gets absorbed, as a function of its wavelength.
         'probability_of_transmitance': probability that a photon passes through the material, as a function of its wavelength.
         """
-        super(SurfaceMaterial, self).__init__(name, properties_front)
-        self.properties_front = properties_front
+        super(SurfaceMaterial, self).__init__(name, properties)
+        self.properties = properties
         # if properties_back is None:
         #     self.properties_back = properties_front
         # else:
@@ -541,12 +562,12 @@ class SurfaceMaterial(Material):
         self.kind = 'Surface'
 
     @classmethod
-    def create(cls, name, properties_front):
-        _ = cls(name, properties_front)
+    def create(cls, name, properties):
+        _ = cls(name, properties)
 
     def decide_phenomenon(self, ray, normal_vector, nearby_material):
         # TODO : Humanize
-        properties = self.properties_front
+        properties = self.properties
         phenomena = [Phenomenon.REFLEXION, Phenomenon.ABSORPTION, Phenomenon.TRANSMITTANCE]
         polarization_vector = ray.polarization_vectors[-1]
         perpendicular_polarized = False
@@ -606,14 +627,14 @@ class SurfaceMaterial(Material):
         return phenomenon, polarization_vector, perpendicular_polarized
 
     def change_of_direction_by_absortion(self, ray, normal_vector):
-        properties = self.properties_front
+        properties = self.properties
         if properties['energy_collector']:
             return OpticalState(Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), Phenomenon.GOT_ABSORBED)
         else:
             return OpticalState(Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), Phenomenon.ABSORPTION)
 
     def change_of_direction_by_reflexion(self, ray, normal_vector, polarization_vector_calculated_before):
-        properties = self.properties_front
+        properties = self.properties
         if 'specular_material' in properties:
             state = reflexion(ray.directions[-1], normal_vector, ray.polarization_vectors[-1],
                               polarization_vector_calculated_before)
@@ -687,8 +708,9 @@ class SurfaceMaterial(Material):
             {
                 'name': self.name,
                 'kind': self.kind,
-                'plain_properties_back': self.properties_back.get('plain_properties', None),
-                'plain_properties_front': self.properties_front.get('plain_properties', None),
+                'classname': self.__class__.__name__,
+                'plain_properties': self.properties.get('plain_properties', None),
+                # 'plain_properties_front': self.properties_front.get('plain_properties', None),
             }, cls=NumpyEncoder
         )
 
@@ -1110,9 +1132,24 @@ class PolarizedCoatingAbsorberLayer(SurfaceMaterial):
 class TwoLayerMaterial(SurfaceMaterial):
     def __init__(self, name, name_front_layer, name_back_layer):
         super(SurfaceMaterial, self).__init__(name, {})
+        self.name_front_layer = name_front_layer
+        self.name_back_layer = name_back_layer
         self.front_material = Material.by_name[name_front_layer]
         self.back_material = Material.by_name[name_back_layer]
         #super(TwoLayerMaterial,self).__init__(name,
         #                                      Material.by_name[layer_front].properties_front,
         #                                      Material.by_name[layer_back].properties_back)
         self.kind = 'Surface'
+
+    def to_json(self):
+        return json.dumps(
+            {
+                'name': self.name,
+                'kind': self.kind,
+                'classname': 'TwoLayerMaterial',
+                'name_front_layer': self.name_front_layer,
+                'name_back_layer': self.name_back_layer
+                #'plain_properties': self.properties.get('plain_properties', None),
+                # 'plain_properties_front': self.properties_front.get('plain_properties', None),
+            }, cls=NumpyEncoder
+        )
