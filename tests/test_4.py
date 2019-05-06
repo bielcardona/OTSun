@@ -42,7 +42,8 @@ doc = FreeCAD.ActiveDocument
 # otsun.create_wavelength_volume_material("Spiro", file_Spiro)
 # file_Ag = 'Ag_Yang.txt'
 # otsun.create_metallic_lambertian_layer("Ag", file_Ag)
-otsun.Material.load_from_json_file('materials-test_4.json')
+# otsun.Material.load_from_json_file('materials-test_4.json')
+otsun.Material.load_from_json_file('mats.json')
 
 # ---
 # Constant inputs for Spectral Analysis
