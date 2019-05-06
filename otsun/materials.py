@@ -820,6 +820,8 @@ class SurfaceMaterial(Material, object):
         -------
 
         """
+        # Only used if Matrix_polarized_reflectance_coating in properties
+        # (PolarizedCoatingReflectorLayer, PolarizedCoatingTransparentLayer, PolarizedCoatingAbsorberLayer)
         # TODO: document
         # returns probability of Reflexion, probability of Absortion, probability of Transmitance, polarization_vector
         mynormal = normal * 1.0
