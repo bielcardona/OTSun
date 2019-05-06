@@ -612,10 +612,11 @@ class PolarizedThinFilm(VolumeMaterial):
             n2 = n_back
         else:
             n2 = n_front
-        energy_absorbed_thin_film, optical_state = self.calculate_state_thin_film(ray.directions[-1], normal_vector, n1,
-                                                                             n2,
-                                                                             ray.polarization_vectors[-1],
-                                                                             self.properties, ray.wavelength)
+        energy_absorbed_thin_film, optical_state = self.calculate_state_thin_film(
+            ray.directions[-1], normal_vector, n1,
+            n2,
+            ray.polarization_vectors[-1],
+            self.properties, ray.wavelength)
         ray.energy = ray.energy * (1.0 - energy_absorbed_thin_film)
         if optical_state.phenomenon == Phenomenon.REFRACTION:
             ray.current_medium = self
@@ -646,43 +647,6 @@ class SurfaceMaterial(Material, object):
     @classmethod
     def create(cls, name, properties_front, properties_back=None):
         _ = cls(name, properties_front, properties_back)
-
-    @staticmethod
-    def tw_absorptance_ratio(normal, b_constant, c_constant, incident):
-        """Angular Solar Absorptance model for selective absorber material.
-
-        Given by the formula 1 - b * (1/cos - 1) ** c, based on:
-        Tesfamichael, T., and Wackelgard, E., 2000, "Angular Solar Absorptance and
-        Incident Angle Modifier of Selective Absorbers for Solar Thermal Collectors,"
-        Sol. Energy, 68, pp. 335-341.
-
-        Parameters
-        ----------
-        normal : Base.Vector
-            normal vector of the surface at the point of incidence
-        b_constant : float
-        c_constant : float
-        incident : Base.Vector
-            direction vector of the incident ray
-
-        Returns
-        -------
-        float
-
-        """
-        # We assume the normal is normalized.
-        my_normal = normal * 1.0
-        if my_normal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
-            my_normal = my_normal * (-1.0)
-        incidence_angle = np.arccos(my_normal.dot(incident) * (-1.0))
-        incidence_angle_deg = incidence_angle * 180.0 / np.pi
-        if incidence_angle_deg < 80.0:
-            absorption_ratio = 1.0 - b_constant * (1.0 / np.cos(incidence_angle) - 1.0) ** c_constant
-        else:
-            y0 = 1.0 - b_constant * (1.0 / np.cos(80.0 * np.pi / 180.0) - 1.0) ** c_constant
-            m = y0 / 10.0
-            absorption_ratio = y0 - m * (incidence_angle_deg - 80.0)
-        return absorption_ratio
 
     @staticmethod
     def calculate_reflexion_metallic(incident, normal, n1, n2, polarization_vector):
@@ -1208,6 +1172,55 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         }
         properties = Material.plain_properties_to_properties(plain_properties)
         super(AbsorberTWModelLayer,self).__init__(name, properties, properties)
+
+    @staticmethod
+    def tw_absorptance_ratio(normal, b_constant, c_constant, incident):
+        """Angular Solar Absorptance model for selective absorber material.
+
+        Given by the formula 1 - b * (1/cos - 1) ** c, based on:
+        Tesfamichael, T., and Wackelgard, E., 2000, "Angular Solar Absorptance and
+        Incident Angle Modifier of Selective Absorbers for Solar Thermal Collectors,"
+        Sol. Energy, 68, pp. 335-341.
+
+        Parameters
+        ----------
+        normal : Base.Vector
+            normal vector of the surface at the point of incidence
+        b_constant : float
+        c_constant : float
+        incident : Base.Vector
+            direction vector of the incident ray
+
+        Returns
+        -------
+        float
+
+        """
+        # Only used if TW_model in properties (AbsorberTWModelLayer)
+        # We assume the normal is normalized.
+        my_normal = normal * 1.0
+        if my_normal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
+            my_normal = my_normal * (-1.0)
+        incidence_angle = np.arccos(my_normal.dot(incident) * (-1.0))
+        incidence_angle_deg = incidence_angle * 180.0 / np.pi
+        if incidence_angle_deg < 80.0:
+            absorption_ratio = 1.0 - b_constant * (1.0 / np.cos(incidence_angle) - 1.0) ** c_constant
+        else:
+            y0 = 1.0 - b_constant * (1.0 / np.cos(80.0 * np.pi / 180.0) - 1.0) ** c_constant
+            m = y0 / 10.0
+            absorption_ratio = y0 - m * (incidence_angle_deg - 80.0)
+        return absorption_ratio
+
+    @staticmethod
+    def compute_probabilities(ray, normal_vector, properties, nearby_material):
+        b_constant = properties['b_constant']
+        c_constant = properties['c_constant']
+        absortion_ratio = AbsorberTWModelLayer.tw_absorptance_ratio(
+            normal_vector, b_constant, c_constant,ray.directions[-1])
+        absortion = properties['probability_of_absortion'](
+            ray.properties['wavelength']) * absortion_ratio
+        por = 1.0 - absortion
+        return [por, absortion, 0]  # Here I assume no transmitance
 
 
 @traced(logger)
