@@ -155,17 +155,23 @@ class Material(object):
             info = [info]
         name = ""
         for mat_spec in info:
+            classname = mat_spec['classname']
             kind = mat_spec['kind']
             name = mat_spec['name']
             if kind == 'Volume':
-                mat = VolumeMaterial(name, {})
+                # mat = VolumeMaterial(name, {})
+                the_class = globals()[classname]
+                mat = the_class(name, {})
                 plain_properties = mat_spec['plain_properties']
                 properties = plain_properties_to_properties(plain_properties)
                 mat.properties = properties
             if kind == 'Surface':
-                mat = SurfaceMaterial(name, {})
-                plain_properties_back = mat_spec['plain_properties_back']
-                mat.properties_back = plain_properties_to_properties(plain_properties_back)
+                # TODO: Adapt for TwoLayer
+                the_class = globals()[classname]
+                mat = the_class(name, {})
+                #mat = SurfaceMaterial(name, {})
+                #plain_properties_back = mat_spec['plain_properties_back']
+                #mat.properties_back = plain_properties_to_properties(plain_properties_back)
                 plain_properties_front = mat_spec['plain_properties_front']
                 mat.properties_front = plain_properties_to_properties(plain_properties_front)
         return name
@@ -302,7 +308,7 @@ class Material(object):
 
 
 @traced(logger)
-class VolumeMaterial(Material, object):
+class VolumeMaterial(Material):
     """
     Subclass of Volume for materials with volume
 
@@ -516,8 +522,8 @@ vacuum_medium = SimpleVolumeMaterial("Vacuum", 1.0, 0.0)
 
 
 @traced(logger)
-class SurfaceMaterial(Material, object):
-    def __init__(self, name, properties_front, properties_back=None):
+class SurfaceMaterial(Material):
+    def __init__(self, name, properties_front):
         """
         Initializes a Surface Material. The properties parameter must be a dict with the physical properties
         describing the material. At least, the following must be provided:
@@ -527,18 +533,19 @@ class SurfaceMaterial(Material, object):
         """
         super(SurfaceMaterial, self).__init__(name, properties_front)
         self.properties_front = properties_front
-        if properties_back is None:
-            self.properties_back = properties_front
-        else:
-            self.properties_back = properties_back
+        # if properties_back is None:
+        #     self.properties_back = properties_front
+        # else:
+        #     self.properties_back = properties_back
         self.kind = 'Surface'
 
     @classmethod
-    def create(cls, name, properties_front, properties_back=None):
-        _ = cls(name, properties_front, properties_back)
+    def create(cls, name, properties_front):
+        _ = cls(name, properties_front)
 
-    def decide_phenomenon(self, ray, normal_vector, properties, nearby_material):
+    def decide_phenomenon(self, ray, normal_vector, nearby_material):
         # TODO : Humanize
+        properties = self.properties_front
         phenomena = [Phenomenon.REFLEXION, Phenomenon.ABSORPTION, Phenomenon.TRANSMITTANCE]
         polarization_vector = ray.polarization_vectors[-1]
         perpendicular_polarized = False
@@ -597,13 +604,15 @@ class SurfaceMaterial(Material, object):
         phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
         return phenomenon, polarization_vector, perpendicular_polarized
 
-    def change_of_direction_by_absortion(self, ray, normal_vector, properties):
+    def change_of_direction_by_absortion(self, ray, normal_vector):
+        properties = self.properties_front
         if properties['energy_collector']:
             return OpticalState(Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), Phenomenon.GOT_ABSORBED)
         else:
             return OpticalState(Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), Phenomenon.ABSORPTION)
 
-    def change_of_direction_by_reflexion(self, ray, normal_vector, properties, polarization_vector_calculated_before):
+    def change_of_direction_by_reflexion(self, ray, normal_vector, polarization_vector_calculated_before):
+        properties = self.properties_front
         if 'specular_material' in properties:
             state = reflexion(ray.directions[-1], normal_vector, ray.polarization_vectors[-1],
                               polarization_vector_calculated_before)
@@ -638,12 +647,15 @@ class SurfaceMaterial(Material, object):
         return state
 
     def change_of_direction(self, ray, normal_vector, nearby_material):
-        if ray.directions[-1].dot(normal_vector) < 0:  # Ray intercepted on the frontside of the surface
-            properties = self.properties_front
-        else:  # Ray intercepted on the backside of the surface
-            properties = self.properties_back
+        if isinstance(self, TwoLayerMaterial):
+            if ray.directions[-1].dot(normal_vector) < 0:  # Ray intercepted on the frontside of the surface
+                material = self.front_material
+            else:  # Ray intercepted on the backside of the surface
+                material = self.back_material
+        else:
+            material = self
 
-        results = self.decide_phenomenon(ray, normal_vector, properties, nearby_material)
+        results = material.decide_phenomenon(ray, normal_vector, nearby_material)
         phenomenon = results[0]
         if ray.polarization_vectors[-1] == results[1]:  # polarization_vector not calculated
             polarization_vector_calculated_before = False
@@ -652,13 +664,16 @@ class SurfaceMaterial(Material, object):
         ray.polarization_vectors[-1] = results[1]
         perpendicular_polarized = results[2]  # True or False
         if phenomenon == Phenomenon.REFLEXION:
-            return self.change_of_direction_by_reflexion(ray, normal_vector, properties,
-                                                         polarization_vector_calculated_before)
+            return material.change_of_direction_by_reflexion(
+                ray, normal_vector,
+                polarization_vector_calculated_before)
         elif phenomenon == Phenomenon.ABSORPTION:
-            return self.change_of_direction_by_absortion(ray, normal_vector, properties)
+            return material.change_of_direction_by_absortion(
+                ray, normal_vector)
         elif phenomenon == Phenomenon.TRANSMITTANCE:
-            return self.change_of_direction_by_transmitance(ray, normal_vector, nearby_material,
-                                                            perpendicular_polarized)
+            return material.change_of_direction_by_transmitance(
+                ray, normal_vector, nearby_material,
+                perpendicular_polarized)
 
     @classmethod
     def from_plain_properties(cls, plain_properties):
@@ -699,7 +714,7 @@ class OpaqueSimpleLayer(SurfaceMaterial):
             }
         }
         properties = plain_properties_to_properties(plain_properties)
-        super(OpaqueSimpleLayer, self).__init__(name, properties, properties)
+        super(OpaqueSimpleLayer, self).__init__(name, properties)
 
 
 @traced(logger)
@@ -728,7 +743,7 @@ class TransparentSimpleLayer(SurfaceMaterial):
             }
         }
         properties = plain_properties_to_properties(plain_properties)
-        super(TransparentSimpleLayer, self).__init__(name, properties, properties)
+        super(TransparentSimpleLayer, self).__init__(name, properties)
 
 
 @traced(logger)
@@ -757,7 +772,7 @@ class AbsorberSimpleLayer(SurfaceMaterial):
             }
         }
         properties = plain_properties_to_properties(plain_properties)
-        super(AbsorberSimpleLayer, self).__init__(name, properties, properties)
+        super(AbsorberSimpleLayer, self).__init__(name, properties)
 
 
 @traced(logger)
@@ -786,7 +801,7 @@ class AbsorberLambertianLayer(SurfaceMaterial):
             }
         }
         properties = plain_properties_to_properties(plain_properties)
-        super(AbsorberLambertianLayer,self).__init__(name, properties, properties)
+        super(AbsorberLambertianLayer,self).__init__(name, properties)
 
 
 @traced(logger)
@@ -827,7 +842,7 @@ class AbsorberTWModelLayer(SurfaceMaterial):
             }
         }
         properties = plain_properties_to_properties(plain_properties)
-        super(AbsorberTWModelLayer,self).__init__(name, properties, properties)
+        super(AbsorberTWModelLayer,self).__init__(name, properties)
 
 
 @traced(logger)
@@ -868,7 +883,7 @@ class ReflectorSpecularLayer(SurfaceMaterial):
             }
         }
         properties = plain_properties_to_properties(plain_properties)
-        super(ReflectorSpecularLayer,self).__init__(name, properties, properties)
+        super(ReflectorSpecularLayer,self).__init__(name, properties)
 
 
 @traced(logger)
@@ -897,7 +912,7 @@ class ReflectorLambertianLayer(SurfaceMaterial):
             },
         }
         properties = plain_properties_to_properties(plain_properties)
-        super(ReflectorLambertianLayer,self).__init__(name, properties, properties)
+        super(ReflectorLambertianLayer,self).__init__(name, properties)
 
 
 @traced(logger)
@@ -943,7 +958,7 @@ class MetallicSpecularLayer(SurfaceMaterial):
             }
         }
         properties = plain_properties_to_properties(plain_properties)
-        super(MetallicSpecularLayer,self).__init__(name, properties, properties)
+        super(MetallicSpecularLayer,self).__init__(name, properties)
 
 
 @traced(logger)
@@ -977,7 +992,7 @@ class MetallicLambertianLayer(SurfaceMaterial):
             },
         }
         properties = plain_properties_to_properties(plain_properties)
-        super(MetallicLambertianLayer,self).__init__(name, properties, properties)
+        super(MetallicLambertianLayer,self).__init__(name, properties)
 
 
 @traced(logger)
@@ -1021,7 +1036,7 @@ class PolarizedCoatingReflectorLayer(SurfaceMaterial):
             }
         }
         properties = plain_properties_to_properties(plain_properties)
-        super(PolarizedCoatingReflectorLayer,self).__init__(name, properties, properties)
+        super(PolarizedCoatingReflectorLayer,self).__init__(name, properties)
 
 
 @traced(logger)
@@ -1051,7 +1066,7 @@ class PolarizedCoatingTransparentLayer(SurfaceMaterial):
             },
         }
         properties = plain_properties_to_properties(plain_properties)
-        super(PolarizedCoatingTransparentLayer,self).__init__(name, properties, properties)
+        super(PolarizedCoatingTransparentLayer,self).__init__(name, properties)
 
 
 @traced(logger)
@@ -1087,13 +1102,16 @@ class PolarizedCoatingAbsorberLayer(SurfaceMaterial):
             },
         }
         properties = plain_properties_to_properties(plain_properties)
-        super(PolarizedCoatingAbsorberLayer,self).__init__(name, properties, properties)
+        super(PolarizedCoatingAbsorberLayer,self).__init__(name, properties)
 
 
 @traced(logger)
 class TwoLayerMaterial(SurfaceMaterial):
-    def __init__(self, name, layer_front, layer_back):
-        super(TwoLayerMaterial,self).__init__(name,
-                                              Material.by_name[layer_front].properties_front,
-                                              Material.by_name[layer_back].properties_back)
-
+    def __init__(self, name, name_front_layer, name_back_layer):
+        super(SurfaceMaterial, self).__init__(name, {})
+        self.front_material = Material.by_name[name_front_layer]
+        self.back_material = Material.by_name[name_back_layer]
+        #super(TwoLayerMaterial,self).__init__(name,
+        #                                      Material.by_name[layer_front].properties_front,
+        #                                      Material.by_name[layer_back].properties_back)
+        self.kind = 'Surface'
