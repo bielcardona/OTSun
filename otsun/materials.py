@@ -156,6 +156,7 @@ class Material(object):
         name = ""
         for mat_spec in info:
             classname = mat_spec['classname']
+            logger.debug(classname)
             kind = mat_spec['kind']
             name = mat_spec['name']
             if kind == 'Volume':

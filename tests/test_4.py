@@ -6,6 +6,23 @@ from FreeCAD import Base
 import Part
 import numpy as np
 
+import logging
+logger = otsun.logger
+logger.setLevel(logging.DEBUG)
+
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# add formatter to ch
+ch.setFormatter(formatter)
+
+# add ch to logger
+logger.addHandler(ch)
+
 MyProject = 'Perovskite_Stack_200nm.FCStd'
 FreeCAD.openDocument(MyProject)
 
@@ -150,6 +167,11 @@ if captured_energy_PV > 1E-9:
 # --------- end
 
 FreeCAD.closeDocument(FreeCAD.ActiveDocument.Name)
+
+print table_Th
+print 0.1 > table_Th[0][1] > 0.0 and 0.1 > table_Th[1][1] > 0.0 and 0.98 > table_PV[0][1] > 0.75 and 0.98 > table_PV[1][1] > 0.75
+
+
 
 def test_4():
     assert 0.1 > table_Th[0][1] > 0.0 and 0.1 > table_Th[1][1] > 0.0 and 0.98 > table_PV[0][1] > 0.75 and 0.98 > table_PV[1][1] > 0.75
