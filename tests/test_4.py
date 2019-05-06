@@ -6,6 +6,9 @@ from FreeCAD import Base
 import Part
 import numpy as np
 
+import random
+random.seed(1)
+
 import logging
 logger = otsun.logger
 logger.setLevel(logging.DEBUG)

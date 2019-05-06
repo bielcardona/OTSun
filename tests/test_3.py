@@ -6,6 +6,9 @@ from FreeCAD import Base
 import Part
 import numpy as np
 
+import random
+random.seed(1)
+
 MyProject = 'Perovskite_Stack_200nm.FCStd'
 FreeCAD.openDocument(MyProject)
 

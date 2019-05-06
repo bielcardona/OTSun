@@ -6,7 +6,7 @@ from FreeCAD import Base
 import Part
 import numpy as np
 import random
-random.seed(312341344112)
+random.seed(1)
 # ---
 # Materials
 # ---
@@ -84,7 +84,7 @@ for ph in np.arange(phi_ini, phi_end, phi_step):
 FreeCAD.closeDocument(FreeCAD.ActiveDocument.Name)
 
 print results
-print 0.9 > results[0][2] > 0.7 and 0.8 > results[1][2] > 0.5 and results[0][3] == 0.0 and results[1][3] == 0.0
+print 0.9 > results[0][2] > 0.7 and 0.85 > results[1][2] > 0.5 and results[0][3] == 0.0 and results[1][3] == 0.0
 
 def test_2():
-    assert 0.9 > results[0][2] > 0.7 and 0.8 > results[1][2] > 0.5 and results[0][3] == 0.0 and results[1][3] == 0.0
+    assert 0.9 > results[0][2] > 0.7 and 0.85 > results[1][2] > 0.5 and results[0][3] == 0.0 and results[1][3] == 0.0

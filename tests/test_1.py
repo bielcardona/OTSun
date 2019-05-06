@@ -9,6 +9,10 @@ from FreeCAD import Base
 import Part
 import time
 import numpy as np
+
+import random
+random.seed(1)
+
 ## reload(raytrace)
 
 MyProject = 'test_PTC.FCStd'
