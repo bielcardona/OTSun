@@ -942,17 +942,17 @@ class SurfaceMaterial(Material, object):
                 ray.polarization_vectors[-1],
                 properties, ray.wavelength)
             probabilities = [results[0], results[1], results[2]]
-        if 'metallic_material' in properties:
-            n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
-            if 'extinction_coefficient' in ray.current_medium.properties:
-                n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength) + 1j * \
-                     ray.current_medium.properties['extinction_coefficient'](ray.wavelength)
-            n2 = properties['index_of_refraction'](ray.wavelength)
-            if 'extinction_coefficient' in properties:
-                n2 = properties['index_of_refraction'](ray.wavelength) + 1j * properties['extinction_coefficient'](
-                    ray.wavelength)
-            results = SurfaceMaterial.calculate_reflexion_metallic(ray.directions[-1], normal_vector, n1, n2, polarization_vector)
-            probabilities = [results[0], results[1], results[2]]
+        # if 'metallic_material' in properties:
+        #     n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
+        #     if 'extinction_coefficient' in ray.current_medium.properties:
+        #         n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength) + 1j * \
+        #              ray.current_medium.properties['extinction_coefficient'](ray.wavelength)
+        #     n2 = properties['index_of_refraction'](ray.wavelength)
+        #     if 'extinction_coefficient' in properties:
+        #         n2 = properties['index_of_refraction'](ray.wavelength) + 1j * properties['extinction_coefficient'](
+        #             ray.wavelength)
+        #     results = SurfaceMaterial.calculate_reflexion_metallic(ray.directions[-1], normal_vector, n1, n2, polarization_vector)
+        #     probabilities = [results[0], results[1], results[2]]
 
         if probabilities is None:
             try:
@@ -1343,6 +1343,20 @@ class ReflectorLambertianLayer(SurfaceMaterial):
 class MetallicLayer(SurfaceMaterial):
     def __init__(self, *args):
         super(MetallicLayer, self).__init__(*args)
+
+    def compute_probabilities(ray, normal_vector, properties, nearby_material):
+        n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
+        if 'extinction_coefficient' in ray.current_medium.properties:
+            n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength) + 1j * \
+                 ray.current_medium.properties['extinction_coefficient'](ray.wavelength)
+        n2 = properties['index_of_refraction'](ray.wavelength)
+        if 'extinction_coefficient' in properties:
+            n2 = properties['index_of_refraction'](ray.wavelength) + 1j * properties['extinction_coefficient'](
+                ray.wavelength)
+        polarization_vector = ray.polarization_vectors[-1]
+        results = SurfaceMaterial.calculate_reflexion_metallic(ray.directions[-1], normal_vector, n1, n2,
+                                                               polarization_vector)
+        return [results[0], results[1], results[2]]
 
 
 @traced(logger)
