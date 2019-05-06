@@ -918,58 +918,20 @@ class SurfaceMaterial(Material, object):
 
     @staticmethod
     def compute_probabilities(ray, normal_vector, properties, nearby_material):
-        polarization_vector = ray.polarization_vectors[-1]
-        perpendicular_polarized = False
-        probabilities = None
-        # if 'TW_model' in properties:
-        #     b_constant = properties['b_constant']
-        #     c_constant = properties['c_constant']
-        #     absortion_ratio = AbsorberTWModelLayer.tw_absorptance_ratio(normal_vector, b_constant, c_constant, ray.directions[-1])
-        #     absortion = properties['probability_of_absortion'](ray.properties['wavelength']) * absortion_ratio
-        #     por = 1.0 - absortion
-        #     probabilities = [por, absortion, 0]  # Here I assume no transmitance
-        if 'Matrix_polarized_reflectance_coating' in properties:  # polarized_coating_layer
-            n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
-            if 'extinction_coefficient' in ray.current_medium.properties:
-                n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength) + 1j * \
-                     ray.current_medium.properties['extinction_coefficient'](ray.wavelength)
-            n2 = nearby_material.properties['index_of_refraction'](ray.wavelength)
-            if 'extinction_coefficient' in nearby_material.properties:
-                n2 = nearby_material.properties['index_of_refraction'](ray.wavelength) + 1j * \
-                     nearby_material.properties['extinction_coefficient'](ray.wavelength)
-            results = SurfaceMaterial.calculate_probabilities_polarizaton_coating(
-                ray.directions[-1], normal_vector, n1, n2,
-                ray.polarization_vectors[-1],
-                properties, ray.wavelength)
-            probabilities = [results[0], results[1], results[2]]
-        # if 'metallic_material' in properties:
-        #     n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
-        #     if 'extinction_coefficient' in ray.current_medium.properties:
-        #         n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength) + 1j * \
-        #              ray.current_medium.properties['extinction_coefficient'](ray.wavelength)
-        #     n2 = properties['index_of_refraction'](ray.wavelength)
-        #     if 'extinction_coefficient' in properties:
-        #         n2 = properties['index_of_refraction'](ray.wavelength) + 1j * properties['extinction_coefficient'](
-        #             ray.wavelength)
-        #     results = SurfaceMaterial.calculate_reflexion_metallic(ray.directions[-1], normal_vector, n1, n2, polarization_vector)
-        #     probabilities = [results[0], results[1], results[2]]
+        try:
+            por = properties['probability_of_reflexion'](ray.properties['wavelength'])
+        except KeyError:
+            por = 1.0
+        try:
+            poa = properties['probability_of_absortion'](ray.properties['wavelength'])
+        except KeyError:
+            poa = 1 - por
+        try:
+            pot = properties['probability_of_transmitance'](ray.properties['wavelength'])
+        except KeyError:
+            pot = 0.0
 
-        if probabilities is None:
-            try:
-                por = properties['probability_of_reflexion'](ray.properties['wavelength'])
-            except KeyError:
-                por = 1.0
-            try:
-                poa = properties['probability_of_absortion'](ray.properties['wavelength'])
-            except KeyError:
-                poa = 1 - por
-            try:
-                pot = properties['probability_of_transmitance'](ray.properties['wavelength'])
-            except KeyError:
-                pot = 0.0
-
-            probabilities = [por, poa, pot]
-        return probabilities
+        return [por, poa, pot]
 
     @staticmethod
     def decide_phenomenon(ray, normal_vector, properties, nearby_material):
@@ -1440,7 +1402,30 @@ class MetallicLambertianLayer(MetallicLayer):
 
 
 @traced(logger)
-class PolarizedCoatingReflectorLayer(SurfaceMaterial):
+class PolarizedCoatingLayer(SurfaceMaterial):
+    def __init__(self,*args):
+        super(PolarizedCoatingLayer, self).__init__(*args)
+
+    def compute_probabilities(ray, normal_vector, properties, nearby_material):
+        print "in subclass"
+        #if 'Matrix_polarized_reflectance_coating' in properties:  # polarized_coating_layer
+        n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
+        if 'extinction_coefficient' in ray.current_medium.properties:
+            n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength) + 1j * \
+                 ray.current_medium.properties['extinction_coefficient'](ray.wavelength)
+        n2 = nearby_material.properties['index_of_refraction'](ray.wavelength)
+        if 'extinction_coefficient' in nearby_material.properties:
+            n2 = nearby_material.properties['index_of_refraction'](ray.wavelength) + 1j * \
+                 nearby_material.properties['extinction_coefficient'](ray.wavelength)
+        results = SurfaceMaterial.calculate_probabilities_polarizaton_coating(
+            ray.directions[-1], normal_vector, n1, n2,
+            ray.polarization_vectors[-1],
+            properties, ray.wavelength)
+        return [results[0], results[1], results[2]]
+
+
+@traced(logger)
+class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
     def __init__(self, name, coating_file, sigma_1=None, sigma_2=None, k=None):
         # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
         # the values in coating_material should be in the corresponding order columns
@@ -1484,7 +1469,7 @@ class PolarizedCoatingReflectorLayer(SurfaceMaterial):
 
 
 @traced(logger)
-class PolarizedCoatingTransparentLayer(SurfaceMaterial):
+class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
     def __init__(self, name, coating_file):
         data_material = np.loadtxt(coating_file, usecols=(0, 1, 2, 3))
         plain_properties = {
@@ -1514,7 +1499,7 @@ class PolarizedCoatingTransparentLayer(SurfaceMaterial):
 
 
 @traced(logger)
-class PolarizedCoatingAbsorberLayer(SurfaceMaterial):
+class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
     def __init__(self, name, coating_file):
         # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
         # the values in coating_material should be in the corresponding order columns
