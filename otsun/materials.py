@@ -971,13 +971,13 @@ class SurfaceMaterial(Material, object):
             probabilities = [por, poa, pot]
         return probabilities
 
-    @staticmethod
-    def decide_phenomenon(ray, normal_vector, properties, nearby_material):
+    @classmethod
+    def decide_phenomenon(cls, ray, normal_vector, properties, nearby_material):
         # TODO : Humanize
         phenomena = [Phenomenon.REFLEXION, Phenomenon.ABSORPTION, Phenomenon.TRANSMITTANCE]
-        probabilities = SurfaceMaterial.compute_probabilities(
+        probabilities = cls.compute_probabilities(
             ray, normal_vector, properties, nearby_material)
-        polarization_vector, perpendicular_polarized = SurfaceMaterial.compute_polarizations(
+        polarization_vector, perpendicular_polarized = cls.compute_polarizations(
             ray, normal_vector, properties, nearby_material)
 
         phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
