@@ -203,45 +203,6 @@ def double_gaussian_dispersion(normal, state, sigma_1, sigma_2, k):
 
 
 @traced(logger)
-def tw_absorptance_ratio(normal, b_constant, c_constant, incident):
-    """Angular Solar Absorptance model for selective absorber material.
-
-    Given by the formula 1 - b * (1/cos - 1) ** c, based on:
-    Tesfamichael, T., and Wackelgard, E., 2000, "Angular Solar Absorptance and
-    Incident Angle Modifier of Selective Absorbers for Solar Thermal Collectors,"
-    Sol. Energy, 68, pp. 335–341.
-
-    Parameters
-    ----------
-    normal : Base.Vector
-        normal vector of the surface at the point of incidence
-    b_constant : float
-    c_constant : float
-    incident : Base.Vector
-        direction vector of the incident ray
-
-    Returns
-    -------
-    float
-
-    """
-    # We assume the normal is normalized.
-    my_normal = normal * 1.0
-    if my_normal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
-        my_normal = my_normal * (-1.0)
-    incidence_angle = np.arccos(my_normal.dot(incident) * (-1.0))
-    incidence_angle_deg = incidence_angle * 180.0 / np.pi
-    if incidence_angle_deg < 80.0:
-        absorption_ratio = 1.0 - b_constant * (1.0 / np.cos(incidence_angle) - 1.0) ** c_constant
-    else:
-        y0 = 1.0 - b_constant * (1.0 / np.cos(80.0 * np.pi / 180.0) - 1.0) ** c_constant
-        m = y0 / 10.0
-        absorption_ratio = y0 - m * (incidence_angle_deg - 80.0)
-    return absorption_ratio
-
-
-
-@traced(logger)
 def refraction(incident, normal, n1, n2, polarization_vector):
     """Implementation of Snell's law of refraction
 
