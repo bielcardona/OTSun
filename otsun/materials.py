@@ -27,53 +27,6 @@ class NumpyEncoder(json.JSONEncoder):
 # Classes for materials
 # ---
 
-def plain_properties_to_properties(plain_properties):
-    """
-    Converts properties of a material in plain format (json) to internal format
-
-    Parameters
-    ----------
-    plain_properties : dict
-
-    Returns
-    -------
-    dict
-    """
-    properties = {}
-    for key in plain_properties:
-        plain_property = plain_properties[key]
-        prop_type = plain_property['type']
-        prop_value = plain_property['value']
-        if prop_type == 'scalar':
-            properties[key] = prop_value
-        if prop_type == 'constant':
-            properties[key] = constant_function(prop_value)
-        if prop_type == 'tabulated':
-            properties[key] = tabulated_function(
-                np.array(prop_value[0]), np.array(prop_value[1]))
-        if prop_type == 'matrix':
-            properties[key] = matrix_reflectance(np.array(prop_value))
-    properties['plain_properties'] = plain_properties
-    return properties
-
-
-def properties_to_plain_properties(properties):
-    """
-    Converts properties of a material in internal format to plain (json ready) format
-
-    Since the plain properties are stored in the internal format,
-    no need for conversions
-    
-    Parameters
-    ----------
-    properties : dict
-
-    Returns
-    -------
-    dict
-    """
-    return properties.get('plain_properties', None)
-
 
 @traced(logger)
 class Material(object):
@@ -103,7 +56,56 @@ class Material(object):
         self.by_name[name] = self
         self.name = name
         self.kind = ""
+        self.classname = ""
         self.properties = properties
+
+    @staticmethod
+    def plain_properties_to_properties(plain_properties):
+        """
+        Converts properties of a material in plain format (json) to internal format
+
+        Parameters
+        ----------
+        plain_properties : dict
+
+        Returns
+        -------
+        dict
+        """
+        properties = {}
+        for key in plain_properties:
+            plain_property = plain_properties[key]
+            prop_type = plain_property['type']
+            prop_value = plain_property['value']
+            if prop_type == 'scalar':
+                properties[key] = prop_value
+            if prop_type == 'constant':
+                properties[key] = constant_function(prop_value)
+            if prop_type == 'tabulated':
+                properties[key] = tabulated_function(
+                    np.array(prop_value[0]), np.array(prop_value[1]))
+            if prop_type == 'matrix':
+                properties[key] = matrix_reflectance(np.array(prop_value))
+        properties['plain_properties'] = plain_properties
+        return properties
+
+    @staticmethod
+    def properties_to_plain_properties(properties):
+        """
+        Converts properties of a material in internal format to plain (json ready) format
+
+        Since the plain properties are stored in the internal format,
+        no need for conversions
+
+        Parameters
+        ----------
+        properties : dict
+
+        Returns
+        -------
+        dict
+        """
+        return properties.get('plain_properties', None)
 
     @classmethod
     def get_from_label(cls, label):
@@ -164,20 +166,19 @@ class Material(object):
             if kind == 'Volume':
                 mat = VolumeMaterial(name, {})
                 plain_properties = mat_spec['plain_properties']
-                properties = plain_properties_to_properties(plain_properties)
+                properties = Material.plain_properties_to_properties(plain_properties)
                 mat.properties = properties
                 the_class = globals()[classname]
                 mat.__class__ = the_class
             if kind == 'Surface':
                 if classname == "TwoLayerMaterial":
-                    # TODO: Adapt for TwoLayer
                     name_front_layer = mat_spec['name_front_layer']
                     name_back_layer = mat_spec['name_back_layer']
                     mat = TwoLayerMaterial(name, name_front_layer, name_back_layer)
                 else:
                     mat = SurfaceMaterial(name, {})
                     plain_properties = mat_spec['plain_properties']
-                    properties = plain_properties_to_properties(plain_properties)
+                    properties = Material.plain_properties_to_properties(plain_properties)
                     mat.properties = properties
                     the_class = globals()[classname]
                     mat.__class__ = the_class
@@ -437,7 +438,7 @@ class SimpleVolumeMaterial(VolumeMaterial):
             }
         }
         super(SimpleVolumeMaterial,self).__init__(name, {})
-        self.properties = plain_properties_to_properties(plain_properties)
+        self.properties = Material.plain_properties_to_properties(plain_properties)
 
 
 class WavelengthVolumeMaterial(VolumeMaterial):
@@ -457,7 +458,7 @@ class WavelengthVolumeMaterial(VolumeMaterial):
             }
         }
         super(WavelengthVolumeMaterial,self).__init__(name)
-        self.properties = plain_properties_to_properties(plain_properties)
+        self.properties = Material.plain_properties_to_properties(plain_properties)
 
 
 class PVMaterial(VolumeMaterial):
@@ -485,7 +486,7 @@ class PVMaterial(VolumeMaterial):
             }
         }
         super(PVMaterial,self).__init__(name)
-        self.properties = plain_properties_to_properties(plain_properties)
+        self.properties = Material.plain_properties_to_properties(plain_properties)
 
 
 class PolarizedThinFilm(VolumeMaterial):
@@ -563,7 +564,7 @@ class PolarizedThinFilm(VolumeMaterial):
             },
         }
         super(PolarizedThinFilm,self).__init__(name)
-        self.properties = plain_properties_to_properties(plain_properties)
+        self.properties = Material.plain_properties_to_properties(plain_properties)
 
 
 vacuum_medium = SimpleVolumeMaterial("Vacuum", 1.0, 0.0)
@@ -760,7 +761,7 @@ class SurfaceMaterial(Material):
 
     @classmethod
     def from_plain_properties(cls, plain_properties):
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         material = cls(properties,properties)
         return material
 
@@ -797,7 +798,7 @@ class OpaqueSimpleLayer(SurfaceMaterial):
                 'value': False
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(OpaqueSimpleLayer, self).__init__(name, properties)
 
 
@@ -826,7 +827,7 @@ class TransparentSimpleLayer(SurfaceMaterial):
                 'value': True
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(TransparentSimpleLayer, self).__init__(name, properties)
 
 
@@ -855,7 +856,7 @@ class AbsorberSimpleLayer(SurfaceMaterial):
                 'value': True
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(AbsorberSimpleLayer, self).__init__(name, properties)
 
 
@@ -884,7 +885,7 @@ class AbsorberLambertianLayer(SurfaceMaterial):
                 'value': True
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(AbsorberLambertianLayer,self).__init__(name, properties)
 
 
@@ -925,7 +926,7 @@ class AbsorberTWModelLayer(SurfaceMaterial):
                 'value': c_constant
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(AbsorberTWModelLayer,self).__init__(name, properties)
 
 
@@ -966,7 +967,7 @@ class ReflectorSpecularLayer(SurfaceMaterial):
                 'value': k
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(ReflectorSpecularLayer,self).__init__(name, properties)
 
 
@@ -995,7 +996,7 @@ class ReflectorLambertianLayer(SurfaceMaterial):
                 'value': True
             },
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(ReflectorLambertianLayer,self).__init__(name, properties)
 
 
@@ -1043,7 +1044,7 @@ class MetallicSpecularLayer(SurfaceMaterial):
                 'value': k
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(MetallicSpecularLayer,self).__init__(name, properties)
 
 
@@ -1079,7 +1080,7 @@ class MetallicLambertianLayer(SurfaceMaterial):
                 'value': True
             },
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(MetallicLambertianLayer,self).__init__(name, properties)
 
 
@@ -1126,7 +1127,7 @@ class PolarizedCoatingReflectorLayer(SurfaceMaterial):
                 'value': k
             }
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(PolarizedCoatingReflectorLayer,self).__init__(name, properties)
 
 
@@ -1156,7 +1157,7 @@ class PolarizedCoatingTransparentLayer(SurfaceMaterial):
                 'value': True
             },
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(PolarizedCoatingTransparentLayer,self).__init__(name, properties)
 
 
@@ -1195,7 +1196,7 @@ class PolarizedCoatingAbsorberLayer(SurfaceMaterial):
                 'value': True
             },
         }
-        properties = plain_properties_to_properties(plain_properties)
+        properties = Material.plain_properties_to_properties(plain_properties)
         super(PolarizedCoatingAbsorberLayer,self).__init__(name, properties)
 
 
