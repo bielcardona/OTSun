@@ -29,7 +29,7 @@ class NumpyEncoder(json.JSONEncoder):
 
 def plain_properties_to_properties(plain_properties):
     """
-    Converts properties of a material in plain format (dict from json) to the internal format
+    Converts properties of a material in plain format (json) to internal format
 
     Parameters
     ----------
@@ -49,7 +49,8 @@ def plain_properties_to_properties(plain_properties):
         if prop_type == 'constant':
             properties[key] = constant_function(prop_value)
         if prop_type == 'tabulated':
-            properties[key] = tabulated_function(np.array(prop_value[0]), np.array(prop_value[1]))
+            properties[key] = tabulated_function(
+                np.array(prop_value[0]), np.array(prop_value[1]))
         if prop_type == 'matrix':
             properties[key] = matrix_reflectance(np.array(prop_value))
     properties['plain_properties'] = plain_properties
@@ -60,7 +61,8 @@ def properties_to_plain_properties(properties):
     """
     Converts properties of a material in internal format to plain (json ready) format
 
-    Since the plain properties are stored in the internal format, no need for conversions
+    Since the plain properties are stored in the internal format,
+    no need for conversions
     
     Parameters
     ----------
@@ -275,9 +277,11 @@ class Material(object):
 
     def change_of_direction(self, ray, normal_vector, *args):
         """
-        Computes how a ray behaves when interacting with the material. MUST be subclassed
+        Computes how a ray behaves when interacting with the material.
+        MUST be subclassed
 
-        The material where the ray is actually located is held in ray.current_material.
+        The material where the ray is actually located is held in
+        ray.current_material.
 
         Parameters
         ----------
@@ -342,8 +346,10 @@ class VolumeMaterial(Material):
 
         The `properties` parameter must be a dict with the physical properties
         describing the material. At least, the following must be provided:
-        'index_of_refraction': index of refraction of the material, as a function of its wavelength, only real part.
-        'extinction_coefficient': imaginary part of the index of refraction of the material as a function of its wavelength.
+        'index_of_refraction': index of refraction of the material, as a
+        function of its wavelength, only real part.
+        'extinction_coefficient': imaginary part of the index of refraction
+        of the material as a function of its wavelength.
 
         Parameters
         ----------
@@ -358,38 +364,50 @@ class VolumeMaterial(Material):
     def change_of_direction(self, ray, normal_vector):
         wavelength = ray.wavelength
         if 'Matrix_reflectance_thin_film' in ray.current_medium.properties:
-            # the ray is traveling inside thin film material and then it will certainly refract
+            # the ray is traveling inside thin film material and
+            # then it will certainly refract
             ray.current_medium = self
-            return OpticalState(ray.polarization_vectors[-1], ray.directions[-1], Phenomenon.REFRACTION)
+            return OpticalState(ray.polarization_vectors[-1],
+                                ray.directions[-1], Phenomenon.REFRACTION)
         if 'Matrix_reflectance_thin_film' in self.properties:
             # the ray impacts on thin film material
-            n1 = ray.materials[-1].properties['index_of_refraction'](ray.wavelength)
+            n1 = ray.materials[-1].properties['index_of_refraction'](
+                ray.wavelength)
             if 'extinction_coefficient' in ray.current_medium.properties:
-                n1 = n1 + 1j * ray.materials[-1].properties['extinction_coefficient'](ray.wavelength)
+                n1 += 1j * \
+                      ray.materials[-1].properties['extinction_coefficient'](
+                          ray.wavelength)
             n_front = self.properties['index_of_refraction_front'](ray.wavelength)
             n_back = self.properties['index_of_refraction_back'](ray.wavelength)
-            if n_front == ray.materials[-1].properties['index_of_refraction'](ray.wavelength):
+            if n_front == ray.materials[-1].properties['index_of_refraction'](
+                    ray.wavelength):
                 # impacts on front material
                 n2 = n_back
             else:
                 n2 = n_front
-            energy_absorbed_thin_film, optical_state = calculate_state_thin_film(ray.directions[-1], normal_vector, n1,
-                                                                                 n2,
-                                                                                 ray.polarization_vectors[-1],
-                                                                                 self.properties, ray.wavelength)
+            energy_absorbed_thin_film, optical_state = (
+                calculate_state_thin_film(
+                    ray.directions[-1], normal_vector, n1,
+                    n2,
+                    ray.polarization_vectors[-1],
+                    self.properties, ray.wavelength))
             ray.energy = ray.energy * (1.0 - energy_absorbed_thin_film)
             if optical_state.phenomenon == Phenomenon.REFRACTION:
                 ray.current_medium = self
             return optical_state
         else:
-            n1 = ray.current_medium.properties['index_of_refraction'](wavelength)
+            n1 = ray.current_medium.properties['index_of_refraction'](
+                wavelength)
             if 'extinction_coefficient' in ray.current_medium.properties:
-                n1 = n1 + 1j * ray.current_medium.properties['extinction_coefficient'](wavelength)
+                n1 += 1j * \
+                      ray.current_medium.properties['extinction_coefficient'](
+                          wavelength)
             n2 = self.properties['index_of_refraction'](wavelength)
             if 'extinction_coefficient' in self.properties:
-                n2 = n2 + 1j * self.properties['extinction_coefficient'](wavelength)
-            optical_state = refraction(ray.directions[-1], normal_vector, n1, n2,
-                                       ray.polarization_vectors[-1])
+                n2 += 1j * self.properties['extinction_coefficient'](wavelength)
+            optical_state = refraction(
+                ray.directions[-1], normal_vector, n1, n2,
+                ray.polarization_vectors[-1])
             if optical_state.phenomenon == Phenomenon.REFRACTION:
                 ray.current_medium = self
             return optical_state
@@ -400,7 +418,8 @@ class VolumeMaterial(Material):
                 'name': self.name,
                 'kind': self.kind,
                 'classname': self.__class__.__name__,
-                'plain_properties': self.properties.get('plain_properties', None)
+                'plain_properties': self.properties.get(
+                    'plain_properties', None)
             }, cls=NumpyEncoder, indent=4
         )
 
@@ -443,7 +462,10 @@ class WavelengthVolumeMaterial(VolumeMaterial):
 
 class PVMaterial(VolumeMaterial):
     def __init__(self, name, file_index_of_refraction):
-        # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
+        # file_index_of_refraction with three columns:
+        # wavelenth in nm,
+        # real(index of refraction),
+        # imaginary(index of refraction)
         data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
         wavelength_values = data_refraction[:, 0]
         n_values = data_refraction[:, 1]
@@ -469,8 +491,12 @@ class PVMaterial(VolumeMaterial):
 class PolarizedThinFilm(VolumeMaterial):
     def __init__(self, name, file_thin_film, file_front, file_back):
         # thin film material calculated by TMM method, six columns:
-        # wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel),  transmittance s-polarized, transmittance p-polarized
-        # the values in coating_material should be in the corresponding order columns
+        # wavelenth in nm, angle in deg.,
+        # reflectance s-polarized (perpendicular),
+        # reflectance p-polarized (parallel),  transmittance s-polarized,
+        # transmittance p-polarized
+        # the values in coating_material should be in the corresponding
+        # order columns
         data = np.loadtxt(file_thin_film)
         data_reflectance = data[:, [0, 1, 2, 3]]
         data_transmittance = data[:, [0, 1, 4, 5]]
@@ -547,18 +573,18 @@ vacuum_medium = SimpleVolumeMaterial("Vacuum", 1.0, 0.0)
 class SurfaceMaterial(Material):
     def __init__(self, name, properties):
         """
-        Initializes a Surface Material. The properties parameter must be a dict with the physical properties
+        Initializes a Surface Material. The properties parameter must be a
+        dict with the physical properties
         describing the material. At least, the following must be provided:
-        'probability_of_reflexion': probability that a photon gets reflected, as a function of its wavelength.
-        'probability_of_absortion': probability that a photon gets absorbed, as a function of its wavelength.
-        'probability_of_transmitance': probability that a photon passes through the material, as a function of its wavelength.
+        'probability_of_reflexion': probability that a photon gets reflected,
+        as a function of its wavelength.
+        'probability_of_absortion': probability that a photon gets absorbed,
+        as a function of its wavelength.
+        'probability_of_transmitance': probability that a photon passes through
+        the material, as a function of its wavelength.
         """
         super(SurfaceMaterial, self).__init__(name, properties)
         self.properties = properties
-        # if properties_back is None:
-        #     self.properties_back = properties_front
-        # else:
-        #     self.properties_back = properties_back
         self.kind = 'Surface'
 
     @classmethod
@@ -568,57 +594,77 @@ class SurfaceMaterial(Material):
     def decide_phenomenon(self, ray, normal_vector, nearby_material):
         # TODO : Humanize
         properties = self.properties
-        phenomena = [Phenomenon.REFLEXION, Phenomenon.ABSORPTION, Phenomenon.TRANSMITTANCE]
+        phenomena = [
+            Phenomenon.REFLEXION,
+            Phenomenon.ABSORPTION,
+            Phenomenon.TRANSMITTANCE]
         polarization_vector = ray.polarization_vectors[-1]
         perpendicular_polarized = False
         probabilities = None
         if 'TW_model' in properties:
             b_constant = properties['b_constant']
             c_constant = properties['c_constant']
-            absortion_ratio = tw_absorptance_ratio(normal_vector, b_constant, c_constant, ray.directions[-1])
-            absortion = properties['probability_of_absortion'](ray.properties['wavelength']) * absortion_ratio
+            absortion_ratio = tw_absorptance_ratio(
+                normal_vector, b_constant, c_constant, ray.directions[-1])
+            absortion = properties['probability_of_absortion'](
+                ray.properties['wavelength']) * absortion_ratio
             por = 1.0 - absortion
             probabilities = [por, absortion, 0]  # Here I assume no transmitance
-        if 'Matrix_polarized_reflectance_coating' in properties:  # polarized_coating_layer
-            n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
+        if 'Matrix_polarized_reflectance_coating' in properties:
+            # polarized_coating_layer
+            n1 = ray.current_medium.properties['index_of_refraction'](
+                ray.wavelength)
             if 'extinction_coefficient' in ray.current_medium.properties:
-                n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength) + 1j * \
-                     ray.current_medium.properties['extinction_coefficient'](ray.wavelength)
-            n2 = nearby_material.properties['index_of_refraction'](ray.wavelength)
+                n1 = ray.current_medium.properties['index_of_refraction'](
+                    ray.wavelength) + 1j * \
+                     ray.current_medium.properties['extinction_coefficient'](
+                         ray.wavelength)
+            n2 = nearby_material.properties['index_of_refraction'](
+                ray.wavelength)
             if 'extinction_coefficient' in nearby_material.properties:
-                n2 = nearby_material.properties['index_of_refraction'](ray.wavelength) + 1j * \
-                     nearby_material.properties['extinction_coefficient'](ray.wavelength)
-            results = calculate_probabilities_polarizaton_coating(ray.directions[-1], normal_vector, n1, n2,
-                                                                  ray.polarization_vectors[-1],
-                                                                  properties, ray.wavelength)
+                n2 = nearby_material.properties['index_of_refraction'](
+                    ray.wavelength) + 1j * \
+                     nearby_material.properties['extinction_coefficient'](
+                         ray.wavelength)
+            results = calculate_probabilities_polarizaton_coating(
+                ray.directions[-1], normal_vector, n1, n2,
+                ray.polarization_vectors[-1],
+                properties, ray.wavelength)
             probabilities = [results[0], results[1], results[2]]
             polarization_vector = results[3]
             perpendicular_polarized = results[4]
         if 'metallic_material' in properties:
-            n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
+            n1 = ray.current_medium.properties['index_of_refraction'](
+                ray.wavelength)
             if 'extinction_coefficient' in ray.current_medium.properties:
-                n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength) + 1j * \
-                     ray.current_medium.properties['extinction_coefficient'](ray.wavelength)
+                n1 = ray.current_medium.properties['index_of_refraction'](
+                    ray.wavelength) + 1j * \
+                     ray.current_medium.properties['extinction_coefficient'](
+                         ray.wavelength)
             n2 = properties['index_of_refraction'](ray.wavelength)
             if 'extinction_coefficient' in properties:
-                n2 = properties['index_of_refraction'](ray.wavelength) + 1j * properties['extinction_coefficient'](
-                    ray.wavelength)
-            results = calculate_reflexion_metallic(ray.directions[-1], normal_vector, n1, n2, polarization_vector)
+                n2 = properties['index_of_refraction'](ray.wavelength) + \
+                     1j * properties['extinction_coefficient'](ray.wavelength)
+            results = calculate_reflexion_metallic(
+                ray.directions[-1], normal_vector, n1, n2, polarization_vector)
             probabilities = [results[0], results[1], results[2]]
             polarization_vector = results[3]
             perpendicular_polarized = results[4]
 
         if probabilities is None:
             try:
-                por = properties['probability_of_reflexion'](ray.properties['wavelength'])
+                por = properties['probability_of_reflexion'](
+                    ray.properties['wavelength'])
             except:
                 por = 1.0
             try:
-                poa = properties['probability_of_absortion'](ray.properties['wavelength'])
+                poa = properties['probability_of_absortion'](
+                    ray.properties['wavelength'])
             except:
                 poa = 1 - por
             try:
-                pot = properties['probability_of_transmitance'](ray.properties['wavelength'])
+                pot = properties['probability_of_transmitance'](
+                    ray.properties['wavelength'])
             except:
                 pot = 0.0
 
@@ -629,38 +675,50 @@ class SurfaceMaterial(Material):
     def change_of_direction_by_absortion(self, ray, normal_vector):
         properties = self.properties
         if properties['energy_collector']:
-            return OpticalState(Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), Phenomenon.GOT_ABSORBED)
+            return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
+                                 Base.Vector(0.0, 0.0, 0.0),
+                                 Phenomenon.GOT_ABSORBED))
         else:
-            return OpticalState(Base.Vector(0.0, 0.0, 0.0), Base.Vector(0.0, 0.0, 0.0), Phenomenon.ABSORPTION)
+            return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
+                                 Base.Vector(0.0, 0.0, 0.0),
+                                 Phenomenon.ABSORPTION))
 
-    def change_of_direction_by_reflexion(self, ray, normal_vector, polarization_vector_calculated_before):
+    def change_of_direction_by_reflexion(self, ray, normal_vector,
+                                         polarization_vector_calculated_before):
         properties = self.properties
         if 'specular_material' in properties:
-            state = reflexion(ray.directions[-1], normal_vector, ray.polarization_vectors[-1],
+            state = reflexion(ray.directions[-1], normal_vector,
+                              ray.polarization_vectors[-1],
                               polarization_vector_calculated_before)
             if properties.get('sigma_1',None):
                 sigma_1 = properties['sigma_1']
                 if properties.get('sigma_2',None):
                     sigma_2 = properties['sigma_2']
                     k = properties.get('k', None) or 0.5
-                    return double_gaussian_dispersion(normal_vector, state, sigma_1, sigma_2, k)
+                    return double_gaussian_dispersion(
+                        normal_vector, state, sigma_1, sigma_2, k)
                 return single_gaussian_dispersion(normal_vector, state, sigma_1)
             return state
         if 'lambertian_material' in properties:
             state = lambertian_reflexion(ray.directions[-1], normal_vector)
             return state
 
-    def change_of_direction_by_transmitance(self, ray, normal_vector, nearby_material, perpendicular_polarized):
-        n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength)
-        if 'extinction_coefficient' in ray.current_medium.properties:
-            n1 = ray.current_medium.properties['index_of_refraction'](ray.wavelength) + 1j * \
-                 ray.current_medium.properties['extinction_coefficient'](ray.wavelength)
-        n2 = nearby_material.properties['index_of_refraction'](ray.wavelength)
-        if 'extinction_coefficient' in nearby_material.properties:
-            n2 = nearby_material.properties['index_of_refraction'](ray.wavelength) + 1j * nearby_material.properties[
-                'extinction_coefficient'](ray.wavelength)
+    def change_of_direction_by_transmitance(self, ray, normal_vector,
+                                            nearby_material,
+                                            perpendicular_polarized):
+        cur_med_prop = ray.current_medium.properties
+        n1 = cur_med_prop['index_of_refraction'](ray.wavelength)
+        if 'extinction_coefficient' in cur_med_prop:
+            n1 = cur_med_prop['index_of_refraction'](ray.wavelength) + \
+                 1j * cur_med_prop['extinction_coefficient'](ray.wavelength)
+        nea_med_prop = nearby_material.properties
+        n2 = nea_med_prop['index_of_refraction'](ray.wavelength)
+        if 'extinction_coefficient' in nea_med_prop:
+            n2 = nea_med_prop['index_of_refraction'](ray.wavelength) +\
+                 1j * nea_med_prop['extinction_coefficient'](ray.wavelength)
         if n1 == n2:  # transparent_simple_layer
-            state = OpticalState(ray.polarization_vectors[-1], ray.directions[-1], Phenomenon.REFRACTION)
+            state = OpticalState(ray.polarization_vectors[-1],
+                                 ray.directions[-1], Phenomenon.REFRACTION)
         else:
             state = shure_refraction(ray.directions[-1], normal_vector, n1, n2,
                                      ray.polarization_vectors[-1],
@@ -670,7 +728,8 @@ class SurfaceMaterial(Material):
 
     def change_of_direction(self, ray, normal_vector, nearby_material):
         if isinstance(self, TwoLayerMaterial):
-            if ray.directions[-1].dot(normal_vector) < 0:  # Ray intercepted on the frontside of the surface
+            if ray.directions[-1].dot(normal_vector) < 0:
+                # Ray intercepted on the frontside of the surface
                 material = self.front_material
             else:  # Ray intercepted on the backside of the surface
                 material = self.back_material
@@ -679,9 +738,11 @@ class SurfaceMaterial(Material):
 
         results = material.decide_phenomenon(ray, normal_vector, nearby_material)
         phenomenon = results[0]
-        if ray.polarization_vectors[-1] == results[1]:  # polarization_vector not calculated
+        if ray.polarization_vectors[-1] == results[1]:
+            # polarization_vector not calculated
             polarization_vector_calculated_before = False
-        else:  # polarization_vector calculated before
+        else:
+            # polarization_vector calculated before
             polarization_vector_calculated_before = True
         ray.polarization_vectors[-1] = results[1]
         perpendicular_polarized = results[2]  # True or False
@@ -709,8 +770,8 @@ class SurfaceMaterial(Material):
                 'name': self.name,
                 'kind': self.kind,
                 'classname': self.__class__.__name__,
-                'plain_properties': self.properties.get('plain_properties', None),
-                # 'plain_properties_front': self.properties_front.get('plain_properties', None),
+                'plain_properties': self.properties.get(
+                    'plain_properties', None),
             }, cls=NumpyEncoder
         )
 
@@ -940,8 +1001,10 @@ class ReflectorLambertianLayer(SurfaceMaterial):
 
 @traced(logger)
 class MetallicSpecularLayer(SurfaceMaterial):
-    def __init__(self, name,file_index_of_refraction, sigma_1=None, sigma_2=None, k=None):
-        # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
+    def __init__(self, name,file_index_of_refraction,
+                 sigma_1=None, sigma_2=None, k=None):
+        # file_index_of_refraction with three columns: wavelenth in nm,
+        # real(index of refraction), imaginary(index of refraction)
         data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
         wavelength_values = data_refraction[:, 0]
         n_values = data_refraction[:, 1]
@@ -987,7 +1050,9 @@ class MetallicSpecularLayer(SurfaceMaterial):
 @traced(logger)
 class MetallicLambertianLayer(SurfaceMaterial):
     def __init__(self, name, file_index_of_refraction):
-        # file_index_of_refraction with three columns: wavelenth in nm, real(index of refraction), imaginary(index of refraction)
+        # file_index_of_refraction with three columns:
+        # wavelenth in nm, real(index of refraction),
+        # imaginary(index of refraction)
         data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
         wavelength_values = data_refraction[:, 0]
         n_values = data_refraction[:, 1]
@@ -1021,8 +1086,11 @@ class MetallicLambertianLayer(SurfaceMaterial):
 @traced(logger)
 class PolarizedCoatingReflectorLayer(SurfaceMaterial):
     def __init__(self, name, coating_file, sigma_1=None, sigma_2=None, k=None):
-        # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
-        # the values in coating_material should be in the corresponding order columns
+        # coating_material with four columns: wavelenth in nm,
+        # angle in deg., reflectance s-polarized (perpendicular),
+        # reflectance p-polarized (parallel)
+        # the values in coating_material should be in the corresponding
+        # order columns
         data_material = np.loadtxt(coating_file, usecols=(0, 1, 2, 3))
         plain_properties = {
             'Matrix_polarized_reflectance_coating': {
@@ -1095,8 +1163,11 @@ class PolarizedCoatingTransparentLayer(SurfaceMaterial):
 @traced(logger)
 class PolarizedCoatingAbsorberLayer(SurfaceMaterial):
     def __init__(self, name, coating_file):
-        # coating_material with four columns: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
-        # the values in coating_material should be in the corresponding order columns
+        # coating_material with four columns: wavelenth in nm, angle in deg.,
+        # reflectance s-polarized (perpendicular),
+        # reflectance p-polarized (parallel)
+        # the values in coating_material should be in the corresponding order
+        # columns
         data_material = np.loadtxt(coating_file, usecols=(0, 1, 2, 3))
         plain_properties = {
             'Matrix_polarized_reflectance_coating': {
@@ -1136,9 +1207,6 @@ class TwoLayerMaterial(SurfaceMaterial):
         self.name_back_layer = name_back_layer
         self.front_material = Material.by_name[name_front_layer]
         self.back_material = Material.by_name[name_back_layer]
-        #super(TwoLayerMaterial,self).__init__(name,
-        #                                      Material.by_name[layer_front].properties_front,
-        #                                      Material.by_name[layer_back].properties_back)
         self.kind = 'Surface'
 
     def to_json(self):
@@ -1149,7 +1217,5 @@ class TwoLayerMaterial(SurfaceMaterial):
                 'classname': 'TwoLayerMaterial',
                 'name_front_layer': self.name_front_layer,
                 'name_back_layer': self.name_back_layer
-                #'plain_properties': self.properties.get('plain_properties', None),
-                # 'plain_properties_front': self.properties_front.get('plain_properties', None),
             }, cls=NumpyEncoder
         )
