@@ -52,11 +52,13 @@ class Material(object):
     """
     by_name = {}
 
-    def __init__(self, name, properties={}):
+    def __init__(self, name, properties=None):
         self.by_name[name] = self
         self.name = name
         self.kind = ""
         self.classname = ""
+        if properties is None:
+            properties = {}
         self.properties = properties
 
     @staticmethod
@@ -202,7 +204,7 @@ class Material(object):
         try:
             with open(filename, 'rb') as f:
                 return cls.load_from_json_fileobject(f)
-        except:
+        except IOError:
             logger.exception("error in processing file %s", filename)
 
     @classmethod
@@ -222,7 +224,7 @@ class Material(object):
                 for matfile in z.namelist():
                     with z.open(matfile) as f:
                         cls.load_from_json_fileobject(f)
-        except:
+        except IOError:
             logger.exception("error in processing file %s", filename)
 
     @classmethod
@@ -248,7 +250,7 @@ class Material(object):
                 mat = dill.load(f)
                 cls.by_name[mat.name] = mat
                 return mat.name
-        except:
+        except IOError:
             logger.exception("error in processing file %s", filename)
 
     @classmethod
@@ -273,7 +275,7 @@ class Material(object):
                     try:
                         mat = dill.load(f)
                         cls.by_name[mat.name] = mat
-                    except:
+                    except IOError:
                         logger.exception("error in processing file %s", matfile)
 
     def change_of_direction(self, ray, normal_vector, *args):
@@ -656,17 +658,17 @@ class SurfaceMaterial(Material):
             try:
                 por = properties['probability_of_reflexion'](
                     ray.properties['wavelength'])
-            except:
+            except KeyError:
                 por = 1.0
             try:
                 poa = properties['probability_of_absortion'](
                     ray.properties['wavelength'])
-            except:
+            except KeyError:
                 poa = 1 - por
             try:
                 pot = properties['probability_of_transmitance'](
                     ray.properties['wavelength'])
-            except:
+            except KeyError:
                 pot = 0.0
 
             probabilities = [por, poa, pot]
