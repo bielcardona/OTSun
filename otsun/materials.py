@@ -594,7 +594,7 @@ class SurfaceMaterial(Material):
         _ = cls(name, properties)
 
 
-    def compute_probabilities(self, ray, normal_vector, nearby_material):
+    def compute_probabilities_and_polarizations(self, ray, normal_vector, nearby_material):
         properties = self.properties
         try:
             por = properties['probability_of_reflexion'](
@@ -612,11 +612,7 @@ class SurfaceMaterial(Material):
         except KeyError:
             pot = 0.0
 
-        return [por, poa, pot]
-
-
-    def compute_polarization(self, ray, normal_vector, nearby_material):
-        return ray.polarization_vectors[-1], False
+        return [por, poa, pot], ray.polarization_vectors[-1], False
 
 
     def decide_phenomenon(self, ray, normal_vector, nearby_material):
@@ -625,9 +621,8 @@ class SurfaceMaterial(Material):
             Phenomenon.ABSORPTION,
             Phenomenon.TRANSMITTANCE]
 
-        probabilities = self.compute_probabilities(ray,normal_vector,nearby_material)
-        polarization_vector, perpendicular_polarized = self.compute_polarization(
-            ray, normal_vector, nearby_material)
+        probabilities, polarization_vector, perpendicular_polarized = \
+            self.compute_probabilities_and_polarizations(ray, normal_vector, nearby_material)
         phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
         return phenomenon, polarization_vector, perpendicular_polarized
 
@@ -887,7 +882,7 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         properties = Material.plain_properties_to_properties(plain_properties)
         super(AbsorberTWModelLayer,self).__init__(name, properties)
 
-    def compute_probabilities(self, ray, normal_vector, nearby_material):
+    def compute_probabilities_and_polarizations(self, ray, normal_vector, nearby_material):
         properties = self.properties
         b_constant = properties['b_constant']
         c_constant = properties['c_constant']
@@ -896,7 +891,7 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         absortion = properties['probability_of_absortion'](
             ray.properties['wavelength']) * absortion_ratio
         por = 1.0 - absortion
-        return [por, absortion, 0]  # Here I assume no transmitance
+        return [por, absortion, 0], ray.polarization_vectors[-1], False  # Here I assume no transmitance
 
 
 @traced(logger)
@@ -974,7 +969,7 @@ class MetallicLayer(SurfaceMaterial):
     def __init__(self, *args):
         super(MetallicLayer, self).__init__(*args)
 
-    def compute_probabilities(self, ray, normal_vector, nearby_material):
+    def compute_probabilities_and_polarizations(self, ray, normal_vector, nearby_material):
         properties = self.properties
         polarization_vector = ray.polarization_vectors[-1]
         n1 = ray.current_medium.properties['index_of_refraction'](
@@ -990,25 +985,8 @@ class MetallicLayer(SurfaceMaterial):
                  1j * properties['extinction_coefficient'](ray.wavelength)
         results = calculate_reflexion_metallic(
             ray.directions[-1], normal_vector, n1, n2, polarization_vector)
-        return results[0:2]
+        return results[0:3], results[3], results[4]
 
-    def compute_polarization(self, ray, normal_vector, nearby_material):
-        properties = self.properties
-        polarization_vector = ray.polarization_vectors[-1]
-        n1 = ray.current_medium.properties['index_of_refraction'](
-            ray.wavelength)
-        if 'extinction_coefficient' in ray.current_medium.properties:
-            n1 = ray.current_medium.properties['index_of_refraction'](
-                ray.wavelength) + 1j * \
-                 ray.current_medium.properties['extinction_coefficient'](
-                     ray.wavelength)
-        n2 = properties['index_of_refraction'](ray.wavelength)
-        if 'extinction_coefficient' in properties:
-            n2 = properties['index_of_refraction'](ray.wavelength) + \
-                 1j * properties['extinction_coefficient'](ray.wavelength)
-        results = calculate_reflexion_metallic(
-            ray.directions[-1], normal_vector, n1, n2, polarization_vector)
-        return tuple(results[3:4])
 
 
 @traced(logger)
@@ -1100,7 +1078,7 @@ class PolarizedCoatingLayer(SurfaceMaterial):
     def __init__(self, *args):
         super(PolarizedCoatingLayer, self).__init__(*args)
 
-    def compute_probabilities(self, ray, normal_vector, nearby_material):
+    def compute_probabilities_and_polarizations(self, ray, normal_vector, nearby_material):
         properties = self.properties
         # polarized_coating_layer
         n1 = ray.current_medium.properties['index_of_refraction'](
@@ -1121,32 +1099,9 @@ class PolarizedCoatingLayer(SurfaceMaterial):
             ray.directions[-1], normal_vector, n1, n2,
             ray.polarization_vectors[-1],
             properties, ray.wavelength)
-        return results[0:3]
+        return results[0:3], results[3], results[4]
 
 
-    def compute_polarization(self, ray, normal_vector, nearby_material):
-        # TODO: we are repeating computations!!!
-        properties = self.properties
-        # polarized_coating_layer
-        n1 = ray.current_medium.properties['index_of_refraction'](
-            ray.wavelength)
-        if 'extinction_coefficient' in ray.current_medium.properties:
-            n1 = ray.current_medium.properties['index_of_refraction'](
-                ray.wavelength) + 1j * \
-                 ray.current_medium.properties['extinction_coefficient'](
-                     ray.wavelength)
-        n2 = nearby_material.properties['index_of_refraction'](
-            ray.wavelength)
-        if 'extinction_coefficient' in nearby_material.properties:
-            n2 = nearby_material.properties['index_of_refraction'](
-                ray.wavelength) + 1j * \
-                 nearby_material.properties['extinction_coefficient'](
-                     ray.wavelength)
-        results = calculate_probabilities_polarizaton_coating(
-            ray.directions[-1], normal_vector, n1, n2,
-            ray.polarization_vectors[-1],
-            properties, ray.wavelength)
-        return tuple(results[3:])
 
 
 @traced(logger)
