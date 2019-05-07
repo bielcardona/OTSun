@@ -542,6 +542,83 @@ class PolarizedThinFilm(VolumeMaterial):
         super(PolarizedThinFilm,self).__init__(name)
         self.properties = Material.plain_properties_to_properties(plain_properties)
 
+    @staticmethod
+    def calculate_state_thin_film(incident, normal, n1, n2, polarization_vector, properties, wavelength):
+        """
+
+        Parameters
+        ----------
+        incident
+        normal
+        n1
+        n2
+        polarization_vector
+        properties
+        wavelength
+
+        Returns
+        -------
+
+        """
+        # TODO: document
+        # returns optical state of the ray in thin film material
+        mynormal = normal * 1.0
+        backside = False
+        if mynormal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
+            mynormal = mynormal * (-1.0)
+            backside = True
+        r = n1.real / n2.real
+        c1 = - mynormal.dot(incident)  # cos (incidence_angle)
+        c2sq = 1.0 - r * r * (1.0 - c1 * c1)  # cos (refracted_angle) ** 2
+        if c2sq.real < 0:  # total internal reflection
+            return 0.0, reflexion(incident, normal, polarization_vector)
+        c2 = sqrt(c2sq)  # cos (refracted_angle)
+
+        normal_parallel_plane = incident.cross(mynormal)  # normal vector of the parallel plane
+        if normal_parallel_plane == Base.Vector(0, 0,
+                                                0):  # to avoid null vector at mynormal and incident parallel vectors
+            normal_parallel_plane = Base.Vector(1, 0, 0)
+        normal_parallel_plane.normalize()
+        normal_perpendicular_plane = normal_parallel_plane.cross(incident)  # normal vector of the perpendicular plane
+        # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
+        parallel_v = polarization_vector - normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+        parallel_component = parallel_v.Length
+        perpendicular_v = polarization_vector - normal_perpendicular_plane * polarization_vector.dot(
+            normal_perpendicular_plane)
+        perpendicular_component = perpendicular_v.Length
+        ref_per = perpendicular_component / (perpendicular_component + parallel_component)
+        perpendicular_polarized = False
+        # https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
+
+        if backside:  # Ray intercepted on the backside of the transparent surface
+            angle = np.arccos(c2.real) * 180.0 / np.pi
+        else:
+            angle = np.arccos(c1) * 180.0 / np.pi
+        reflectance_matrix = properties['Matrix_reflectance_thin_film']
+        r_matrix = reflectance_matrix(angle, wavelength)
+        if myrandom() < ref_per:
+            r = calculate_reflectance(r_matrix, angle, wavelength)[
+                0]  # reflectance for s-polarized (perpendicular) light
+            perpendicular_polarized = True
+            polarization_vector = perpendicular_v.normalize()
+        else:
+            angle = np.arccos(c1) * 180.0 / np.pi
+            r = calculate_reflectance(r_matrix, angle, wavelength)[1]  # reflectance for p-polarized (parallel) light
+            polarization_vector = parallel_v.normalize()
+        if myrandom() < r:  # ray reflected
+            return 0.0, reflexion(incident, normal, polarization_vector)
+        else:
+            transmittance_matrix = properties['Matrix_transmittance_thin_film']
+            t_matrix = transmittance_matrix(angle, wavelength)
+            if perpendicular_polarized:
+                t = calculate_reflectance(t_matrix, angle, wavelength)[0]
+            else:
+                t = calculate_reflectance(t_matrix, angle, wavelength)[1]
+            energy_absorbed_thin_film = (1 - r - t) / (1 - r)
+            refracted_direction = incident * r.real + mynormal * (r.real * c1.real - c2.real)
+            return energy_absorbed_thin_film, OpticalState(polarization_vector, refracted_direction,
+                                                           Phenomenon.REFRACTION)
+
     def change_of_direction(self, ray, normal_vector):
         # the ray impacts on thin film material
         n1 = ray.materials[-1].properties['index_of_refraction'](
@@ -557,7 +634,7 @@ class PolarizedThinFilm(VolumeMaterial):
         else:
             n2 = n_front
         energy_absorbed_thin_film, optical_state = (
-            calculate_state_thin_film(
+            self.calculate_state_thin_film(
                 ray.directions[-1], normal_vector, n1,
                 n2,
                 ray.polarization_vectors[-1],
