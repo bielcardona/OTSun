@@ -176,7 +176,7 @@ class Material(object):
                 if classname == "TwoLayerMaterial":
                     name_front_layer = mat_spec['name_front_layer']
                     name_back_layer = mat_spec['name_back_layer']
-                    mat = TwoLayerMaterial(name, name_front_layer, name_back_layer)
+                    _ = TwoLayerMaterial(name, name_front_layer, name_back_layer)
                 else:
                     mat = SurfaceMaterial(name, {})
                     plain_properties = mat_spec['plain_properties']
@@ -278,7 +278,7 @@ class Material(object):
                     except IOError:
                         logger.exception("error in processing file %s", matfile)
 
-    def change_of_direction(self, ray, normal_vector, *args):
+    def change_of_direction(self, *args):
         """
         Computes how a ray behaves when interacting with the material.
         MUST be subclassed
@@ -343,7 +343,7 @@ class VolumeMaterial(Material):
     TODO: comment on properties
 
     """
-    def __init__(self, name, properties={}):
+    def __init__(self, name, properties=None):
         """
         Initializes a Volume Material.
 
