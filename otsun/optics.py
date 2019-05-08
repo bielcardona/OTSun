@@ -78,6 +78,7 @@ def reflexion(incident, normal, polarization_vector, polarization_vector_calcula
     reflected = incident - my_normal * 2.0 * my_normal.dot(incident)
     c1 = - my_normal.dot(incident)  # cos (incidence_angle)
     # angle for making a rotation to the polarizacion vector
+    # TODO: @Ramon Review if formula for angle is OK
     angle = 2.0 * (np.pi - np.arccos(c1)) * 180.0 / np.pi
     if not polarization_vector_calculated_before:
         # axis for the rotation, only parallel component must be rotated

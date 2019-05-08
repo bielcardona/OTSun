@@ -370,6 +370,7 @@ class VolumeMaterial(Material):
             # the ray is traveling inside thin film material and
             # then it will certainly refract
             ray.current_medium = self
+            # TODO: Caution! modifying member of other class
             return OpticalState(ray.polarization_vectors[-1],
                                 ray.directions[-1], Phenomenon.REFRACTION)
         else:
@@ -387,6 +388,7 @@ class VolumeMaterial(Material):
                 ray.polarization_vectors[-1])
             if optical_state.phenomenon == Phenomenon.REFRACTION:
                 ray.current_medium = self
+                # TODO: Caution! modifying member of other class
             return optical_state
 
     def to_json(self):
@@ -640,8 +642,10 @@ class PolarizedThinFilm(VolumeMaterial):
                 ray.polarization_vectors[-1],
                 self.properties, ray.wavelength))
         ray.energy = ray.energy * (1.0 - energy_absorbed_thin_film)
+        # TODO: CAUTION!!! Method modifying member of another class
         if optical_state.phenomenon == Phenomenon.REFRACTION:
             ray.current_medium = self
+            # TODO: CAUTION!!! Method modifying member of another class
         return optical_state
 
 
@@ -755,6 +759,7 @@ class SurfaceMaterial(Material):
                                      ray.polarization_vectors[-1],
                                      perpendicular_polarized)
         ray.current_medium = nearby_material
+        # TODO: CAUTION!!! Method modifying member of another class
         return state
 
     def change_of_direction(self, ray, normal_vector, nearby_material):

@@ -18,7 +18,7 @@ class Experiment:
         Source of the rays to emit
     number_of_rays : int
         Number of rays to emit in the experiment
-    show_in_doc : Add.Document
+    show_in_doc : App.Document
         FreeCAD document where to plot the rays, or None if plotting not desired
 
     Attributes
