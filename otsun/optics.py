@@ -244,14 +244,11 @@ def refraction(incident, normal, n1, n2, polarization_vector):
         # to avoid null vector at my_normal and incident parallel vectors
         normal_parallel_plane = Base.Vector(1, 0, 0)
     normal_parallel_plane.normalize()
-    # TODO: normal_perpendicular_plane not needed: use my_normal
-    normal_perpendicular_plane = normal_parallel_plane.cross(incident)
-    # normal vector of the perpendicular plane
     # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
     parallel_v = polarization_vector - normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
     parallel_component = parallel_v.Length
     perpendicular_v = polarization_vector - \
-        normal_perpendicular_plane * polarization_vector.dot(normal_perpendicular_plane)
+        my_normal * polarization_vector.dot(my_normal)
     perpendicular_component = perpendicular_v.Length
     ref_per = perpendicular_component / (perpendicular_component + parallel_component)
     perpendicular_polarized = False
