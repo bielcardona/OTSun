@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+"""
+Implementation of optical effects on rays
+"""
 
 from FreeCAD import Base
 import numpy as np
@@ -10,7 +12,10 @@ from .logging_unit import logger
 
 
 class Phenomenon(Enum):
-    """Enum for optical phenomena
+    """
+    Enum for optical phenomena.
+
+    This enum is used to describe which optical phenomenon affected a ray
     """
     REFLEXION = 1
     REFRACTION = 2
@@ -24,23 +29,18 @@ class OpticalState(object):
 
     The OpticalState class gathers together information about the optical
     state of a ray.
+
+    Parameters
+    ----------
+    polarization : Base.Vector
+        polarization vector of the ray
+    direction : Base.Vector
+        direction vector of the ray
+    phenomenon : Phenomenon
+        last phenomenon that the ray experimented
     """
     
     def __init__(self, polarization, direction, phenomenon):
-        """Optical state of a ray.
-
-        The OpticalState class gathers together information about the optical
-        state of a ray.
-
-        Parameters
-        ----------
-        polarization : Base.Vector
-            polarization vector of the ray
-        direction : Base.Vector
-            direction vector of the ray
-        phenomenon : Phenomenon
-            last phenomenon that the ray experimented
-        """
         self.polarization = polarization
         self.direction = direction
         self.phenomenon = phenomenon
@@ -56,33 +56,39 @@ def reflexion(incident, normal, polarization_vector, polarization_vector_calcula
 
     Parameters
     ----------
+    incident : Base.Vector
+        vector incident
     normal : Base.Vector
-        normal vector
+        vector normal to the surface
     polarization_vector :
-    polarization_vector_calculated_before :
+    polarization_vector_calculated_before : bool
+        True if the polarization vector was computed before
     incident : Base.Vector
         incident vector
 
     Returns
     -------
-    Base.Vector
-        reflected vector from incident and normal surface
+    OpticalState
+        optical state of the reflected ray
     """
-    mynormal = normal * 1.0
-    if mynormal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
-        mynormal = mynormal * (-1.0)
-    reflected = incident - mynormal * 2.0 * mynormal.dot(incident)  # refelcted vector
-    c1 = - mynormal.dot(incident)  # cos (incidence_angle)
-    angle = 2.0 * (np.pi - np.arccos(c1)) * 180.0 / np.pi  # angle for make a rotation to the polarizacion vector
+    my_normal = normal * 1.0
+    if my_normal.dot(incident) > 0:
+        # Ray intercepted on the backside of the surface
+        my_normal = my_normal * (-1.0)
+    reflected = incident - my_normal * 2.0 * my_normal.dot(incident)
+    c1 = - my_normal.dot(incident)  # cos (incidence_angle)
+    # angle for making a rotation to the polarizacion vector
+    angle = 2.0 * (np.pi - np.arccos(c1)) * 180.0 / np.pi
     if not polarization_vector_calculated_before:
-        normal_parallel_plane = incident.cross(
-            mynormal)  # axis for the rotation, only parallel component must be rotated
-        if normal_parallel_plane == Base.Vector(0, 0, 0):  # to avoid null vector in a common case
+        # axis for the rotation, only parallel component must be rotated
+        normal_parallel_plane = incident.cross(my_normal)
+        if normal_parallel_plane == Base.Vector(0, 0, 0):
+            # to avoid null vector in a common case
             normal_parallel_plane = Base.Vector(1, 0, 0)
         rotation = Base.Rotation(normal_parallel_plane, angle)
         polarization_vector = rotation.multVec(polarization_vector)
-    else:
-        polarization_vector = polarization_vector
+    # else:
+    #     polarization_vector = polarization_vector
     return OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION)
 
 
@@ -222,24 +228,30 @@ def refraction(incident, normal, n1, n2, polarization_vector):
     # TODO: document
     # https://en.wikipedia.org/wiki/Snell's_law#Vector_form
     my_normal = normal * 1.0
-    if my_normal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
+    if my_normal.dot(incident) > 0:
+        # Ray intercepted on the backside of the surface
         my_normal = my_normal * (-1.0)
     r = n1 / n2
     c1 = - my_normal.dot(incident)  # cos (incidence_angle)
     c2sq = 1.0 - r * r * (1.0 - c1 * c1)  # cos (refracted_angle) ** 2
-    if c2sq.real < 0:  # total internal reflection
+    if c2sq.real < 0:
+        # total internal reflection
         return reflexion(incident, normal, polarization_vector)
     c2 = sqrt(c2sq)  # cos (refracted_angle)
-    normal_parallel_plane = incident.cross(my_normal)  # normal vector of the parallel plane
-    if normal_parallel_plane == Base.Vector(0, 0, 0):  # to avoid null vector at my_normal and incident parallel vectors
+    normal_parallel_plane = incident.cross(my_normal)
+    # normal vector of the parallel plane
+    if normal_parallel_plane == Base.Vector(0, 0, 0):
+        # to avoid null vector at my_normal and incident parallel vectors
         normal_parallel_plane = Base.Vector(1, 0, 0)
     normal_parallel_plane.normalize()
-    normal_perpendicular_plane = normal_parallel_plane.cross(incident)  # normal vector of the perpendicular plane
+    # TODO: normal_perpendicular_plane not needed: use my_normal
+    normal_perpendicular_plane = normal_parallel_plane.cross(incident)
+    # normal vector of the perpendicular plane
     # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
     parallel_v = polarization_vector - normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
     parallel_component = parallel_v.Length
-    perpendicular_v = polarization_vector - normal_perpendicular_plane * polarization_vector.dot(
-        normal_perpendicular_plane)
+    perpendicular_v = polarization_vector - \
+        normal_perpendicular_plane * polarization_vector.dot(normal_perpendicular_plane)
     perpendicular_component = perpendicular_v.Length
     ref_per = perpendicular_component / (perpendicular_component + parallel_component)
     perpendicular_polarized = False
@@ -253,12 +265,15 @@ def refraction(incident, normal, n1, n2, polarization_vector):
         a = (n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)
         r = a * a.conjugate()  # reflectance for p-polarized (parallel) light
         polarization_vector = parallel_v.normalize()
-    if myrandom() < r.real:  # ray reflected
+    if myrandom() < r.real:
+        # ray reflected
         return reflexion(incident, normal, polarization_vector, True)
-    else:  # ray refracted
+    else:
+        # ray refracted
         refracted_direction = incident * r.real + my_normal * (r.real * c1.real - c2.real)
         perp_v = refracted_direction.cross(my_normal)
-        if perp_v == Base.Vector(0, 0, 0):  # to avoid null vector at my_normal and incident parallel vectors
+        if perp_v == Base.Vector(0, 0, 0):
+            # to avoid null vector at my_normal and incident parallel vectors
             perp_v = Base.Vector(1, 0, 0)
         para_v = refracted_direction.cross(perp_v)
         if perpendicular_polarized:
@@ -288,17 +303,20 @@ def shure_refraction(incident, normal, n1, n2, polarization_vector, perpendicula
     # TODO: document
     # https://en.wikipedia.org/wiki/Snell's_law#Vector_form
     mynormal = normal * 1.0
-    if mynormal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
+    if mynormal.dot(incident) > 0:
+        # Ray intercepted on the backside of the surface
         mynormal = mynormal * (-1.0)
     r = n1.real / n2.real
     c1 = - mynormal.dot(incident)  # cos (incidence_angle)
     c2sq = 1.0 - r * r * (1.0 - c1 * c1)  # cos (refracted_angle) ** 2
     c2 = c2sq ** 0.5  # cos (refracted_angle)
     refracted_direction = incident * r + mynormal * (r * c1 - c2)
-    if perpendicular_polarized == 'thin film':  # refraction in thin film
+    if perpendicular_polarized == 'thin film':
+        # refraction in thin film
         return OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION)
     perp_v = refracted_direction.cross(mynormal)
-    if perp_v == Base.Vector(0, 0, 0):  # to avoid null vector at mynormal and incident parallel vectors
+    if perp_v == Base.Vector(0, 0, 0):
+        # to avoid null vector at mynormal and incident parallel vectors
         perp_v = Base.Vector(1, 0, 0)
     para_v = refracted_direction.cross(perp_v)
     if perpendicular_polarized:
@@ -327,7 +345,8 @@ def dispersion_from_main_direction(main_direction, theta, phi):
     # TODO: document
     v = main_direction
     v_p = Base.Vector(v[1], -v[0], 0)
-    if v_p == Base.Vector(0, 0, 0):  # to avoid null vector at mynormal and incident parallel vectors
+    if v_p == Base.Vector(0, 0, 0):
+        # to avoid null vector at mynormal and incident parallel vectors
         v_p = Base.Vector(1, 0, 0)
     v_p.normalize()
     rotation_1 = Base.Rotation(v_p, theta)
@@ -356,7 +375,8 @@ def dispersion_polarization(main_direction, polarization_vector, theta, phi):
     # TODO: document
     v = main_direction
     v_p = Base.Vector(v[1], -v[0], 0)
-    if v_p == Base.Vector(0, 0, 0):  # to avoid null vector at mynormal and incident parallel vectors
+    if v_p == Base.Vector(0, 0, 0):
+        # to avoid null vector at mynormal and incident parallel vectors
         v_p = Base.Vector(1, 0, 0)
     v_p.normalize()
     rotation_1 = Base.Rotation(v_p, theta)
@@ -444,11 +464,13 @@ def calculate_reflectance(m_reflectance, angle, wavelength):
     if len(m_reflectance) == 0:  # wavelength experiments out of range of the data_material
         return  0.0, 0.0
     r_matrix = np.mat(m_reflectance)
-    if len(r_matrix) == 1:  # interpolation is not needed
+    if len(r_matrix) == 1:
+        # interpolation is not needed
         return r_matrix[0, 2], r_matrix[0, 3]
 
     if len(r_matrix) == 2:  # simple interpolation
-        if r_matrix[0, 0] == r_matrix[1, 0]:  # identical wavelengths; hence angle interpolation (column 1)
+        if r_matrix[0, 0] == r_matrix[1, 0]:
+            # identical wavelengths; hence angle interpolation (column 1)
             x_values = [r_matrix[0, 1], r_matrix[1, 1]]
             y_values = [r_matrix[0, 2], r_matrix[1, 2]]
             r_per = np.interp(angle, x_values, y_values)
@@ -458,7 +480,8 @@ def calculate_reflectance(m_reflectance, angle, wavelength):
             r_par = np.interp(angle, x_values, y_values)
             return r_per, r_par
 
-        if r_matrix[0, 1] == r_matrix[1, 1]:  # identical angles; hence wavelength interpolation (column 0)
+        if r_matrix[0, 1] == r_matrix[1, 1]:
+            # identical angles; hence wavelength interpolation (column 0)
             x_values = [r_matrix[0, 0], r_matrix[1, 0]]
             y_values = [r_matrix[0, 2], r_matrix[1, 2]]
             r_per = np.interp(wavelength, x_values, y_values)
@@ -468,7 +491,8 @@ def calculate_reflectance(m_reflectance, angle, wavelength):
             r_par = np.interp(wavelength, x_values, y_values)
             return r_per, r_par
 
-    if len(r_matrix) == 4:  # double interpolation
+    if len(r_matrix) == 4:
+        # double interpolation
         x_values = [r_matrix[0, 1], r_matrix[1, 1]]
         y_values = [r_matrix[0, 2], r_matrix[1, 2]]
         r1 = np.interp(angle, x_values, y_values)

@@ -1,3 +1,7 @@
+"""
+Mathematical functions that are used as helper functions
+"""
+
 import numpy as np
 from FreeCAD import Base
 import random
@@ -112,9 +116,13 @@ def cdf_from_pdf_file(data_file):
     It returns the CDF as two lists; first on is the list of x-values,
     second one is the list of corresponding CDF values.
 
+    Parameters
+    ----------
+
     data_file: file or str
         file or filename where PDF values are stored
     output: list of float, list of float
+        x-values and y-values of CDF
     """
     data_array = np.loadtxt(data_file, usecols=(0, 1))
     x = data_array[:, 0]
