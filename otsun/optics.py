@@ -239,28 +239,36 @@ def refraction(incident, normal, n1, n2, polarization_vector):
         return reflexion(incident, normal, polarization_vector)
     c2 = sqrt(c2sq)  # cos (refracted_angle)
     normal_parallel_plane = incident.cross(my_normal)
-    # normal vector of the parallel plane
+    # vector perpendicular to incident and parallel to plane
     if normal_parallel_plane == Base.Vector(0, 0, 0):
         # to avoid null vector at my_normal and incident parallel vectors
         normal_parallel_plane = Base.Vector(1, 0, 0)
     normal_parallel_plane.normalize()
     # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
-    parallel_v = polarization_vector - normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+    parallel_v = polarization_vector - \
+                 normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+    # TODO: Review
+    # parallel_v is the projection of polarization_vector on the plane
+    # containing the normal to the surface and the incident vector
+    perpendicular_v = polarization_vector - my_normal * polarization_vector.dot(my_normal)
+    # TODO: Review
+    # perpendicular_v is the projection of polarization_vector on the plane
+    # parallel to the surface
     parallel_component = parallel_v.Length
-    perpendicular_v = polarization_vector - \
-        my_normal * polarization_vector.dot(my_normal)
     perpendicular_component = perpendicular_v.Length
     ref_per = perpendicular_component / (perpendicular_component + parallel_component)
-    perpendicular_polarized = False
     # https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
     if myrandom() < ref_per:
+        # Perpendicular polarization
         a = (n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)
         r = a * a.conjugate()  # reflectance for s-polarized (perpendicular) light
         perpendicular_polarized = True
         polarization_vector = perpendicular_v.normalize()
     else:
+        # Parallel polarization
         a = (n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)
         r = a * a.conjugate()  # reflectance for p-polarized (parallel) light
+        perpendicular_polarized = False
         polarization_vector = parallel_v.normalize()
     if myrandom() < r.real:
         # ray reflected
