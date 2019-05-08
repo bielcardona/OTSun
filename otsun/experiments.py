@@ -2,13 +2,44 @@ from .math import random_congruential
 import time
 import numpy as np
 
-
 class Experiment:
     """
     Sets up and runs and experiment in a given scene with a given light source.
 
-    If show_in_doc is given, the emitting region is drawn in the FreeCAD active document.
-    If show_in_doc is given, the rays could be drawn in the FreeCAD active document (using the run function).
+    An Experiment is formed by a scene and a ligh_source. Rays are emitted from light_source
+    and interfere with the scene until they are absorbed or scape from the scene. If they are
+    absorbed, the energies are computed and stored.
+
+    Parameters
+    ----------
+    scene : otsun.Scene
+        Scene of the experiment
+    light_source : otsun.LightSource
+        Source of the rays to emit
+    number_of_rays : int
+        Number of rays to emit in the experiment
+    show_in_doc : Add.Document
+        FreeCAD document where to plot the rays, or None if plotting not desired
+
+    Attributes
+    ----------
+    wavelengths: List of float
+        List of wavelengths of emitted rays
+    captured_energy_Th : float
+        Total energy of rays that got absorbed
+    captured_energy_PV : float
+        Total energy of rays that fell in a PV
+    Th_energy :
+    Th_wavelength : List of float
+        List of wavelengths of rays that got absorbed (or not??? BUG?)
+    PV_energy : List of floats # TODO: Needed?
+        List of energies of rays that fell in a PV
+    PV_wavelength : List of float
+        List of wavelengths of rays that fell in a PV (or not??? BUG?)
+    PV_values : List of tuples of floats # TODO: Needed?
+        List of PV_values of all emitted rays that fell in a PV
+    points_absorber_Th : List of tuple of floats # TODO: Needed?
+        List with data (energy, location,...) for each ray that got absorbed
     """
 
     def __init__(self, scene, light_source, number_of_rays, show_in_doc=None):
@@ -29,6 +60,7 @@ class Experiment:
         random_congruential(time.time()) # TODO: change location
 
     def run(self, show_in_doc=None):
+        """Runs the experiment and plots the rays in the document specified (if any)"""
         for _ in np.arange(0,self.number_of_rays,1):
             ray = self.light_source.emit_ray()
             ray.run()
@@ -45,6 +77,8 @@ class Experiment:
                                              ray.normals[-1].x, ray.normals[-1].y, ray.normals[-1].z))
             else:
                 self.Th_energy.append(0.0)
+                # TODO: Review... ray.wavelength always added to Th_wavelength
+                # Hence always Th_wavelength == wavelenghts
                 self.Th_wavelength.append(ray.wavelength)
             if ray.in_PV:
                 PV_energy_absorbed = np.sum(ray.PV_absorbed)
@@ -54,7 +88,9 @@ class Experiment:
                 length = len(ray.PV_values)
                 if length > 0:
                     for z in np.arange(0,length,1):
+                        # TODO: Review... no ho entenc (pq no afegir directament tot?)
                         self.PV_values.append(ray.PV_values[z])
             else:
                 self.PV_energy.append(0.0)
+                # TODO: Review... ray.wavelength always added to PV_wavelength
                 self.PV_wavelength.append(ray.wavelength)
