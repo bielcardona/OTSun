@@ -107,6 +107,7 @@ def lambertian_reflexion(incident, normal):
         my_normal = my_normal * (-1.0)
     dot = - 1.0
     while dot <= 0.01:
+        # TODO: this is not uniform!
         random_vector = Base.Vector(myrandom() - 0.5, myrandom() - 0.5, myrandom() - 0.5)
         random_vector.normalize()
         dot = my_normal.dot(random_vector)

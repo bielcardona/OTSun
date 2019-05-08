@@ -6,6 +6,7 @@ import numpy as np
 class Experiment:
     """
     Sets up and runs and experiment in a given scene with a given light source.
+
     If show_in_doc is given, the emitting region is drawn in the FreeCAD active document.
     If show_in_doc is given, the rays could be drawn in the FreeCAD active document (using the run function).
     """
