@@ -74,7 +74,7 @@ class Experiment:
                 self.points_absorber_Th.append((ray.energy,
                                              ray.points[-1].x, ray.points[-1].y, ray.points[-1].z,
                                              ray.points[-2].x, ray.points[-2].y, ray.points[-2].z,
-                                             ray.normals[-1].x, ray.normals[-1].y, ray.normals[-1].z))
+                                             ray.last_normal.x, ray.last_normal.y, ray.last_normal.z))
             else:
                 self.Th_energy.append(0.0)
                 # TODO: Review... ray.wavelength always added to Th_wavelength
