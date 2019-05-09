@@ -247,6 +247,13 @@ class Ray(object):
                 self.finished = True
 
     def add_to_document(self, doc):
+        """
+        Draws the ray in a FreeCAD document
+
+        Parameters
+        ----------
+        doc : App.Document
+        """
         lshape_wire = Part.makePolygon(self.points)
         my_shape_ray = doc.addObject("Part::Feature", "Ray")
         my_shape_ray.Shape = lshape_wire

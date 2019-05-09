@@ -210,9 +210,6 @@ class Material(object):
         ----------
         filename : str
             Name of the file
-
-        Returns
-        -------
         """
         try:
             with zipfile.ZipFile(filename) as z:
@@ -304,15 +301,18 @@ class Material(object):
         ----------
         filename : str
             Name of the file
-
-        Returns
-        -------
         """
         with open(filename, 'w') as f:
             f.write(self.to_json())
 
     @staticmethod
     def all_to_json():
+        """
+        # TODO: Document
+        Returns
+        -------
+
+        """
         materials = Material.by_name.values()
         simple_mats = [material for material in materials if
                        not isinstance(material, TwoLayerMaterial)]
@@ -323,6 +323,13 @@ class Material(object):
 
     @staticmethod
     def save_all_to_json_file(filename):
+        """
+        # TODO: Document
+
+        Parameters
+        ----------
+        filename
+        """
         with open(filename, 'w') as f:
             f.write('[\n')
             f.write(',\n'.join(Material.all_to_json()))
@@ -380,7 +387,7 @@ class VolumeMaterial(Material):
 
     def change_of_direction(self, ray, normal_vector):
         """
-
+        # TODO: Document
         Parameters
         ----------
         ray :
@@ -419,6 +426,9 @@ class VolumeMaterial(Material):
 
 
 class SimpleVolumeMaterial(VolumeMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, index_of_refraction, attenuation_coefficient=None):
         plain_properties = {
             'index_of_refraction': {
@@ -435,6 +445,9 @@ class SimpleVolumeMaterial(VolumeMaterial):
 
 
 class WavelengthVolumeMaterial(VolumeMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, file_index_of_refraction):
         data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
         wavelength_values = data_refraction[:, 0]
@@ -455,6 +468,9 @@ class WavelengthVolumeMaterial(VolumeMaterial):
 
 
 class PVMaterial(VolumeMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, file_index_of_refraction):
         # file_index_of_refraction with three columns:
         # wavelenth in nm,
@@ -508,6 +524,9 @@ class PVMaterial(VolumeMaterial):
                 )
 
 class PolarizedThinFilm(VolumeMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, file_thin_film, file_front, file_back):
         # thin film material calculated by TMM method, six columns:
         # wavelenth in nm, angle in deg.,
@@ -588,6 +607,7 @@ class PolarizedThinFilm(VolumeMaterial):
     def calculate_state_thin_film(incident, normal, n1, n2, polarization_vector,
                                   properties, wavelength):
         """
+        # TODO: Document
 
         Parameters
         ----------
@@ -658,6 +678,17 @@ class PolarizedThinFilm(VolumeMaterial):
                     OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION))
 
     def change_of_direction(self, ray, normal_vector):
+        """
+        # TODO: Document
+        Parameters
+        ----------
+        ray
+        normal_vector
+
+        Returns
+        -------
+
+        """
         # the ray impacts on thin film material
         n1 = ray.current_medium().get_n(ray.wavelength)
         n_front = self.properties['index_of_refraction_front'](ray.wavelength)
@@ -687,6 +718,9 @@ vacuum_medium = SimpleVolumeMaterial("Vacuum", 1.0, 0.0)
 
 @traced(logger)
 class SurfaceMaterial(Material):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, properties):
         """
         Initializes a Surface Material. The properties parameter must be a
@@ -709,6 +743,19 @@ class SurfaceMaterial(Material):
 
 
     def compute_probabilities_and_polarizations(self, ray, normal_vector, nearby_material):
+        """
+        # TODO: Document
+
+        Parameters
+        ----------
+        ray
+        normal_vector
+        nearby_material
+
+        Returns
+        -------
+
+        """
         properties = self.properties
         try:
             por = properties['probability_of_reflexion'](ray.wavelength)
@@ -727,6 +774,19 @@ class SurfaceMaterial(Material):
 
 
     def decide_phenomenon(self, ray, normal_vector, nearby_material):
+        """
+        # TODO: Document
+
+        Parameters
+        ----------
+        ray
+        normal_vector
+        nearby_material
+
+        Returns
+        -------
+
+        """
         phenomena = [
             Phenomenon.REFLEXION,
             Phenomenon.ABSORPTION,
@@ -739,6 +799,18 @@ class SurfaceMaterial(Material):
         return phenomenon, polarization_vector, perpendicular_polarized
 
     def change_of_direction_by_absortion(self, ray, normal_vector):
+        """
+        # TODO: Document
+
+        Parameters
+        ----------
+        ray
+        normal_vector
+
+        Returns
+        -------
+
+        """
         properties = self.properties
         # TODO @Ramon: GOT_ABSORBED i ABSORPTION sonen massa iguals, no? Cal distingir?
         if properties['energy_collector']:
@@ -754,6 +826,19 @@ class SurfaceMaterial(Material):
 
     def change_of_direction_by_reflexion(self, ray, normal_vector,
                                          polarization_vector_calculated_before):
+        """
+        # TODO: Document
+
+        Parameters
+        ----------
+        ray
+        normal_vector
+        polarization_vector_calculated_before
+
+        Returns
+        -------
+
+        """
         properties = self.properties
         if 'specular_material' in properties:
             state = reflexion(ray.current_direction(), normal_vector,
@@ -778,6 +863,20 @@ class SurfaceMaterial(Material):
     def change_of_direction_by_transmitance(self, ray, normal_vector,
                                             nearby_material,
                                             perpendicular_polarized):
+        """
+        # TODO: Document
+
+        Parameters
+        ----------
+        ray
+        normal_vector
+        nearby_material
+        perpendicular_polarized
+
+        Returns
+        -------
+
+        """
         n1 = ray.current_medium().get_n(ray.wavelength)
         n2 = nearby_material.get_n(ray.wavelength)
         if n1 == n2:  # transparent_simple_layer
@@ -791,6 +890,19 @@ class SurfaceMaterial(Material):
         return state
 
     def change_of_direction(self, ray, normal_vector, nearby_material):
+        """
+        # TODO: Document
+
+        Parameters
+        ----------
+        ray
+        normal_vector
+        nearby_material
+
+        Returns
+        -------
+
+        """
         if isinstance(self, TwoLayerMaterial):
             if ray.current_direction().dot(normal_vector) < 0:
                 # Ray intercepted on the frontside of the surface
@@ -828,6 +940,17 @@ class SurfaceMaterial(Material):
 
     @classmethod
     def from_plain_properties(cls, plain_properties):
+        """
+        # TODO: Document
+
+        Parameters
+        ----------
+        plain_properties
+
+        Returns
+        -------
+
+        """
         properties = Material.plain_properties_to_properties(plain_properties)
         material = cls(properties,properties)
         return material
@@ -846,6 +969,9 @@ class SurfaceMaterial(Material):
 
 @traced(logger)
 class OpaqueSimpleLayer(SurfaceMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, name):
         plain_properties = {
             'probability_of_reflexion': {
@@ -871,6 +997,9 @@ class OpaqueSimpleLayer(SurfaceMaterial):
 
 @traced(logger)
 class TransparentSimpleLayer(SurfaceMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self,name,pot):
         plain_properties = {
             'probability_of_reflexion': {
@@ -900,6 +1029,9 @@ class TransparentSimpleLayer(SurfaceMaterial):
 
 @traced(logger)
 class AbsorberSimpleLayer(SurfaceMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, poa):
         plain_properties = {
             'probability_of_reflexion': {
@@ -929,6 +1061,9 @@ class AbsorberSimpleLayer(SurfaceMaterial):
 
 @traced(logger)
 class AbsorberLambertianLayer(SurfaceMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, poa):
         plain_properties = {
             'probability_of_reflexion': {
@@ -958,6 +1093,9 @@ class AbsorberLambertianLayer(SurfaceMaterial):
 
 @traced(logger)
 class AbsorberTWModelLayer(SurfaceMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, poa, b_constant, c_constant):
         plain_properties = {
             'probability_of_reflexion': {
@@ -1047,6 +1185,9 @@ class AbsorberTWModelLayer(SurfaceMaterial):
 
 @traced(logger)
 class ReflectorSpecularLayer(SurfaceMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self,name, por, sigma_1=None, sigma_2=None, k=None):
         plain_properties = {
             'probability_of_reflexion': {
@@ -1088,6 +1229,9 @@ class ReflectorSpecularLayer(SurfaceMaterial):
 
 @traced(logger)
 class ReflectorLambertianLayer(SurfaceMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, por):
         plain_properties = {
             'probability_of_reflexion': {
@@ -1117,6 +1261,9 @@ class ReflectorLambertianLayer(SurfaceMaterial):
 
 @traced(logger)
 class MetallicLayer(SurfaceMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, *args):
         super(MetallicLayer, self).__init__(*args)
 
@@ -1161,6 +1308,9 @@ class MetallicLayer(SurfaceMaterial):
 
 @traced(logger)
 class MetallicSpecularLayer(SurfaceMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, name,file_index_of_refraction,
                  sigma_1=None, sigma_2=None, k=None):
         # file_index_of_refraction with three columns: wavelenth in nm,
@@ -1209,6 +1359,9 @@ class MetallicSpecularLayer(SurfaceMaterial):
 
 @traced(logger)
 class MetallicLambertianLayer(SurfaceMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, file_index_of_refraction):
         # file_index_of_refraction with three columns:
         # wavelenth in nm, real(index of refraction),
@@ -1245,6 +1398,9 @@ class MetallicLambertianLayer(SurfaceMaterial):
 
 @traced(logger)
 class PolarizedCoatingLayer(SurfaceMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, *args):
         super(PolarizedCoatingLayer, self).__init__(*args)
 
@@ -1310,6 +1466,9 @@ class PolarizedCoatingLayer(SurfaceMaterial):
 
 @traced(logger)
 class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, coating_file, sigma_1=None, sigma_2=None, k=None):
         # coating_material with four columns: wavelenth in nm,
         # angle in deg., reflectance s-polarized (perpendicular),
@@ -1357,6 +1516,9 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
 
 @traced(logger)
 class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, coating_file):
         data_material = np.loadtxt(coating_file, usecols=(0, 1, 2, 3))
         plain_properties = {
@@ -1387,6 +1549,9 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
 
 @traced(logger)
 class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, coating_file):
         # coating_material with four columns: wavelenth in nm, angle in deg.,
         # reflectance s-polarized (perpendicular),
@@ -1426,6 +1591,9 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
 
 @traced(logger)
 class TwoLayerMaterial(SurfaceMaterial):
+    """
+    # TODO: Document
+    """
     def __init__(self, name, name_front_layer, name_back_layer):
         super(SurfaceMaterial, self).__init__(name, {})
         self.name_front_layer = name_front_layer
