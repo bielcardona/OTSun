@@ -155,3 +155,39 @@ def pick_random_from_cdf(cdf):
     float
     """
     return np.interp(random.random(), cdf[1], cdf[0])
+
+def parallel_orthogonal_components(vector, incident, normal):
+    """Decomposition of vector in components
+
+    Given `vector` (a polarization),
+    `incident` (direction of a ray) and
+    `normal` (vector orthogonal to a plane),
+    decompose `vector` it in
+    a component parallel to the plane (and orthogonal to incident)
+    a component contained in the plane determined by normal and incident
+
+    Parameters
+    ----------
+    vector : Base.Vector
+    incident : Base.Vector
+    normal : Base.Vector
+
+    Returns
+    -------
+    parallel : Base.Vector
+    orthogonal : Base.Vector
+    """
+    normal_parallel_plane = incident.cross(normal)
+    # normal vector of the parallel plane
+    if normal_parallel_plane == Base.Vector(0, 0, 0):
+        # to avoid null vector at mynormal and incident parallel vectors
+        normal_parallel_plane = Base.Vector(1, 0, 0)
+    normal_parallel_plane.normalize()
+    normal_perpendicular_plane = normal_parallel_plane.cross(incident)
+    # normal vector of the perpendicular plane
+    parallel_v = vector - normal_parallel_plane * \
+                 vector.dot(normal_parallel_plane)
+    perpendicular_v = vector - \
+                      normal_perpendicular_plane * \
+                      vector.dot(normal_perpendicular_plane)
+    return parallel_v, perpendicular_v

@@ -601,20 +601,10 @@ class PolarizedThinFilm(VolumeMaterial):
             return 0.0, state
         c2 = sqrt(c2sq)  # cos (refracted_angle)
 
-        normal_parallel_plane = incident.cross(mynormal)
-        # normal vector of the parallel plane
-        if normal_parallel_plane == Base.Vector(0, 0, 0):
-            # to avoid null vector at mynormal and incident parallel vectors
-            normal_parallel_plane = Base.Vector(1, 0, 0)
-        normal_parallel_plane.normalize()
-        normal_perpendicular_plane = normal_parallel_plane.cross(incident)
-        # normal vector of the perpendicular plane
-        parallel_v = polarization_vector - normal_parallel_plane * \
-                     polarization_vector.dot(normal_parallel_plane)
+        parallel_v, perpendicular_v = parallel_orthogonal_components(
+            polarization_vector, incident, mynormal)
+
         parallel_component = parallel_v.Length
-        perpendicular_v = polarization_vector - \
-                          normal_perpendicular_plane * \
-                          polarization_vector.dot(normal_perpendicular_plane)
         perpendicular_component = perpendicular_v.Length
         ref_per = perpendicular_component / (perpendicular_component + parallel_component)
         perpendicular_polarized = False
@@ -1136,20 +1126,10 @@ class MetallicLayer(SurfaceMaterial):
         c1 = - my_normal.dot(incident)  # cos (incidence_angle)
         c2 = sqrt(1.0 - r * r * (1.0 - c1 * c1))  # cos (refracted_angle)
 
-        normal_parallel_plane = incident.cross(my_normal)
-        # normal vector of the parallel plane
-        if normal_parallel_plane == Base.Vector(0, 0, 0):
-            # to avoid null vector at mynormal and incident parallel vectors
-            normal_parallel_plane = Base.Vector(1, 0, 0)
-        normal_parallel_plane.normalize()
-        normal_perpendicular_plane = normal_parallel_plane.cross(incident)
-        # normal vector of the perpendicular plane
-        parallel_v = polarization_vector - \
-                     normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+        parallel_v, perpendicular_v = parallel_orthogonal_components(
+            polarization_vector, incident, my_normal)
+
         parallel_component = parallel_v.Length
-        perpendicular_v = polarization_vector - \
-                          normal_perpendicular_plane * \
-                          polarization_vector.dot(normal_perpendicular_plane)
         perpendicular_component = perpendicular_v.Length
         ref_per = perpendicular_component / (perpendicular_component + parallel_component)
         perpendicular_polarized = False
@@ -1282,20 +1262,11 @@ class PolarizedCoatingLayer(SurfaceMaterial):
                 # TODO: Must be wrong!
                 return reflexion(incident, normal_vector, polarization_vector)
         c2 = sqrt(c2sq)  # cos (refracted_angle)
-        normal_parallel_plane = incident.cross(my_normal)
-        # normal vector of the parallel plane
-        if normal_parallel_plane == Base.Vector(0, 0, 0):
-            # to avoid null vector at mynormal and incident parallel vectors
-            normal_parallel_plane = Base.Vector(1, 0, 0)
-        normal_parallel_plane.normalize()
-        normal_perpendicular_plane = normal_parallel_plane.cross(incident)
-        # normal vector of the perpendicular plane
-        parallel_v = polarization_vector - \
-                     normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+
+        parallel_v, perpendicular_v = parallel_orthogonal_components(
+            polarization_vector, incident, my_normal)
+
         parallel_component = parallel_v.Length
-        perpendicular_v = polarization_vector - \
-                          normal_perpendicular_plane * \
-                          polarization_vector.dot(normal_perpendicular_plane)
         perpendicular_component = perpendicular_v.Length
         ref_per = perpendicular_component / (perpendicular_component + parallel_component)
         perpendicular_polarized = False
