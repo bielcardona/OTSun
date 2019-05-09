@@ -37,13 +37,9 @@ class Ray(object):
         Points where the ray passes at each iteration
     optical_states : list of OpticalState
         OpticalStates of the rays at each iteration
-    directions : list of Base.Vector
-        Directions of the ray at each iteration
     normals : list of Base.Vector
         Vectors normal to the surfaces where the ray hits (except the first)
         # TODO: Review... is it needed? strange!
-    materials : list of otsun.Material
-        List of materials where the ray is located at each iteration
     wavelength : float
         Wavelength of ray
     energy : float
@@ -52,9 +48,6 @@ class Ray(object):
         Polarization of the ray at each iteration
     finished : bool
     got_absorbed : bool
-    current_medium : otsun.Material
-        Current material where the ray is
-        # TODO: Find relation between current_medium and materials[-1] (!?)
     PV_energy : float
     PV_values : list of ?
     in_PV : bool
@@ -71,16 +64,13 @@ class Ray(object):
             vacuum_medium
         )
         self.optical_states = [state]
-        self.directions = [direction]
         self.normals = []
-        self.materials = [vacuum_medium]
         self.properties = properties
         self.wavelength = properties['wavelength']
         self.energy = properties['energy']
         self.polarization_vectors = [properties['polarization_vector']]
         self.finished = False
         self.got_absorbed = False
-        # self.current_medium = vacuum_medium
         self.PV_energy = 0.0
         self.PV_values = []
         self.in_PV = False
@@ -96,6 +86,24 @@ class Ray(object):
         """
         return self.optical_states[-1].material
 
+    def current_direction(self):
+        """
+
+        Returns
+        -------
+
+        """
+        return self.optical_states[-1].direction
+
+    def current_polarization(self):
+        """
+
+        Returns
+        -------
+
+        """
+        return self.optical_states[-1].polarization
+
     def next_intersection(self):
         """
         Computes the next intersection of the ray with the scene.
@@ -105,7 +113,7 @@ class Ray(object):
         """
         max_distance = 5 * self.scene.diameter
         p0 = self.points[-1]
-        direction = self.directions[-1]
+        direction = self.current_direction()
         p0 = p0 + direction * self.scene.epsilon
         intersections = []
         p1 = p0 + direction * max_distance
@@ -127,10 +135,10 @@ class Ray(object):
         the material where the ray will be travelling next and
         a string representing the physical phenomenon that took place
         """
-        current_direction = self.directions[-1]
+        current_direction = self.current_direction()
         current_point = self.points[-1]
-        current_material = self.materials[-1]
-        polarization_vector = self.polarization_vectors[-1]
+        current_material = self.current_medium()
+        polarization_vector = self.current_polarization()
         uv = face.Surface.parameter(current_point)
         normal = face.normalAt(uv[0], uv[1])
         normal.normalize()
@@ -209,17 +217,16 @@ class Ray(object):
                     self.PV_energy = energy_before
                     alpha = self.scene.materials[actual_solid].properties['extinction_coefficient'](
                     self.wavelength) * 4 * np.pi / (self.wavelength / 1E6) # mm-1
-                    angle_incident = np.arccos (- self.normals[-1].dot(self.directions[-1])) * 180.0 / np.pi
+                    angle_incident = np.arccos (
+                        - self.normals[-1].dot(self.current_direction())) * 180.0 / np.pi
                     self.PV_values.append((
                         point_2.x,point_2.y,point_2.z,point_1.x,point_1.y,point_1.z,
                         energy_before,self.energy,self.wavelength,alpha,angle_incident))
                     self.PV_absorbed.append(energy_before - self.energy)
             state, material, normal = self.next_state_and_material(face)  # TODO polarization_vector
             self.optical_states.append(state)
-            self.directions.append(state.direction)
-            self.materials.append(material)
             self.normals.append(normal)
-            self.polarization_vectors.append(state.polarization)
+            # self.polarization_vectors.append(state.polarization)
             if self.energy < 1E-4: # needed for PV calculations
                 self.finished = True
             if state.phenomenon == Phenomenon.ABSORPTION:
