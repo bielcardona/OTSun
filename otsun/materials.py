@@ -1268,7 +1268,7 @@ class PolarizedCoatingLayer(SurfaceMaterial):
         c2sq = 1.0 - r * r * (1.0 - c1 * c1)  # cos (refracted_angle) ** 2
         if properties['transparent_material']:  # transparent coating
             if c2sq.real < 0:  # total internal reflection
-                # TODO: Must be wrong!
+                # TODO: @Ramon Review!
                 return reflexion(incident, normal_vector, polarization_vector)
         c2 = sqrt(c2sq)  # cos (refracted_angle)
 
