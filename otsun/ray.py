@@ -1,6 +1,6 @@
 from autologging import traced
 from .logging_unit import logger
-from .materials import vacuum_medium, PVMaterial
+from .materials import vacuum_medium, PVMaterial, PolarizedThinFilm
 from .optics import Phenomenon, OpticalState
 import numpy as np
 import Part
@@ -220,6 +220,13 @@ class Ray(object):
                 self.PV_absorbed.append(PV_absorbed_energy)
             # Update optical state
             state, normal = self.next_state_and_normal(face)  # TODO polarization_vector
+
+            # TODO: The following line is not elegant.
+            #  Provisional solution for updating energy when passed a thin film
+            if 'factor_energy_absorbed_thin_film' in state.extra_data:
+                factor = state.extra_data['factor_energy_absorbed_thin_film']
+                self.energy = self.energy * (1 - factor)
+
             self.optical_states.append(state)
             self.last_normal = normal
             if self.energy < 1E-4:

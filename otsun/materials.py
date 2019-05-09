@@ -652,11 +652,10 @@ class PolarizedThinFilm(VolumeMaterial):
                 t = calculate_reflectance(t_matrix, angle, wavelength)[0]
             else:
                 t = calculate_reflectance(t_matrix, angle, wavelength)[1]
-            energy_absorbed_thin_film = (1 - r - t) / (1 - r)
+            factor_energy_absorbed_thin_film = (1 - r - t) / (1 - r)
             refracted_direction = incident * r.real + mynormal * (r.real * c1.real - c2.real)
-            return energy_absorbed_thin_film, OpticalState(polarization_vector,
-                                                           refracted_direction,
-                                                           Phenomenon.REFRACTION)
+            return (factor_energy_absorbed_thin_film,
+                    OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION))
 
     def change_of_direction(self, ray, normal_vector):
         # the ray impacts on thin film material
@@ -668,14 +667,14 @@ class PolarizedThinFilm(VolumeMaterial):
             n2 = n_back
         else:
             n2 = n_front
-        energy_absorbed_thin_film, optical_state = (
+        factor_energy_absorbed_thin_film, optical_state = (
             self.calculate_state_thin_film(
                 ray.current_direction(), normal_vector, n1,
                 n2,
                 ray.current_polarization(),
                 self.properties, ray.wavelength))
-        ray.energy = ray.energy * (1.0 - energy_absorbed_thin_film)
-        # TODO: CAUTION!!! Method modifying member of another class
+        optical_state.extra_data['factor_energy_absorbed_thin_film'] = factor_energy_absorbed_thin_film
+        # ray.energy = ray.energy * (1.0 - factor_energy_absorbed_thin_film)
         if optical_state.phenomenon == Phenomenon.REFRACTION:
             optical_state.material = self
         else:
