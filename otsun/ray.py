@@ -203,32 +203,40 @@ class Ray(object):
         count = 0
         while (not self.finished) and (count < max_hops):
             count += 1
+
             # Find next intersection
+            # Update points
             point, face = self.next_intersection()
             self.points.append(point)
             if not face:
                 self.finished = True
                 self.got_absorbed = False
                 break
+
+            # Update optical state
+            state, normal = self.next_state_and_normal(face)
+
             # Update energy
             energy_before = self.energy
             self.update_energy()
-            current_material = self.current_medium()
-            if isinstance(current_material, PVMaterial):
-                PV_absorbed_energy, PV_value = current_material.get_PV_data(self, energy_before)
-                self.PV_values.append(PV_value)
-                self.PV_absorbed.append(PV_absorbed_energy)
-            # Update optical state
-            state, normal = self.next_state_and_normal(face)  # TODO polarization_vector
-
             # TODO: The following line is not elegant.
             #  Provisional solution for updating energy when passed a thin film
             if 'factor_energy_absorbed_thin_film' in state.extra_data:
                 factor = state.extra_data['factor_energy_absorbed_thin_film']
                 self.energy = self.energy * (1 - factor)
 
+            # Treat PV material
+            current_material = self.current_medium()
+            if isinstance(current_material, PVMaterial):
+                PV_absorbed_energy, PV_value = current_material.get_PV_data(self, energy_before)
+                self.PV_values.append(PV_value)
+                self.PV_absorbed.append(PV_absorbed_energy)
+
+            # Update optical_states
             self.optical_states.append(state)
             self.last_normal = normal
+
+            # Test for finish
             if self.energy < 1E-4:
                 # needed for PV calculations TODO @Ramon: Why?
                 self.finished = True
