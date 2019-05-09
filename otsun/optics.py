@@ -42,13 +42,18 @@ class OpticalState(object):
         last phenomenon that the ray experimented
     material : Material
         Material where the ray is located
+    extra_data : dict
+        Dictionary where materials can put extra data
     """
     
-    def __init__(self, polarization, direction, phenomenon, material = None):
+    def __init__(self, polarization, direction, phenomenon, material = None, extra_data = None):
         self.polarization = polarization
         self.direction = direction
         self.phenomenon = phenomenon
         self.material = material
+        if extra_data is None:
+            extra_data = {}
+        self.extra_data = extra_data
 
     def apply_single_gaussian_dispersion(self, normal, sigma_1):
         """
