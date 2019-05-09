@@ -80,11 +80,21 @@ class Ray(object):
         self.polarization_vectors = [properties['polarization_vector']]
         self.finished = False
         self.got_absorbed = False
-        self.current_medium = vacuum_medium
+        # self.current_medium = vacuum_medium
         self.PV_energy = 0.0
         self.PV_values = []
         self.in_PV = False
         self.PV_absorbed = []
+
+    def current_medium(self):
+        """
+        Get medium where ray is located
+
+        Returns
+        -------
+            otsun.VolumeMaterial
+        """
+        return self.optical_states[-1].material
 
     def next_intersection(self):
         """
@@ -177,8 +187,8 @@ class Ray(object):
         count = 0
         while (not self.finished) and (count < max_hops):
             # TODO: delete
-            assert self.current_medium == self.materials[-1]
-            assert self.optical_states[-1].material == self.current_medium
+            # assert self.current_medium == self.materials[-1]
+            # assert self.optical_states[-1].material == self.current_medium
             count += 1
             point, face = self.next_intersection()
             self.points.append(point)

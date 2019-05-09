@@ -48,6 +48,8 @@ class Material(object):
         Holds the name of the material
     kind : str
         Holds the type of the material ("Surface" or "Volume")
+    classname : str
+        String identifying the class
     properties : dict
         Dictionary with physical properties of the material
     """
@@ -397,28 +399,19 @@ class VolumeMaterial(Material):
 
         """
         wavelength = ray.wavelength
-        if isinstance(ray.current_medium, PolarizedThinFilm):
-            # the ray is traveling inside thin film material and
-            # then it will certainly refract
-            ray.current_medium = self
-            # TODO: Caution! modifying member of other class
-            state = OpticalState(ray.polarization_vectors[-1],
-                                ray.directions[-1], Phenomenon.REFRACTION)
-            state.material = self
-            return state
-        # TODO: Add material after refraction from pol.thin.film
+        if isinstance(ray.current_medium(), PolarizedThinFilm):
+            return OpticalState(ray.polarization_vectors[-1],
+                                ray.directions[-1], Phenomenon.REFRACTION, self)
         else:
-            n1 = ray.current_medium.get_n(wavelength)
+            n1 = ray.current_medium().get_n(wavelength)
             n2 = self.get_n(wavelength)
             optical_state = refraction(
                 ray.directions[-1], normal_vector, n1, n2,
                 ray.polarization_vectors[-1])
             if optical_state.phenomenon == Phenomenon.REFRACTION:
-                ray.current_medium = self
                 optical_state.material = self
-                # TODO: Caution! modifying member of other class
             else:
-                optical_state.material = ray.current_medium
+                optical_state.material = ray.current_medium()
             return optical_state
 
     def to_json(self):
@@ -677,11 +670,9 @@ class PolarizedThinFilm(VolumeMaterial):
         ray.energy = ray.energy * (1.0 - energy_absorbed_thin_film)
         # TODO: CAUTION!!! Method modifying member of another class
         if optical_state.phenomenon == Phenomenon.REFRACTION:
-            ray.current_medium = self
             optical_state.material = self
-            # TODO: CAUTION!!! Method modifying member of another class
         else:
-            optical_state.material = ray.current_medium
+            optical_state.material = ray.current_medium()
         return optical_state
 
 
@@ -764,6 +755,7 @@ class SurfaceMaterial(Material):
             state = reflexion(ray.directions[-1], normal_vector,
                               ray.polarization_vectors[-1],
                               polarization_vector_calculated_before)
+            state.material = ray.current_medium()
             if properties.get('sigma_1',None):
                 sigma_1 = properties['sigma_1']
                 if properties.get('sigma_2',None):
@@ -771,22 +763,22 @@ class SurfaceMaterial(Material):
                     k = properties.get('k', None) or 0.5
                     state = double_gaussian_dispersion(
                         normal_vector, state, sigma_1, sigma_2, k)
-                    state.material = ray.current_medium
+                    state.material = ray.current_medium()
                     return state
                 state = single_gaussian_dispersion(normal_vector, state, sigma_1)
-                state.material = ray.current_medium
+                state.material = ray.current_medium()
                 return state
             return state
         if 'lambertian_material' in properties:
             state = lambertian_reflexion(ray.directions[-1], normal_vector)
-            state.material = ray.current_medium
+            state.material = ray.current_medium()
             return state
 
     def change_of_direction_by_transmitance(self, ray, normal_vector,
                                             nearby_material,
                                             perpendicular_polarized):
-        # cur_med = ray.current_medium
-        n1 = ray.current_medium.get_n(ray.wavelength)
+        # cur_med = ray.current_medium()
+        n1 = ray.current_medium().get_n(ray.wavelength)
         n2 = nearby_material.get_n(ray.wavelength)
         if n1 == n2:  # transparent_simple_layer
             state = OpticalState(ray.polarization_vectors[-1],
@@ -796,10 +788,6 @@ class SurfaceMaterial(Material):
                                      ray.polarization_vectors[-1],
                                      perpendicular_polarized)
             state.material = nearby_material
-        ray.current_medium = nearby_material
-        # logger.info(state.material)
-        # logger.info( ray.current_medium)
-        # TODO: CAUTION!!! Method modifying member of another class
         return state
 
     def change_of_direction(self, ray, normal_vector, nearby_material):
@@ -826,18 +814,15 @@ class SurfaceMaterial(Material):
             state = material.change_of_direction_by_reflexion(
                 ray, normal_vector,
                 polarization_vector_calculated_before)
-            state.material = ray.current_medium
             return state
         elif phenomenon == Phenomenon.ABSORPTION:
             state = material.change_of_direction_by_absortion(
                 ray, normal_vector)
-            state.material = self
             return state
         elif phenomenon == Phenomenon.TRANSMITTANCE:
             state = material.change_of_direction_by_transmitance(
                 ray, normal_vector, nearby_material,
                 perpendicular_polarized)
-            state.material = nearby_material
             return state
 
     @classmethod
@@ -1138,7 +1123,7 @@ class MetallicLayer(SurfaceMaterial):
 
     def compute_probabilities_and_polarizations(self, ray, normal_vector, nearby_material):
         polarization_vector = ray.polarization_vectors[-1]
-        n1 = ray.current_medium.get_n(ray.wavelength)
+        n1 = ray.current_medium().get_n(ray.wavelength)
         n2 = self.get_n(ray.wavelength)
 
         my_normal = normal_vector * 1.0
@@ -1277,7 +1262,7 @@ class PolarizedCoatingLayer(SurfaceMaterial):
     def compute_probabilities_and_polarizations(self, ray, normal_vector, nearby_material):
         properties = self.properties
         # polarized_coating_layer
-        n1 = ray.current_medium.get_n(ray.wavelength)
+        n1 = ray.current_medium().get_n(ray.wavelength)
         n2 = nearby_material.get_n(ray.wavelength)
         my_normal = normal_vector * 1.0
         incident = ray.directions[-1]
