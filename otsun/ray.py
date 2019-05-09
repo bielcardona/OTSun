@@ -205,24 +205,32 @@ class Ray(object):
                 self.got_absorbed = False
                 break
             energy_before = self.energy
-            point_1 = self.points[-1]
-            point_2 = self.points[-2]
-            middle_point = point_1.add(point_2) * 0.5
-            actual_solid = self.scene.solid_at_point(middle_point)
-            if actual_solid:
-                current_material = self.scene.materials[actual_solid]
-                self.update_energy(current_material)
-                if 'PV_material' in self.scene.materials[actual_solid].properties:
-                    self.in_PV = True
-                    self.PV_energy = energy_before
-                    alpha = self.scene.materials[actual_solid].properties['extinction_coefficient'](
-                    self.wavelength) * 4 * np.pi / (self.wavelength / 1E6) # mm-1
-                    angle_incident = np.arccos (
-                        - self.normals[-1].dot(self.current_direction())) * 180.0 / np.pi
-                    self.PV_values.append((
-                        point_2.x,point_2.y,point_2.z,point_1.x,point_1.y,point_1.z,
-                        energy_before,self.energy,self.wavelength,alpha,angle_incident))
-                    self.PV_absorbed.append(energy_before - self.energy)
+            # point_1 = self.points[-1]
+            # point_2 = self.points[-2]
+            # middle_point = point_1.add(point_2) * 0.5
+            # actual_solid = self.scene.solid_at_point(middle_point)
+            # if actual_solid:
+            # current_material = self.scene.materials[actual_solid]
+            current_material = self.current_medium()
+            self.update_energy(current_material)
+            if isinstance(current_material, PVMaterial):
+                PV_absorbed_energy, PV_value = current_material.get_PV_data(self, energy_before)
+                self.PV_values.append(PV_value)
+                self.PV_absorbed.append(PV_absorbed_energy)
+
+            # if 'PV_material' in current_material.properties:
+                # self.in_PV = True
+                # self.PV_energy = energy_before
+                # alpha = current_material.properties['extinction_coefficient'](
+                # self.wavelength) * 4 * np.pi / (self.wavelength / 1E6) # mm-1
+                # angle_incident = np.arccos (
+                #     - self.normals[-1].dot(self.current_direction())) * 180.0 / np.pi
+                # point_1 = self.points[-1]
+                # point_2 = self.points[-2]
+                # self.PV_values.append((
+                #     point_2.x,point_2.y,point_2.z,point_1.x,point_1.y,point_1.z,
+                #     energy_before,self.energy,self.wavelength,alpha,angle_incident))
+                # self.PV_absorbed.append(energy_before - self.energy)
             state, material, normal = self.next_state_and_material(face)  # TODO polarization_vector
             self.optical_states.append(state)
             self.normals.append(normal)

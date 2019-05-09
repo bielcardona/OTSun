@@ -489,6 +489,27 @@ class PVMaterial(VolumeMaterial):
         super(PVMaterial,self).__init__(name)
         self.properties = Material.plain_properties_to_properties(plain_properties)
 
+    def get_PV_data(self, ray, energy_before):
+        """
+
+        Parameters
+        ----------
+        ray
+
+        Returns
+        -------
+
+        """
+        alpha = self.properties['extinction_coefficient'](
+            ray.wavelength) * 4 * np.pi / (ray.wavelength / 1E6)  # mm-1
+        angle_incident = np.arccos(
+            - ray.normals[-1].dot(ray.current_direction())) * 180.0 / np.pi
+        point_1 = ray.points[-1]
+        point_2 = ray.points[-2]
+        return (energy_before - ray.energy,
+                (point_2.x, point_2.y, point_2.z, point_1.x, point_1.y, point_1.z,
+                    energy_before, ray.energy, ray.wavelength, alpha, angle_incident)
+                )
 
 class PolarizedThinFilm(VolumeMaterial):
     def __init__(self, name, file_thin_film, file_front, file_back):
