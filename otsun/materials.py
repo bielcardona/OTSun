@@ -288,8 +288,6 @@ class Material(object):
 
         Parameters
         ----------
-        ray : Ray
-        normal_vector : Vector
         args
             Variable length argument list
 
@@ -365,6 +363,17 @@ class VolumeMaterial(Material):
         self.kind = 'Volume'
 
     def change_of_direction(self, ray, normal_vector):
+        """
+
+        Parameters
+        ----------
+        ray :
+        normal_vector :
+
+        Returns
+        -------
+
+        """
         wavelength = ray.wavelength
         if isinstance(ray.current_medium, PolarizedThinFilm):
             # the ray is traveling inside thin film material and
@@ -545,7 +554,8 @@ class PolarizedThinFilm(VolumeMaterial):
         self.properties = Material.plain_properties_to_properties(plain_properties)
 
     @staticmethod
-    def calculate_state_thin_film(incident, normal, n1, n2, polarization_vector, properties, wavelength):
+    def calculate_state_thin_film(incident, normal, n1, n2, polarization_vector,
+                                  properties, wavelength):
         """
 
         Parameters
@@ -576,17 +586,20 @@ class PolarizedThinFilm(VolumeMaterial):
             return 0.0, reflexion(incident, normal, polarization_vector)
         c2 = sqrt(c2sq)  # cos (refracted_angle)
 
-        normal_parallel_plane = incident.cross(mynormal)  # normal vector of the parallel plane
-        if normal_parallel_plane == Base.Vector(0, 0,
-                                                0):  # to avoid null vector at mynormal and incident parallel vectors
+        normal_parallel_plane = incident.cross(mynormal)
+        # normal vector of the parallel plane
+        if normal_parallel_plane == Base.Vector(0, 0, 0):
+            # to avoid null vector at mynormal and incident parallel vectors
             normal_parallel_plane = Base.Vector(1, 0, 0)
         normal_parallel_plane.normalize()
-        normal_perpendicular_plane = normal_parallel_plane.cross(incident)  # normal vector of the perpendicular plane
-        # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
-        parallel_v = polarization_vector - normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+        normal_perpendicular_plane = normal_parallel_plane.cross(incident)
+        # normal vector of the perpendicular plane
+        parallel_v = polarization_vector - normal_parallel_plane * \
+                     polarization_vector.dot(normal_parallel_plane)
         parallel_component = parallel_v.Length
-        perpendicular_v = polarization_vector - normal_perpendicular_plane * polarization_vector.dot(
-            normal_perpendicular_plane)
+        perpendicular_v = polarization_vector - \
+                          normal_perpendicular_plane * \
+                          polarization_vector.dot(normal_perpendicular_plane)
         perpendicular_component = perpendicular_v.Length
         ref_per = perpendicular_component / (perpendicular_component + parallel_component)
         perpendicular_polarized = False
@@ -605,7 +618,8 @@ class PolarizedThinFilm(VolumeMaterial):
             polarization_vector = perpendicular_v.normalize()
         else:
             angle = np.arccos(c1) * 180.0 / np.pi
-            r = calculate_reflectance(r_matrix, angle, wavelength)[1]  # reflectance for p-polarized (parallel) light
+            r = calculate_reflectance(r_matrix, angle, wavelength)[1]
+            # reflectance for p-polarized (parallel) light
             polarization_vector = parallel_v.normalize()
         if myrandom() < r:  # ray reflected
             return 0.0, reflexion(incident, normal, polarization_vector)
@@ -618,7 +632,8 @@ class PolarizedThinFilm(VolumeMaterial):
                 t = calculate_reflectance(t_matrix, angle, wavelength)[1]
             energy_absorbed_thin_film = (1 - r - t) / (1 - r)
             refracted_direction = incident * r.real + mynormal * (r.real * c1.real - c2.real)
-            return energy_absorbed_thin_film, OpticalState(polarization_vector, refracted_direction,
+            return energy_absorbed_thin_film, OpticalState(polarization_vector,
+                                                           refracted_direction,
                                                            Phenomenon.REFRACTION)
 
     def change_of_direction(self, ray, normal_vector):
@@ -703,7 +718,8 @@ class SurfaceMaterial(Material):
             Phenomenon.TRANSMITTANCE]
 
         probabilities, polarization_vector, perpendicular_polarized = \
-            self.compute_probabilities_and_polarizations(ray, normal_vector, nearby_material)
+            self.compute_probabilities_and_polarizations(ray, normal_vector,
+                                                         nearby_material)
         phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
         return phenomenon, polarization_vector, perpendicular_polarized
 
@@ -994,7 +1010,8 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         incidence_angle = np.arccos(my_normal.dot(incident) * (-1.0))
         incidence_angle_deg = incidence_angle * 180.0 / np.pi
         if incidence_angle_deg < 80.0:
-            absorption_ratio = 1.0 - b_constant * (1.0 / np.cos(incidence_angle) - 1.0) ** c_constant
+            absorption_ratio = 1.0 - \
+                               b_constant * (1.0 / np.cos(incidence_angle) - 1.0) ** c_constant
         else:
             y0 = 1.0 - b_constant * (1.0 / np.cos(80.0 * np.pi / 180.0) - 1.0) ** c_constant
             m = y0 / 10.0
@@ -1010,7 +1027,8 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         absortion = properties['probability_of_absortion'](
             ray.properties['wavelength']) * absortion_ratio
         por = 1.0 - absortion
-        return [por, absortion, 0], ray.polarization_vectors[-1], False  # Here I assume no transmitance
+        # Here I assume no transmitance
+        return [por, absortion, 0], ray.polarization_vectors[-1], False
 
 
 @traced(logger)
@@ -1116,17 +1134,20 @@ class MetallicLayer(SurfaceMaterial):
         c1 = - my_normal.dot(incident)  # cos (incidence_angle)
         c2 = sqrt(1.0 - r * r * (1.0 - c1 * c1))  # cos (refracted_angle)
 
-        normal_parallel_plane = incident.cross(my_normal)  # normal vector of the parallel plane
-        if normal_parallel_plane == Base.Vector(0, 0,
-                                                0):  # to avoid null vector at mynormal and incident parallel vectors
+        normal_parallel_plane = incident.cross(my_normal)
+        # normal vector of the parallel plane
+        if normal_parallel_plane == Base.Vector(0, 0, 0):
+            # to avoid null vector at mynormal and incident parallel vectors
             normal_parallel_plane = Base.Vector(1, 0, 0)
         normal_parallel_plane.normalize()
-        normal_perpendicular_plane = normal_parallel_plane.cross(incident)  # normal vector of the perpendicular plane
-        # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
-        parallel_v = polarization_vector - normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+        normal_perpendicular_plane = normal_parallel_plane.cross(incident)
+        # normal vector of the perpendicular plane
+        parallel_v = polarization_vector - \
+                     normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
         parallel_component = parallel_v.Length
-        perpendicular_v = polarization_vector - normal_perpendicular_plane * polarization_vector.dot(
-            normal_perpendicular_plane)
+        perpendicular_v = polarization_vector - \
+                          normal_perpendicular_plane * \
+                          polarization_vector.dot(normal_perpendicular_plane)
         perpendicular_component = perpendicular_v.Length
         ref_per = perpendicular_component / (perpendicular_component + parallel_component)
         perpendicular_polarized = False
@@ -1276,23 +1297,27 @@ class PolarizedCoatingLayer(SurfaceMaterial):
                 # TODO: Must be wrong!
                 return reflexion(incident, normal_vector, polarization_vector)
         c2 = sqrt(c2sq)  # cos (refracted_angle)
-        normal_parallel_plane = incident.cross(my_normal)  # normal vector of the parallel plane
-        if normal_parallel_plane == Base.Vector(0, 0,
-                                                0):  # to avoid null vector at mynormal and incident parallel vectors
+        normal_parallel_plane = incident.cross(my_normal)
+        # normal vector of the parallel plane
+        if normal_parallel_plane == Base.Vector(0, 0, 0):
+            # to avoid null vector at mynormal and incident parallel vectors
             normal_parallel_plane = Base.Vector(1, 0, 0)
         normal_parallel_plane.normalize()
-        normal_perpendicular_plane = normal_parallel_plane.cross(incident)  # normal vector of the perpendicular plane
-        # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
-        parallel_v = polarization_vector - normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+        normal_perpendicular_plane = normal_parallel_plane.cross(incident)
+        # normal vector of the perpendicular plane
+        parallel_v = polarization_vector - \
+                     normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
         parallel_component = parallel_v.Length
-        perpendicular_v = polarization_vector - normal_perpendicular_plane * polarization_vector.dot(
-            normal_perpendicular_plane)
+        perpendicular_v = polarization_vector - \
+                          normal_perpendicular_plane * \
+                          polarization_vector.dot(normal_perpendicular_plane)
         perpendicular_component = perpendicular_v.Length
         ref_per = perpendicular_component / (perpendicular_component + parallel_component)
         perpendicular_polarized = False
         # https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
 
-        if backside == True and properties['transparent_material']:  # Ray intercepted on the backside of the surface
+        if backside == True and properties['transparent_material']:
+            # Ray intercepted on the backside of the surface
             angle = np.arccos(c2.real) * 180.0 / np.pi
         else:
             angle = np.arccos(c1) * 180.0 / np.pi
@@ -1305,7 +1330,8 @@ class PolarizedCoatingLayer(SurfaceMaterial):
             polarization_vector = perpendicular_v.normalize()
         else:
             angle = np.arccos(c1) * 180.0 / np.pi
-            r = calculate_reflectance(r_matrix, angle, wavelength)[1]  # reflectance for p-polarized (parallel) light
+            r = calculate_reflectance(r_matrix, angle, wavelength)[1]
+            # reflectance for p-polarized (parallel) light
             polarization_vector = parallel_v.normalize()
         if myrandom() < r:  # ray reflected
             return [1, 0, 0], polarization_vector, perpendicular_polarized

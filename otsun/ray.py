@@ -133,8 +133,6 @@ class Ray(object):
                 state = nearby_material.change_of_direction(self, normal, nearby_material)
             else:
                 state = nearby_material.change_of_direction(self, normal)
-            ### polarization_vector, direction, phenomenon = nearby_material.change_of_direction(self,
-            ###                                                                                 normal)
             # TODO polarization_vector
         next_material = None
         if state.phenomenon == Phenomenon.REFRACTION:
@@ -153,7 +151,8 @@ class Ray(object):
         point_1 = self.points[-1]
         point_2 = self.points[-2]
         if 'extinction_coefficient' in material.properties:
-            alpha = material.properties['extinction_coefficient'](self.wavelength) * 4 * np.pi / (self.wavelength / 1E6) # mm-1
+            alpha = material.properties['extinction_coefficient'](self.wavelength) * \
+                    4 * np.pi / (self.wavelength / 1E6) # mm-1
             d = point_1.distanceToPoint(point_2)
             self.energy = self.energy * np.exp(- alpha * d)
         if 'attenuation_coefficient' in material.properties:
@@ -168,6 +167,7 @@ class Ray(object):
         """
         count = 0
         while (not self.finished) and (count < max_hops):
+            # TODO: delete
             assert self.current_medium == self.materials[-1]
             count += 1
             point, face = self.next_intersection()
@@ -190,7 +190,9 @@ class Ray(object):
                     alpha = self.scene.materials[actual_solid].properties['extinction_coefficient'](
                     self.wavelength) * 4 * np.pi / (self.wavelength / 1E6) # mm-1
                     angle_incident = np.arccos (- self.normals[-1].dot(self.directions[-1])) * 180.0 / np.pi
-                    self.PV_values.append((point_2.x,point_2.y,point_2.z,point_1.x,point_1.y,point_1.z,energy_before,self.energy,self.wavelength,alpha,angle_incident))
+                    self.PV_values.append((
+                        point_2.x,point_2.y,point_2.z,point_1.x,point_1.y,point_1.z,
+                        energy_before,self.energy,self.wavelength,alpha,angle_incident))
                     self.PV_absorbed.append(energy_before - self.energy)
             state, material, normal = self.next_state_and_material(face)  # TODO polarization_vector
             self.directions.append(state.direction)
