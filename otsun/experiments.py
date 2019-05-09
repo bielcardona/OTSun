@@ -80,7 +80,7 @@ class Experiment:
                 # TODO: Review... ray.wavelength always added to Th_wavelength
                 # Hence always Th_wavelength == wavelenghts
                 self.Th_wavelength.append(ray.wavelength)
-            if ray.in_PV:
+            if ray.PV_absorbed:
                 PV_energy_absorbed = np.sum(ray.PV_absorbed)
                 self.captured_energy_PV += PV_energy_absorbed
                 self.PV_energy.append(PV_energy_absorbed)

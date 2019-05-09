@@ -1,6 +1,6 @@
 from autologging import traced
 from .logging_unit import logger
-from .materials import vacuum_medium
+from .materials import vacuum_medium, PVMaterial
 from .optics import Phenomenon, OpticalState
 import numpy as np
 import Part
@@ -71,9 +71,9 @@ class Ray(object):
         self.polarization_vectors = [properties['polarization_vector']]
         self.finished = False
         self.got_absorbed = False
-        self.PV_energy = 0.0
+        # self.PV_energy = 0.0
         self.PV_values = []
-        self.in_PV = False
+        # self.in_PV = False
         self.PV_absorbed = []
 
     def current_medium(self):
