@@ -50,6 +50,74 @@ class OpticalState(object):
         self.phenomenon = phenomenon
         self.material = material
 
+    def apply_single_gaussian_dispersion(self, normal, sigma_1):
+        """
+        Apply a single gaussian dispersion to the optical state
+
+        Parameters
+        ----------
+        normal : Base.Vector
+            normal vector of the surface at the point of incidence
+        sigma_1 : float
+            dispersion coefficient
+         """
+        # TODO: @Ramon: Review
+        rad = np.pi / 180.0
+        u = myrandom()
+        theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
+        v = self.direction
+        axis_1 = normal.cross(self.direction)
+        rotation_1 = Base.Rotation(axis_1, theta)
+        new_v1 = rotation_1.multVec(v)
+        u = myrandom()
+        phi = 360. * u
+        axis_2 = v
+        rotation_2 = Base.Rotation(axis_2, phi)
+        new_v2 = rotation_2.multVec(new_v1)
+        polarization_vector = self.polarization
+        new_pol_1 = rotation_1.multVec(polarization_vector)
+        new_polarization_vector = rotation_2.multVec(new_pol_1)
+        self.polarization = new_polarization_vector
+        self.direction = new_v2
+
+    def apply_double_gaussian_dispersion(self, normal, sigma_1, sigma_2, k):
+        """
+        Apply a double gaussian dispersion to the state
+
+
+        Parameters
+        ----------
+        normal : Base.Vector
+            normal vector of the surface at the point of incidence
+        sigma_1 : float
+            dispersion coefficient (first case)
+        sigma_2 : float
+            dispersion coefficient (second case)
+        k : float
+            threshold for randomly applying first or second case
+        """
+        rad = np.pi / 180.0
+        k_ran = myrandom()
+        u = myrandom()
+        if k_ran < k:
+            theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
+        else:
+            theta = (-2. * sigma_2 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
+        v = self.direction
+        axis_1 = normal.cross(self.direction)
+        rotation_1 = Base.Rotation(axis_1, theta)
+        new_v1 = rotation_1.multVec(v)
+        u = myrandom()
+        phi = 360. * u
+        axis_2 = v
+        rotation_2 = Base.Rotation(axis_2, phi)
+        new_v2 = rotation_2.multVec(new_v1)
+        polarization_vector = self.polarization
+        new_pol_1 = rotation_1.multVec(polarization_vector)
+        new_polarization_vector = rotation_2.multVec(new_pol_1)
+        self.direction = new_v2
+        self.polarization = new_polarization_vector
+
 
 # ---
 # Helper functions for reflexion and refraction
@@ -127,94 +195,6 @@ def lambertian_reflexion(incident, normal):
     new_direction = random_vector
     random_polarization_vector = random_polarization(new_direction)  ## To be tested!!!!!
     return OpticalState(random_polarization_vector, new_direction, Phenomenon.REFLEXION)
-
-
-@traced(logger)
-def single_gaussian_dispersion(normal, state, sigma_1):
-    """
-    Single gaussian dispersion based on the ideal reflected direction
-
-    Computes
-
-    Parameters
-    ----------
-    normal : Base.Vector
-        normal vector of the surface at the point of incidence
-    state : OpticalState
-        optical state of the ray
-    sigma_1 : float
-        dispersion coefficient
-
-    Returns
-    -------
-    OpticalState
-
-    """
-    # TODO: @Ramon: Review
-    rad = np.pi / 180.0
-    u = myrandom()
-    theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
-    v = state.direction
-    axis_1 = normal.cross(state.direction)
-    rotation_1 = Base.Rotation(axis_1, theta)
-    new_v1 = rotation_1.multVec(v)
-    u = myrandom()
-    phi = 360. * u
-    axis_2 = v
-    rotation_2 = Base.Rotation(axis_2, phi)
-    new_v2 = rotation_2.multVec(new_v1)
-    polarization_vector = state.polarization
-    new_pol_1 = rotation_1.multVec(polarization_vector)
-    new_polarization_vector = rotation_2.multVec(new_pol_1)
-    return OpticalState(new_polarization_vector, new_v2, Phenomenon.REFLEXION)
-
-
-@traced(logger)
-def double_gaussian_dispersion(normal, state, sigma_1, sigma_2, k):
-    # TODO: change to OpticalState... look materials!
-    """
-    Double gaussian dispersion based on the ideal reflected direction
-
-    Computes
-
-    Parameters
-    ----------
-    normal : Base.Vector
-        normal vector of the surface at the point of incidence
-    state : OpticalState
-        optical state of the ray
-    sigma_1 : float
-        dispersion coefficient (first case)
-    sigma_2 : float
-        dispersion coefficient (second case)
-    k : float
-        threshold for randomly applying first or second case
-
-    Returns
-    -------
-    OpticalState
-
-    """
-    rad = np.pi / 180.0
-    k_ran = myrandom()
-    u = myrandom()
-    if k_ran < k:
-        theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
-    else:
-        theta = (-2. * sigma_2 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
-    v = state.direction
-    axis_1 = normal.cross(state.direction)
-    rotation_1 = Base.Rotation(axis_1, theta)
-    new_v1 = rotation_1.multVec(v)
-    u = myrandom()
-    phi = 360. * u
-    axis_2 = v
-    rotation_2 = Base.Rotation(axis_2, phi)
-    new_v2 = rotation_2.multVec(new_v1)
-    polarization_vector = state.polarization
-    new_pol_1 = rotation_1.multVec(polarization_vector)
-    new_polarization_vector = rotation_2.multVec(new_pol_1)
-    return OpticalState(new_polarization_vector, new_v2, Phenomenon.REFLEXION)
 
 
 @traced(logger)

@@ -10,10 +10,7 @@ import json
 import zipfile
 import dill
 from .optics import *
-#from .optics import Phenomenon
 from .math import *
-#from .source import Ray
-#from .optics import OpticalState
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -22,11 +19,6 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
-
-
-# ---
-# Classes for materials
-# ---
 
 
 @traced(logger)
@@ -774,13 +766,10 @@ class SurfaceMaterial(Material):
                 if properties.get('sigma_2',None):
                     sigma_2 = properties['sigma_2']
                     k = properties.get('k', None) or 0.5
-                    state = double_gaussian_dispersion(
-                        normal_vector, state, sigma_1, sigma_2, k)
-                    state.material = ray.current_medium()
-                    return state
-                state = single_gaussian_dispersion(normal_vector, state, sigma_1)
-                state.material = ray.current_medium()
-                return state
+                    state.apply_double_gaussian_dispersion(
+                        normal_vector, sigma_1, sigma_2, k)
+                else:
+                    state.apply_single_gaussian_dispersion(normal_vector, sigma_1)
             return state
         if 'lambertian_material' in properties:
             state = lambertian_reflexion(ray.current_direction(), normal_vector)
@@ -790,7 +779,6 @@ class SurfaceMaterial(Material):
     def change_of_direction_by_transmitance(self, ray, normal_vector,
                                             nearby_material,
                                             perpendicular_polarized):
-        # cur_med = ray.current_medium()
         n1 = ray.current_medium().get_n(ray.wavelength)
         n2 = nearby_material.get_n(ray.wavelength)
         if n1 == n2:  # transparent_simple_layer
@@ -1036,15 +1024,14 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         my_normal = normal * 1.0
         if my_normal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
             my_normal = my_normal * (-1.0)
-        incidence_angle = np.arccos(my_normal.dot(incident) * (-1.0))
-        incidence_angle_deg = incidence_angle * 180.0 / np.pi
-        if incidence_angle_deg < 80.0:
-            absorption_ratio = 1.0 - \
-                               b_constant * (1.0 / np.cos(incidence_angle) - 1.0) ** c_constant
+        angle = np.arccos(my_normal.dot(incident) * (-1.0))
+        angle_deg = angle * 180.0 / np.pi
+        if angle_deg < 80.0:
+            absorption_ratio = 1.0 - b_constant * (1.0 / np.cos(angle) - 1.0) ** c_constant
         else:
             y0 = 1.0 - b_constant * (1.0 / np.cos(80.0 * np.pi / 180.0) - 1.0) ** c_constant
             m = y0 / 10.0
-            absorption_ratio = y0 - m * (incidence_angle_deg - 80.0)
+            absorption_ratio = y0 - m * (angle_deg - 80.0)
         return absorption_ratio
 
     def compute_probabilities_and_polarizations(self, ray, normal_vector, nearby_material):
@@ -1302,8 +1289,8 @@ class PolarizedCoatingLayer(SurfaceMaterial):
         reflectance_matrix = properties['Matrix_polarized_reflectance_coating']
         r_matrix = reflectance_matrix(angle, wavelength)
         if myrandom() < ref_per:
-            r = calculate_reflectance(r_matrix, angle, wavelength)[
-                0]  # reflectance for s-polarized (perpendicular) light
+            r = calculate_reflectance(r_matrix, angle, wavelength)[0]
+            # reflectance for s-polarized (perpendicular) light
             perpendicular_polarized = True
             polarization_vector = perpendicular_v.normalize()
         else:
