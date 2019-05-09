@@ -345,8 +345,6 @@ class LightSource(object):
             wavelength = self.light_spectrum  # experiment with a single wavelength (nanometers)
         else:
             wavelength = pick_random_from_cdf(self.light_spectrum)  # light spectrum is active (nanometers)
-        ray = Ray(self.scene, point, direction, {'wavelength': wavelength,
-                                                 'energy': self.initial_energy,
-                                                 'polarization_vector': polarization_vector})
+        ray = Ray(self.scene, point, direction, wavelength, self.initial_energy, polarization_vector)
         return ray
 

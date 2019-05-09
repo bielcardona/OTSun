@@ -494,16 +494,20 @@ class PVMaterial(VolumeMaterial):
 
         Parameters
         ----------
-        ray
+        ray : Ray
+            Ray that has passed through the PV material
+        energy_before : float
+            Energy of the ray before passing through the PV material
 
         Returns
         -------
-
+        float, tuple of floats
         """
         alpha = self.properties['extinction_coefficient'](
             ray.wavelength) * 4 * np.pi / (ray.wavelength / 1E6)  # mm-1
+        # TODO: @Ramon: Revisar angle (sona raro)
         angle_incident = np.arccos(
-            - ray.normals[-1].dot(ray.current_direction())) * 180.0 / np.pi
+            - ray.last_normal.dot(ray.current_direction())) * 180.0 / np.pi
         point_1 = ray.points[-1]
         point_2 = ray.points[-2]
         return (energy_before - ray.energy,
@@ -716,18 +720,15 @@ class SurfaceMaterial(Material):
     def compute_probabilities_and_polarizations(self, ray, normal_vector, nearby_material):
         properties = self.properties
         try:
-            por = properties['probability_of_reflexion'](
-                ray.properties['wavelength'])
+            por = properties['probability_of_reflexion'](ray.wavelength)
         except KeyError:
             por = 1.0
         try:
-            poa = properties['probability_of_absortion'](
-                ray.properties['wavelength'])
+            poa = properties['probability_of_absortion'](ray.wavelength)
         except KeyError:
             poa = 1 - por
         try:
-            pot = properties['probability_of_transmitance'](
-                ray.properties['wavelength'])
+            pot = properties['probability_of_transmitance'](ray.wavelength)
         except KeyError:
             pot = 0.0
 
@@ -748,6 +749,7 @@ class SurfaceMaterial(Material):
 
     def change_of_direction_by_absortion(self, ray, normal_vector):
         properties = self.properties
+        # TODO @Ramon: GOT_ABSORBED i ABSORPTION sonen massa iguals, no? Cal distingir?
         if properties['energy_collector']:
             return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                  Base.Vector(0.0, 0.0, 0.0),
@@ -1051,8 +1053,7 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         c_constant = properties['c_constant']
         absortion_ratio = self.tw_absorptance_ratio(
             normal_vector, b_constant, c_constant, ray.current_direction())
-        absortion = properties['probability_of_absortion'](
-            ray.properties['wavelength']) * absortion_ratio
+        absortion = properties['probability_of_absortion'](ray.wavelength) * absortion_ratio
         por = 1.0 - absortion
         # Here I assume no transmitance
         return [por, absortion, 0], ray.current_polarization(), False
