@@ -1,7 +1,7 @@
 from autologging import traced
 from .logging_unit import logger
 from .materials import vacuum_medium
-from .optics import Phenomenon
+from .optics import Phenomenon, OpticalState
 import numpy as np
 import Part
 
@@ -35,6 +35,8 @@ class Ray(object):
     ----------
     points : list of Base.Vector
         Points where the ray passes at each iteration
+    optical_states : list of OpticalState
+        OpticalStates of the rays at each iteration
     directions : list of Base.Vector
         Directions of the ray at each iteration
     normals : list of Base.Vector
@@ -62,6 +64,13 @@ class Ray(object):
     def __init__(self, scene, origin, direction, properties):
         self.scene = scene
         self.points = [origin]
+        state = OpticalState(
+            properties['polarization_vector'],
+            direction,
+            Phenomenon.JUST_STARTED,
+            vacuum_medium
+        )
+        self.optical_states = [state]
         self.directions = [direction]
         self.normals = []
         self.materials = [vacuum_medium]
@@ -169,6 +178,7 @@ class Ray(object):
         while (not self.finished) and (count < max_hops):
             # TODO: delete
             assert self.current_medium == self.materials[-1]
+            assert self.optical_states[-1].material == self.current_medium
             count += 1
             point, face = self.next_intersection()
             self.points.append(point)
@@ -195,6 +205,7 @@ class Ray(object):
                         energy_before,self.energy,self.wavelength,alpha,angle_incident))
                     self.PV_absorbed.append(energy_before - self.energy)
             state, material, normal = self.next_state_and_material(face)  # TODO polarization_vector
+            self.optical_states.append(state)
             self.directions.append(state.direction)
             self.materials.append(material)
             self.normals.append(normal)

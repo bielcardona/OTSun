@@ -9,6 +9,7 @@ from enum import Enum
 from numpy.lib.scimath import sqrt
 from autologging import traced
 from .logging_unit import logger
+# from .materials import Material, vacuum_medium
 
 
 class Phenomenon(Enum):
@@ -17,6 +18,7 @@ class Phenomenon(Enum):
 
     This enum is used to describe which optical phenomenon affected a ray
     """
+    JUST_STARTED = 0
     REFLEXION = 1
     REFRACTION = 2
     ABSORPTION = 3
@@ -38,19 +40,23 @@ class OpticalState(object):
         direction vector of the ray
     phenomenon : Phenomenon
         last phenomenon that the ray experimented
+    material : Material
+        Material where the ray is located
     """
     
-    def __init__(self, polarization, direction, phenomenon):
+    def __init__(self, polarization, direction, phenomenon, material = None):
         self.polarization = polarization
         self.direction = direction
         self.phenomenon = phenomenon
+        self.material = material
 
 
 # ---
 # Helper functions for reflexion and refraction
 # ---
 @traced(logger)
-def reflexion(incident, normal, polarization_vector, polarization_vector_calculated_before=False):
+def reflexion(incident, normal, polarization_vector,
+              polarization_vector_calculated_before=False):
     """
     Implementation of law of reflexion for incident and polarization vector.
 
@@ -165,6 +171,7 @@ def single_gaussian_dispersion(normal, state, sigma_1):
 
 @traced(logger)
 def double_gaussian_dispersion(normal, state, sigma_1, sigma_2, k):
+    # TODO: change to OpticalState... look materials!
     """
     Double gaussian dispersion based on the ideal reflected direction
 
@@ -245,7 +252,6 @@ def refraction(incident, normal, n1, n2, polarization_vector):
         # to avoid null vector at my_normal and incident parallel vectors
         normal_parallel_plane = Base.Vector(1, 0, 0)
     normal_parallel_plane.normalize()
-    # http://www.maplesoft.com/support/help/Maple/view.aspx?path=MathApps/ProjectionOfVectorOntoPlane
     parallel_v = polarization_vector - \
                  normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
     # TODO: Review
@@ -276,7 +282,8 @@ def refraction(incident, normal, n1, n2, polarization_vector):
         return reflexion(incident, normal, polarization_vector, True)
     else:
         # ray refracted
-        refracted_direction = incident * r.real + my_normal * (r.real * c1.real - c2.real)
+        refracted_direction = incident * r.real + \
+                              my_normal * (r.real * c1.real - c2.real)
         perp_v = refracted_direction.cross(my_normal)
         if perp_v == Base.Vector(0, 0, 0):
             # to avoid null vector at my_normal and incident parallel vectors
@@ -423,9 +430,11 @@ def random_polarization(direction):
 @traced(logger)
 def matrix_reflectance(data_material):
     """
-    data_material: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular), reflectance p-polarized (parallel)
+    data_material: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular),
+    reflectance p-polarized (parallel)
     the values should be in the corresponding order columns with constants steps
-	We generate a matrix for the interpolation depending on the x=angle and y=wavelength values (lambda values)
+	We generate a matrix for the interpolation depending on the x=angle and
+	y=wavelength values (lambda values)
 
     Parameters
     ----------
