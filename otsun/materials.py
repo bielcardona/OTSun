@@ -824,6 +824,7 @@ class SurfaceMaterial(Material):
     def change_of_direction_by_reflexion(self, ray, normal_vector,
                                          polarization_vector_calculated_before):
         """
+        # TODO @Ramon: Mirar l'embull del polarization_vector_calculated_before
         # TODO: Document
 
         Parameters
