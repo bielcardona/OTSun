@@ -24,7 +24,7 @@ class Ray(object):
     wavelength : float
         Wavelength of the ray
     energy : float
-        Initial enerty of the ray
+        Initial energy of the ray
     polarization_vector : Base.Vector
         Initial polarization vector of the ray
 

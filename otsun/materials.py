@@ -34,16 +34,19 @@ class Material(object):
     by_name : dict
         associates each material name to the material itself
 
-    Attributes
+    Parameters
     ----------
     name : str
-        Holds the name of the material
+        Name of the material
+    properties : dict
+        Dictionary with physical properties of the material
+
+    Attributes
+    ----------
     kind : str
         Holds the type of the material ("Surface" or "Volume")
     classname : str
         String identifying the class
-    properties : dict
-        Dictionary with physical properties of the material
     """
     by_name = {}
 
@@ -143,7 +146,7 @@ class Material(object):
 
         Parameters
         ----------
-        f : file
+        f : BinaryIO
             File object
 
         Returns
@@ -291,7 +294,7 @@ class Material(object):
 
     def to_json(self):
         """Converts material to json. MUST be subclassed"""
-        pass
+        return ""
 
     def save_to_json_file(self, filename):
         """
@@ -308,10 +311,11 @@ class Material(object):
     @staticmethod
     def all_to_json():
         """
-        # TODO: Document
+        Convert all materials to json
+
         Returns
         -------
-
+        list of str
         """
         materials = Material.by_name.values()
         simple_mats = [material for material in materials if
@@ -324,7 +328,7 @@ class Material(object):
     @staticmethod
     def save_all_to_json_file(filename):
         """
-        # TODO: Document
+        Saves all materials to text file
 
         Parameters
         ----------
@@ -340,27 +344,16 @@ class VolumeMaterial(Material):
     """
     Subclass of Volume for materials with volume
 
-    TODO: comment on properties
-
+    The `properties` parameter must be a dict with the physical properties
+    describing the material. At least, the following must be provided:
+    'index_of_refraction': float
+        index of refraction of the material, as a
+        function of its wavelength, only real part.
+    'extinction_coefficient': float
+        imaginary part of the index of refraction
+        of the material as a function of its wavelength.
     """
     def __init__(self, name, properties=None):
-        """
-        Initializes a Volume Material.
-
-        The `properties` parameter must be a dict with the physical properties
-        describing the material. At least, the following must be provided:
-        'index_of_refraction': index of refraction of the material, as a
-        function of its wavelength, only real part.
-        'extinction_coefficient': imaginary part of the index of refraction
-        of the material as a function of its wavelength.
-
-        Parameters
-        ----------
-        name : str
-            Name of the material
-        properties : dict
-            Properties of the material
-        """
         super(VolumeMaterial, self).__init__(name, properties)
         self.kind = 'Volume'
 
@@ -387,15 +380,20 @@ class VolumeMaterial(Material):
 
     def change_of_direction(self, ray, normal_vector):
         """
-        # TODO: Document
+        Compute the change of optical state
+
+        Computes the new optical state when `ray` hits the material
+        at a point with given `normal_vector`
+
+        # TODO: Change name
         Parameters
         ----------
-        ray :
-        normal_vector :
+        ray : Ray
+        normal_vector : Base.Vector
 
         Returns
         -------
-
+        OpticalState
         """
         wavelength = ray.wavelength
         if isinstance(ray.current_medium(), PolarizedThinFilm):
