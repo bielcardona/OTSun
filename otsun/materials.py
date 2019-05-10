@@ -690,20 +690,19 @@ class PolarizedThinFilm(VolumeMaterial):
         # the ray impacts on thin film material
         n1 = ray.current_medium().get_n(ray.wavelength)
         n_front = self.properties['index_of_refraction_front'](ray.wavelength)
+        k_front = self.properties['extinction_coefficient_front'](ray.wavelength)
         n_back = self.properties['index_of_refraction_back'](ray.wavelength)
-        if n_front == ray.current_medium().properties['index_of_refraction'](ray.wavelength):
-            # impacts on front material
-            n2 = n_back
+        k_back = self.properties['extinction_coefficient_back'](ray.wavelength)
+        if n1 == n_front + 1j * k_front:
+            n2 = n_back + 1j * k_back
         else:
-            n2 = n_front
+            n2 = n_front + 1j * k_back
         factor_energy_absorbed_thin_film, optical_state = (
             self.calculate_state_thin_film(
-                ray.current_direction(), normal_vector, n1,
-                n2,
+                ray.current_direction(), normal_vector, n1,n2,
                 ray.current_polarization(),
                 self.properties, ray.wavelength))
         optical_state.extra_data['factor_energy_absorbed_thin_film'] = factor_energy_absorbed_thin_film
-        # ray.energy = ray.energy * (1.0 - factor_energy_absorbed_thin_film)
         if optical_state.phenomenon == Phenomenon.REFRACTION:
             optical_state.material = self
         else:
