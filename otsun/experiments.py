@@ -88,7 +88,7 @@ class Experiment:
                 length = len(ray.PV_values)
                 if length > 0:
                     for z in np.arange(0,length,1):
-                        # TODO: Review... no ho entenc (pq no afegir directament tot?)
+                        # TODO: Review... no ho entenc (pq no afegir directament tot?) Ramon please check
                         self.PV_values.append(ray.PV_values[z])
             else:
                 self.PV_energy.append(0.0)
