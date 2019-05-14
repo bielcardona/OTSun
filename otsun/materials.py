@@ -273,7 +273,7 @@ class Material(object):
                     except IOError:
                         logger.exception("error in processing file %s", matfile)
 
-    def change_of_direction(self, *args):
+    def change_of_optical_state(self, *args):
         """
         Computes how a ray behaves when interacting with the material.
         MUST be subclassed
@@ -378,7 +378,7 @@ class VolumeMaterial(Material):
             return n
 
 
-    def change_of_direction(self, ray, normal_vector):
+    def change_of_optical_state(self, ray, normal_vector):
         """
         Compute the change of optical state
 
@@ -675,7 +675,7 @@ class PolarizedThinFilm(VolumeMaterial):
             return (factor_energy_absorbed_thin_film,
                     OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION))
 
-    def change_of_direction(self, ray, normal_vector):
+    def change_of_optical_state(self, ray, normal_vector):
         """
         # TODO: Document
         Parameters
@@ -795,7 +795,7 @@ class SurfaceMaterial(Material):
         phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
         return phenomenon, polarization_vector, perpendicular_polarized
 
-    def change_of_direction_by_absortion(self, ray, normal_vector):
+    def change_of_optical_state_by_absortion(self, ray, normal_vector):
         """
         # TODO: Document
 
@@ -821,8 +821,8 @@ class SurfaceMaterial(Material):
                                  Phenomenon.ABSORPTION,
                                  self))
 
-    def change_of_direction_by_reflexion(self, ray, normal_vector,
-                                         polarization_vector_calculated_before):
+    def change_of_optical_state_by_reflexion(self, ray, normal_vector,
+                                             polarization_vector_calculated_before):
         """
         # TODO @Ramon: Mirar l'embull del polarization_vector_calculated_before
         # TODO: Document
@@ -858,9 +858,9 @@ class SurfaceMaterial(Material):
             state.material = ray.current_medium()
             return state
 
-    def change_of_direction_by_transmitance(self, ray, normal_vector,
-                                            nearby_material,
-                                            perpendicular_polarized):
+    def change_of_optical_state_by_transmitance(self, ray, normal_vector,
+                                                nearby_material,
+                                                perpendicular_polarized):
         """
         # TODO: Document
 
@@ -887,7 +887,7 @@ class SurfaceMaterial(Material):
             state.material = nearby_material
         return state
 
-    def change_of_direction(self, ray, normal_vector, nearby_material):
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):
         """
         # TODO: Document
 
@@ -922,16 +922,16 @@ class SurfaceMaterial(Material):
         # TODO: Caution!!!! previous line!
         perpendicular_polarized = results[2]  # True or False
         if phenomenon == Phenomenon.REFLEXION:
-            state = material.change_of_direction_by_reflexion(
+            state = material.change_of_optical_state_by_reflexion(
                 ray, normal_vector,
                 polarization_vector_calculated_before)
             return state
         elif phenomenon == Phenomenon.ABSORPTION:
-            state = material.change_of_direction_by_absortion(
+            state = material.change_of_optical_state_by_absortion(
                 ray, normal_vector)
             return state
         elif phenomenon == Phenomenon.TRANSMITTANCE:
-            state = material.change_of_direction_by_transmitance(
+            state = material.change_of_optical_state_by_transmitance(
                 ray, normal_vector, nearby_material,
                 perpendicular_polarized)
             return state
