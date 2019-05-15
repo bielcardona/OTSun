@@ -937,20 +937,21 @@ class SurfaceMaterial(Material):
             return state
 
     @classmethod
-    def from_plain_properties(cls, plain_properties):
+    def from_plain_properties(cls, name, plain_properties):
         """
         # TODO: Document
 
         Parameters
         ----------
-        plain_properties
+        name : str
+        plain_properties : dict
 
         Returns
         -------
-
+            Material
         """
         properties = Material.plain_properties_to_properties(plain_properties)
-        material = cls(properties,properties)
+        material = cls(name,properties)
         return material
 
     def to_json(self):
