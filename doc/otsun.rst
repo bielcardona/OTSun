@@ -40,7 +40,7 @@ otsun.optics module
 -------------------
 
 .. automodule:: otsun.optics
-    :members:
+    :members: OpticalState
     :undoc-members:
     :show-inheritance:
 
