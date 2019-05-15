@@ -18,4 +18,5 @@ pySunScene.egg-info
 .pytest_cache
 OTSun.egg-info
 dummy
-doc
+docb
+doc/_build
