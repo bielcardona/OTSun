@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='OTSun',
     version='1.0.0',
-    py_modules=['otsun'],
+    packages=['otsun',],
     url='',
     install_requires=['numpy==1.12', 'enum', 'dill==0.2.7.1', 'autologging'],
     license='MIT',
