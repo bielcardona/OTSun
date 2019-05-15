@@ -415,19 +415,18 @@ def random_polarization(direction):
 @traced(logger)
 def matrix_reflectance(data_material):
     """
-    data_material: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular),
-    reflectance p-polarized (parallel)
-    the values should be in the corresponding order columns with constants steps
-	We generate a matrix for the interpolation depending on the x=angle and
-	y=wavelength values (lambda values)
+    Computes the matrix reflectance
 
     Parameters
     ----------
-    data_material
+    data_material : array_like
+        columns are: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular),
+        reflectance p-polarized (parallel) the values should be in the corresponding order columns
+        with constants steps
 
     Returns
     -------
-
+        function
     """
     # TODO: document
     steps = np.diff(data_material[:, 1])

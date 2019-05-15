@@ -29,11 +29,6 @@ class Material(object):
     The `properties` dictionary holds the physical properties of the material.
     Its contents are specific to the kind of material.
 
-    Class Variables
-    ---------------
-    by_name : dict
-        associates each material name to the material itself
-
     Parameters
     ----------
     name : str
@@ -48,7 +43,12 @@ class Material(object):
     classname : str
         String identifying the class
     """
+
     by_name = {}
+    """
+    Dict that associates the name of each created material with the material itself
+    """
+
 
     def __init__(self, name, properties=None):
         self.by_name[name] = self
@@ -346,12 +346,10 @@ class VolumeMaterial(Material):
 
     The `properties` parameter must be a dict with the physical properties
     describing the material. At least, the following must be provided:
-    'index_of_refraction': float
-        index of refraction of the material, as a
-        function of its wavelength, only real part.
-    'extinction_coefficient': float
-        imaginary part of the index of refraction
-        of the material as a function of its wavelength.
+    'index_of_refraction': float (index of refraction of the material, as a function
+    of its wavelength, only real part)
+    'extinction_coefficient': float (imaginary part of the index of refraction
+    of the material as a function of its wavelength)
     """
     def __init__(self, name, properties=None):
         super(VolumeMaterial, self).__init__(name, properties)
