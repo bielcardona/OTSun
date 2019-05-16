@@ -227,30 +227,42 @@ def refraction(incident, normal, n1, n2, polarization_vector):
     # See Chapter 2 of the book Thin-films optical filters
     # See Fresnel equations in WikipediA
     my_normal = normal * 1.0
-    if my_normal.dot(incident) > 0: # Ray intercepted on the backside of the surface
+    if my_normal.dot(incident) > 0:
+        # Ray intercepted on the backside of the surface
         my_normal = my_normal * (-1.0)
     r = n1 / n2
-    c1 = - my_normal.dot(incident)  # cos (incidence_angle)
-    c2sq = 1.0 - r * r * (1.0 - c1 * c1)  # cos (refracted_angle) ** 2
-    if c2sq.real < 0: # total internal reflection
+    c1 = - my_normal.dot(incident)
+    # cos (incidence_angle)
+    c2sq = 1.0 - r * r * (1.0 - c1 * c1)
+    # cos (refracted_angle) ** 2
+    if c2sq.real < 0:
+    # total internal reflection
         return reflexion(incident, normal, polarization_vector)
-    c2 = sqrt(c2sq)  # cos (refracted_angle)
-    normal_parallel_plane = incident.cross(my_normal) # orthogonal vector to reflexion plane (parallel_plane)
-    if normal_parallel_plane == Base.Vector(0, 0, 0): # incident parallel to my_normal
-        normal_parallel_plane = Base.Vector(-my_normal[2], 0, my_normal[0]) # this is orthogonal to my_normal
-        if normal_parallel_plane == Base.Vector(0, 0, 0): # to avoid null vector
-            normal_parallel_plane = Base.Vector(-my_normal[1], my_normal[0], 0) # this is another orthogonal vector to my_normal
+    c2 = sqrt(c2sq)
+    # cos (refracted_angle)
+    normal_parallel_plane = incident.cross(my_normal)
+    # orthogonal vector to reflexion plane (parallel_plane)
+    if normal_parallel_plane == Base.Vector(0, 0, 0):
+    # incident parallel to my_normal
+        normal_parallel_plane = Base.Vector(-my_normal[2], 0, my_normal[0])
+        # orthogonal vector to my_normal
+        if normal_parallel_plane == Base.Vector(0, 0, 0):
+        # to avoid null vector
+            normal_parallel_plane = Base.Vector(-my_normal[1], my_normal[0], 0)
+            # another orthogonal vector to my_normal
     normal_parallel_plane.normalize()
     parallel_v = polarization_vector - \
                  normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
     # parallel_v is the projection of polarization_vector onto parallel_plane
-    normal_perpendicular_plane = incident.cross(normal_parallel_plane) # orthogonal vector to perpendicular_plane
+    normal_perpendicular_plane = incident.cross(normal_parallel_plane)
+    # orthogonal vector to perpendicular_plane
     perpendicular_v = polarization_vector - \
                  normal_perpendicular_plane * polarization_vector.dot(normal_perpendicular_plane)
     # perpendicular_v is the projection of polarization_vector onto the perpendicular_plane
     parallel_component = parallel_v.Length
     perpendicular_component = perpendicular_v.Length
-    ref_per = perpendicular_component ** 2.0 / polarization_vector.Length ** 2.0 # weight of perpendicular component: 0 < ref_per < 1
+    ref_per = perpendicular_component ** 2.0 / polarization_vector.Length ** 2.0
+    # weight of perpendicular component: 0 < ref_per < 1
     # We decide the polarization projection onto the parallel / perpendicular plane
     if myrandom() < ref_per:
         # Perpendicular polarization
@@ -268,13 +280,17 @@ def refraction(incident, normal, n1, n2, polarization_vector):
     if myrandom() < r.real: # ray reflected
         # return reflexion(incident, normal, polarization_vector, True) TODO: Ramon
         return reflexion(incident, normal, polarization_vector, False)
-    else: # ray refracted: computing the efrcing direction
+    else:
+        # ray refracted: computing the rfracing direction
         refracted_direction = incident * r.real + \
                               my_normal * (r.real * c1.real - c2.real)
-        if perpendicular_polarized: # refraction no changes the perpendicular component of incident polarization_vector
+        if perpendicular_polarized:
+            # refraction no changes the perpendicular component of incident polarization_vector
             return OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION)
-        else: # refraction changes the parallel component of incident polarization_vector
-            angle = (np.arccos(c2) - np.arccos(c1)) * 180.0 / np.pi # angle to rotate the incident polarization vector
+        else:
+            # refraction changes the parallel component of incident polarization_vector
+            angle = (np.arccos(c2) - np.arccos(c1)) * 180.0 / np.pi
+            # angle to rotate the incident polarization vector
             angle = angle.real			
             rotation = Base.Rotation(normal_parallel_plane, angle)
             polarization_vector = rotation.multVec(polarization_vector)
