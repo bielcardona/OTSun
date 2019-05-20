@@ -8,7 +8,7 @@ for specific materials.
 
 import json
 import zipfile
-import dill
+# import dill
 from .optics import *
 from .math import *
 
