@@ -7,6 +7,9 @@ from FreeCAD import Base
 import random
 import time
 
+EPSILON = 1E-6 
+# Tolerance for considering equal to zero
+
 def polar_to_cartesian(phi, theta):
     """Convert polar coordinates of unit vector to cartesian
 
@@ -100,8 +103,8 @@ def random_congruential(seed=None):
 # ---
 # Define the random algorithm
 # ---
-# myrandom = random_congruential
-myrandom = random.random
+myrandom = random_congruential
+# myrandom = random.random
 
 # ---
 # Helper function for Cumulative Function Distribution and Randomly generatting distribution
@@ -163,8 +166,9 @@ def parallel_orthogonal_components(vector, incident, normal):
     `incident` (direction of a ray) and
     `normal` (vector orthogonal to a plane),
     decompose `vector` it in
-    a component parallel to the plane (and orthogonal to incident)
-    a component contained in the plane determined by normal and incident
+    a component contained in the reflexion (parallel) plane (determined by normal and incident): p-polarized (parallel) light
+    a component contained in the orthogonal plane to the reflexion plane: s-polarized (perpendicular) light
+    also returns the normal vector to the reflexion plane
 
     Parameters
     ----------
@@ -176,18 +180,64 @@ def parallel_orthogonal_components(vector, incident, normal):
     -------
     parallel : Base.Vector
     orthogonal : Base.Vector
+    normal of the parallel plane: Base.Vector
     """
+    polarization_vector = vector
     normal_parallel_plane = incident.cross(normal)
-    # normal vector of the parallel plane
-    if normal_parallel_plane == Base.Vector(0, 0, 0):
-        # to avoid null vector at mynormal and incident parallel vectors
-        normal_parallel_plane = Base.Vector(1, 0, 0)
+    # orthogonal vector to reflexion plane (parallel_plane)
+    if normal_parallel_plane.Length < EPSILON:
+        # incident parallel to normal
+        normal_parallel_plane = Base.Vector(-normal[2], 0, normal[0])
+        # orthogonal vector to normal
+        if normal_parallel_plane.Length < EPSILON:
+        # to avoid null vector
+            normal_parallel_plane = Base.Vector(-normal[1], normal[0], 0)
+            # another orthogonal vector to normal
     normal_parallel_plane.normalize()
-    normal_perpendicular_plane = normal_parallel_plane.cross(incident)
-    # normal vector of the perpendicular plane
-    parallel_v = vector - normal_parallel_plane * \
-                 vector.dot(normal_parallel_plane)
-    perpendicular_v = vector - \
-                      normal_perpendicular_plane * \
-                      vector.dot(normal_perpendicular_plane)
-    return parallel_v, perpendicular_v
+    normal_perpendicular_plane = incident.cross(normal_parallel_plane)
+    # orthogonal vector to perpendicular_plane
+    parallel_v = polarization_vector - \
+                 normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+    # parallel_v is the projection of polarization_vector onto parallel_plane
+    perpendicular_v = polarization_vector - \
+                 normal_perpendicular_plane * polarization_vector.dot(normal_perpendicular_plane)
+    # perpendicular_v is the projection of polarization_vector onto the perpendicular_plane
+    return parallel_v, perpendicular_v, normal_parallel_plane
+	
+def two_orthogonal_vectors(vector):
+    """Gives two orthogonal vectors of a vector
+
+    Given `vector` find two orthogonal vectors
+
+    Parameters
+    ----------
+    vector : Base.Vector
+
+    Returns
+    -------
+    orthogonal_1 : Base.Vector
+    orthogonal_2 : Base.Vector
+    """
+    orthogonal_1 = Base.Vector(-vector[1], vector[0] , 0)
+    if orthogonal_1.Length < EPSILON:
+        orthogonal_1 = Base.Vector(-vector[2], 0, vector[0])
+    orthogonal_2 = Base.Vector(0, -vector[2] , vector[1])
+    return orthogonal_1.normalize(), orthogonal_2.normalize()
+
+def one_orthogonal_vector(vector):
+    """Gives one orthogonal vector of a vector
+
+    Given `vector` find one orthogonal vector
+
+    Parameters
+    ----------
+    vector : Base.Vector
+
+    Returns
+    -------
+    orthogonal : Base.Vector
+    """
+    orthogonal = Base.Vector(-vector[1], vector[0] , 0)
+    if orthogonal.Length < EPSILON:
+        orthogonal = Base.Vector(-vector[2], 0, vector[0])
+    return orthogonal.normalize()

@@ -357,7 +357,7 @@ class VolumeMaterial(Material):
 
     def get_n(self, wavelength):
         """
-        Returns the (complex) refractive index at a certain frequency
+        Returns the (complex) refractive index at a certain wavelength
 
         Parameters
         ----------
@@ -634,7 +634,7 @@ class PolarizedThinFilm(VolumeMaterial):
             return 0.0, state
         c2 = sqrt(c2sq)  # cos (refracted_angle)
 
-        parallel_v, perpendicular_v = parallel_orthogonal_components(
+        parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(
             polarization_vector, incident, mynormal)
 
         parallel_component = parallel_v.Length
@@ -737,6 +737,26 @@ class SurfaceMaterial(Material):
         _ = cls(name, properties)
 
 
+    def get_n(self, wavelength):
+        """
+        Returns the (complex) refractive index at a certain wavelength
+
+        Parameters
+        ----------
+        wavelength : float
+
+        Returns
+        -------
+            complex
+        """
+        n = self.properties['index_of_refraction'](wavelength)
+        if 'extinction_coefficient' in self.properties:
+            kappaf = self.properties['extinction_coefficient']
+            kappa = kappaf(wavelength)
+            return n + 1j * kappa
+        else:
+            return n
+
     def compute_probabilities_and_polarizations(self, ray, normal_vector, nearby_material):
         """
         # TODO: Document
@@ -787,9 +807,10 @@ class SurfaceMaterial(Material):
             Phenomenon.ABSORPTION,
             Phenomenon.TRANSMITTANCE]
 
-        probabilities, polarization_vector, perpendicular_polarized = \
+        ans = \
             self.compute_probabilities_and_polarizations(ray, normal_vector,
                                                          nearby_material)
+        probabilities, polarization_vector, perpendicular_polarized = ans
         phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
         return phenomenon, polarization_vector, perpendicular_polarized
 
@@ -820,7 +841,7 @@ class SurfaceMaterial(Material):
                                  self))
 
     def change_of_optical_state_by_reflexion(self, ray, normal_vector,
-                                             polarization_vector_calculated_before):
+                                         polarization_vector_calculated_before):
         """
         # TODO @Ramon: Mirar l'embull del polarization_vector_calculated_before
         # TODO: Document
@@ -1278,7 +1299,7 @@ class MetallicLayer(SurfaceMaterial):
         c1 = - my_normal.dot(incident)  # cos (incidence_angle)
         c2 = sqrt(1.0 - r * r * (1.0 - c1 * c1))  # cos (refracted_angle)
 
-        parallel_v, perpendicular_v = parallel_orthogonal_components(
+        parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(
             polarization_vector, incident, my_normal)
 
         parallel_component = parallel_v.Length
@@ -1304,7 +1325,7 @@ class MetallicLayer(SurfaceMaterial):
 
 
 @traced(logger)
-class MetallicSpecularLayer(SurfaceMaterial):
+class MetallicSpecularLayer(MetallicLayer):
     """
     # TODO: Document
     """
@@ -1353,9 +1374,24 @@ class MetallicSpecularLayer(SurfaceMaterial):
         properties = Material.plain_properties_to_properties(plain_properties)
         super(MetallicSpecularLayer,self).__init__(name, properties)
 
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):	
+        polarization_vector = ray.current_polarization()
+        n1 = ray.current_medium().get_n(ray.wavelength)
+        n2 = self.get_n(ray.wavelength)
+        my_normal = normal_vector * 1.0
+        incident = ray.current_direction()
+        state = refraction(incident, my_normal, n1, n2, polarization_vector)
+        if state.phenomenon == Phenomenon.REFLEXION:
+            state.material = ray.current_medium()
+        if state.phenomenon == Phenomenon.REFRACTION:
+            # refraction in metallic layer: the ray is killed
+            state.material = nearby_material
+            state.phenomenon == Phenomenon.ABSORPTION
+        return state			
 
+        
 @traced(logger)
-class MetallicLambertianLayer(SurfaceMaterial):
+class MetallicLambertianLayer(MetallicLayer):
     """
     # TODO: Document
     """
@@ -1391,6 +1427,21 @@ class MetallicLambertianLayer(SurfaceMaterial):
         }
         properties = Material.plain_properties_to_properties(plain_properties)
         super(MetallicLambertianLayer,self).__init__(name, properties)
+		
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):	
+        polarization_vector = ray.current_polarization()
+        n1 = ray.current_medium().get_n(ray.wavelength)
+        n2 = self.get_n(ray.wavelength)
+        my_normal = normal_vector * 1.0
+        incident = ray.current_direction()
+        state = refraction(incident, my_normal, n1, n2, polarization_vector, True)
+        if state.phenomenon == Phenomenon.REFLEXION:
+            state.material = ray.current_medium()
+        if state.phenomenon == Phenomenon.REFRACTION:
+            # refraction in metallic layer: the ray is killed
+            state.material = nearby_material
+            state.phenomenon == Phenomenon.ABSORPTION
+        return state
 
 
 @traced(logger)
@@ -1424,7 +1475,7 @@ class PolarizedCoatingLayer(SurfaceMaterial):
                 return reflexion(incident, normal_vector, polarization_vector)
         c2 = sqrt(c2sq)  # cos (refracted_angle)
 
-        parallel_v, perpendicular_v = parallel_orthogonal_components(
+        parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(
             polarization_vector, incident, my_normal)
 
         parallel_component = parallel_v.Length
