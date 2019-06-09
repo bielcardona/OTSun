@@ -5,6 +5,9 @@ from .optics import Phenomenon, OpticalState
 import numpy as np
 import Part
 
+LOW_ENERGY = 1E-4 
+# Zero energy level 
+
 @traced(logger)
 class Ray(object):
     """
@@ -237,8 +240,7 @@ class Ray(object):
             self.last_normal = normal
 
             # Test for finish
-            if self.energy < 1E-4:
-                # needed for PV calculations TODO @Ramon: Why?
+            if self.energy < LOW_ENERGY:
                 self.finished = True
             if state.phenomenon == Phenomenon.ABSORPTION:
                 self.finished = True

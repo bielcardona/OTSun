@@ -13,6 +13,8 @@ from .logging_unit import logger
 
 EPSILON = 1E-6 
 # Tolerance for considering equal to zero
+INF = 1E20
+# Infinite
 
 class Phenomenon(Enum):
     """
@@ -230,11 +232,11 @@ def refraction(incident, normal, n1, n2, polarization_vector, Lambertian_surface
         my_normal = my_normal * (-1.0)
     r = n1 / n2
     c1 = - my_normal.dot(incident)
-    # cos (incidence_angle)
+    # cos (incident_angle)
     c2sq = 1.0 - r * r * (1.0 - c1 * c1)
     # cos (refracted_angle) ** 2
     if c2sq.real < 0:
-    # total internal reflection
+        # total internal reflection
         if not Lambertian_surface:
             return reflexion(incident, normal, polarization_vector)
         else:
@@ -242,22 +244,27 @@ def refraction(incident, normal, n1, n2, polarization_vector, Lambertian_surface
     c2 = sqrt(c2sq)
     # cos (refracted_angle)
     parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident, normal)
-	# parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
+    # parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
     ref_per = perpendicular_v.Length ** 2.0 / polarization_vector.Length ** 2.0
     # weight of perpendicular component: 0 < ref_per < 1
     # We decide the polarization projection onto the parallel / perpendicular plane
-    # if myrandom() < ref_per:
-    if myrandom() < -1.0:
-        # Perpendicular polarization
+    if myrandom() < ref_per:
+        # reflectance for s-polarized (perpendicular) light
         a = (n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)
-        reflectance = a * a.conjugate()  # reflectance for s-polarized (perpendicular) light
+        reflectance = a * a.conjugate()
         perpendicular_polarized = True
+        if perpendicular_v.Length < EPSILON:
+            # we avoid null vector
+            perpendicular_v = perpendicular_v * INF
         polarization_vector = perpendicular_v.normalize()
     else:
-        # Parallel polarization
+        # reflectance for p-polarized (parallel) light
         a = (n1 * c2 - n2 * c1) / (n1 * c2 + n2 * c1)
-        reflectance = a * a.conjugate()  # reflectance for p-polarized (parallel) light
+        reflectance = a * a.conjugate()
         perpendicular_polarized = False
+        if parallel_v.Length < EPSILON:
+            # we avoid null vector
+            parallel_v = parallel_v * INF
         polarization_vector = parallel_v.normalize()
     # The ray can be reflected or refracted 
     if myrandom() < reflectance.real:
@@ -277,7 +284,7 @@ def refraction(incident, normal, n1, n2, polarization_vector, Lambertian_surface
         else:
             return lambertian_reflexion(incident, normal)
     else:
-        # ray refracted: computing the refracing direction
+        # ray refracted: computing the refracted direction
         refracted_direction = incident * r.real + \
                               my_normal * (r.real * c1 - c2.real)
         if perpendicular_polarized:
@@ -285,9 +292,11 @@ def refraction(incident, normal, n1, n2, polarization_vector, Lambertian_surface
             return OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION)
         else:
             # refraction changes the parallel component of incident polarization
-            angle = (np.arccos(c2) - np.arccos(c1)) * 180.0 / np.pi
-            # angle to rotate the incident polarization vector
-            angle = angle.real			
+            # print c2.real, c1
+            if not -1 <= c2.real <= 1 or not -1 <= c1 <= 1:
+                print c1, c2, c2sq, r, n1, n2
+            angle = (np.arccos(c2.real) - np.arccos(c1)) * 180.0 / np.pi
+            # angle to rotate the incident polarization vector			
             rotation = Base.Rotation(normal_parallel_plane, angle)
             polarization_vector = rotation.multVec(polarization_vector)
             return OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION)

@@ -621,57 +621,89 @@ class PolarizedThinFilm(VolumeMaterial):
         """
         # TODO: document
         # returns optical state of the ray in thin film material
-        mynormal = normal * 1.0
+        my_normal = normal * 1.0
         backside = False
-        if mynormal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
-            mynormal = mynormal * (-1.0)
+        perpendicular_polarized = False
+        if my_normal.dot(incident) > 0:
+            # Ray intercepted on the backside of the surface
+            my_normal = my_normal * (-1.0)
             backside = True
-        r = n1.real / n2.real
-        c1 = - mynormal.dot(incident)  # cos (incidence_angle)
-        c2sq = 1.0 - r * r * (1.0 - c1 * c1)  # cos (refracted_angle) ** 2
-        if c2sq.real < 0:  # total internal reflection
+        r = n1 / n2
+        c1 = - my_normal.dot(incident)
+        # cos (incident_angle)
+        c2sq = 1.0 - r * r * (1.0 - c1 * c1)
+        # cos (refracted_angle) ** 2
+        if c2sq.real < 0:
+            # total internal reflection
             state = reflexion(incident, normal, polarization_vector)
             return 0.0, state
-        c2 = sqrt(c2sq)  # cos (refracted_angle)
-
-        parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(
-            polarization_vector, incident, mynormal)
-
-        parallel_component = parallel_v.Length
-        perpendicular_component = perpendicular_v.Length
-        ref_per = perpendicular_component / (perpendicular_component + parallel_component)
-        perpendicular_polarized = False
-        # https://en.wikipedia.org/wiki/Fresnel_equations # Fresnel equations
-
-        if backside:  # Ray intercepted on the backside of the transparent surface
+            # no energy is abosrbed in the thinfilm
+        c2 = sqrt(c2sq)
+        # cos (refracted_angle)
+        parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident, my_normal)
+        # parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
+        ref_per = perpendicular_v.Length ** 2.0 / polarization_vector.Length ** 2.0
+        # weight of perpendicular component: 0 < ref_per < 1
+        if backside:
+            # Ray intercepted on the backside of the transparent surface
             angle = np.arccos(c2.real) * 180.0 / np.pi
         else:
             angle = np.arccos(c1) * 180.0 / np.pi
         reflectance_matrix = properties['Matrix_reflectance_thin_film']
         r_matrix = reflectance_matrix(angle, wavelength)
+        # reflectance dependent of incidence angle and wavelength
+        # We decide the polarization projection onto the parallel / perpendicular plane
         if myrandom() < ref_per:
-            r = calculate_reflectance(r_matrix, angle, wavelength)[
-                0]  # reflectance for s-polarized (perpendicular) light
+            reflectance = calculate_reflectance(r_matrix, angle, wavelength)[0]
+            # reflectance for s-polarized (perpendicular) light
             perpendicular_polarized = True
+            if perpendicular_v.Length < EPSILON:
+                # we avoid null vector
+                perpendicular_v = perpendicular_v * INF
             polarization_vector = perpendicular_v.normalize()
         else:
-            angle = np.arccos(c1) * 180.0 / np.pi
-            r = calculate_reflectance(r_matrix, angle, wavelength)[1]
+            reflectance = calculate_reflectance(r_matrix, angle, wavelength)[1]
             # reflectance for p-polarized (parallel) light
+            if parallel_v.Length < EPSILON:
+                # we avoid null vector
+                parallel_v = parallel_v * INF
             polarization_vector = parallel_v.normalize()
-        if myrandom() < r:  # ray reflected
-            return 0.0, reflexion(incident, normal, polarization_vector)
+        if myrandom() < reflectance:
+            # ray reflected
+            reflected = incident + my_normal * 2.0 * c1
+            reflected_direction = reflected.normalize()
+            if perpendicular_polarized:
+                # reflexion no changes the perpendicular component of incident polarization
+                return 0.0, OpticalState(polarization_vector, reflected_direction, Phenomenon.REFLEXION) 
+            else:
+                # reflexion changes the parallel component of incident polarization
+                rotation_angle = (np.pi - 2.0 * np.arccos(c1)) * 180.0 / np.pi
+                rotation = Base.Rotation(normal_parallel_plane, rotation_angle)
+                polarization_vector = rotation.multVec(polarization_vector)
+                return 0.0, OpticalState(polarization_vector, reflected_direction, Phenomenon.REFLEXION)
         else:
+            # ray refracted: computing the refracted direction and energy absorbed
             transmittance_matrix = properties['Matrix_transmittance_thin_film']
             t_matrix = transmittance_matrix(angle, wavelength)
+            # transmittance dependent of incidence angle and wavelength
             if perpendicular_polarized:
-                t = calculate_reflectance(t_matrix, angle, wavelength)[0]
+                transmittance = calculate_reflectance(t_matrix, angle, wavelength)[0]
             else:
-                t = calculate_reflectance(t_matrix, angle, wavelength)[1]
-            factor_energy_absorbed_thin_film = (1 - r - t) / (1 - r)
-            refracted_direction = incident * r.real + mynormal * (r.real * c1.real - c2.real)
-            return (factor_energy_absorbed_thin_film,
-                    OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION))
+                transmittance = calculate_reflectance(t_matrix, angle, wavelength)[1]
+            factor_energy_absorbed_thin_film = (1 - reflectance - transmittance) / (1 - reflectance)
+            refracted_direction = incident * r.real + \
+                                  my_normal * (r.real * c1 - c2.real)
+            if perpendicular_polarized:
+                # refraction no changes the perpendicular component of incident polarization
+                return factor_energy_absorbed_thin_film, OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION)
+            else:
+                # refraction changes the parallel component of incident polarization
+                angle_r = (np.arccos(c2.real) - np.arccos(c1)) * 180.0 / np.pi
+                # angle to rotate the incident polarization vector
+                rotation = Base.Rotation(normal_parallel_plane, angle_r)
+                polarization_vector = rotation.multVec(polarization_vector)
+                return (factor_energy_absorbed_thin_film,
+                        OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION))
 
     def change_of_optical_state(self, ray, normal_vector):
         """
@@ -694,7 +726,7 @@ class PolarizedThinFilm(VolumeMaterial):
         if n1 == n_front + 1j * k_front:
             n2 = n_back + 1j * k_back
         else:
-            n2 = n_front + 1j * k_back
+            n2 = n_front + 1j * k_front
         factor_energy_absorbed_thin_film, optical_state = (
             self.calculate_state_thin_film(
                 ray.current_direction(), normal_vector, n1,n2,
@@ -807,10 +839,9 @@ class SurfaceMaterial(Material):
             Phenomenon.ABSORPTION,
             Phenomenon.TRANSMITTANCE]
 
-        ans = \
+        probabilities, polarization_vector, perpendicular_polarized = \
             self.compute_probabilities_and_polarizations(ray, normal_vector,
                                                          nearby_material)
-        probabilities, polarization_vector, perpendicular_polarized = ans
         phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
         return phenomenon, polarization_vector, perpendicular_polarized
 
@@ -829,6 +860,7 @@ class SurfaceMaterial(Material):
         """
         properties = self.properties
         # TODO @Ramon: GOT_ABSORBED i ABSORPTION sonen massa iguals, no? Cal distingir?
+        # Si, es pot canviar per ENERGY_ABSORBED
         if properties['energy_collector']:
             return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                  Base.Vector(0.0, 0.0, 0.0),
@@ -924,7 +956,8 @@ class SurfaceMaterial(Material):
             if ray.current_direction().dot(normal_vector) < 0:
                 # Ray intercepted on the frontside of the surface
                 material = self.front_material
-            else:  # Ray intercepted on the backside of the surface
+            else:
+                # Ray intercepted on the backside of the surface
                 material = self.back_material
         else:
             material = self
@@ -1243,8 +1276,7 @@ class ReflectorSpecularLayer(SurfaceMaterial):
         }
         properties = Material.plain_properties_to_properties(plain_properties)
         super(ReflectorSpecularLayer,self).__init__(name, properties)
-
-
+    
 @traced(logger)
 class ReflectorLambertianLayer(SurfaceMaterial):
     """
@@ -1282,6 +1314,7 @@ class MetallicLayer(SurfaceMaterial):
     """
     # TODO: Document
     """
+    # TODO: material obsolet o be que sigui el pare de MetallicSpecularLayer i MetallicLambertianLayer
     def __init__(self, *args):
         super(MetallicLayer, self).__init__(*args)
 
@@ -1289,7 +1322,6 @@ class MetallicLayer(SurfaceMaterial):
         polarization_vector = ray.current_polarization()
         n1 = ray.current_medium().get_n(ray.wavelength)
         n2 = self.get_n(ray.wavelength)
-
         my_normal = normal_vector * 1.0
         incident = ray.current_direction()
         if my_normal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
@@ -1298,15 +1330,12 @@ class MetallicLayer(SurfaceMaterial):
         r = n1 / n2
         c1 = - my_normal.dot(incident)  # cos (incidence_angle)
         c2 = sqrt(1.0 - r * r * (1.0 - c1 * c1))  # cos (refracted_angle)
-
-        parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(
-            polarization_vector, incident, my_normal)
-
+        parallel_v, perpendicular_v, normal_parallel_plane = \
+            parallel_orthogonal_components(polarization_vector, incident, my_normal)
         parallel_component = parallel_v.Length
         perpendicular_component = perpendicular_v.Length
         ref_per = perpendicular_component / (perpendicular_component + parallel_component)
         perpendicular_polarized = False
-
         if myrandom() < ref_per:
             a = (n1 * c1 - n2 * c2) / (n1 * c1 + n2 * c2)
             r = a * a.conjugate()  # reflectance for s-polarized (perpendicular) light
@@ -1320,8 +1349,6 @@ class MetallicLayer(SurfaceMaterial):
             return [1, 0, 0], polarization_vector, perpendicular_polarized, True
         else:  # ray refracted
             return [0, 1, 0], polarization_vector, perpendicular_polarized, True
-
-
 
 
 @traced(logger)
