@@ -9,6 +9,7 @@ import time
 
 EPSILON = 1E-6 
 # Tolerance for considering equal to zero
+INF = 1E20
 
 def polar_to_cartesian(phi, theta):
     """Convert polar coordinates of unit vector to cartesian
@@ -31,6 +32,9 @@ def polar_to_cartesian(phi, theta):
     z = np.cos(theta * rad)
     return Base.Vector(x, y, z)
 
+
+def rad_to_deg(angle):
+    return angle * 180.0 / np.pi
 
 # ---
 # Helper functions for input of functions
@@ -66,6 +70,17 @@ def tabulated_function(xvalues, yvalues):
         Function that interpolates by straight line segments the input data
     """
     return lambda x: np.interp(x, xvalues, yvalues)
+
+
+def cached_tabulated_function(xvalues, yvalues):
+    cached_values = {}
+    def my_func(x):
+        if x not in cached_values:
+            # print "computing for ",x
+            value = np.interp(x, xvalues, yvalues)
+            cached_values[x] = value
+        return cached_values[x]
+    return my_func
 
 
 # ---
@@ -124,7 +139,10 @@ def cdf_from_pdf_file(data_file):
 
     data_file: file or str
         file or filename where PDF values are stored
-    output: list of float, list of float
+
+    Returns
+    -------
+    list of float, list of float
         x-values and y-values of CDF
     """
     data_array = np.loadtxt(data_file, usecols=(0, 1))
@@ -180,19 +198,13 @@ def parallel_orthogonal_components(vector, incident, normal):
     -------
     parallel : Base.Vector
     orthogonal : Base.Vector
-    normal of the parallel plane: Base.Vector
+    normal_parallel_plane: Base.Vector
     """
     polarization_vector = vector
     normal_parallel_plane = incident.cross(normal)
     # orthogonal vector to reflexion plane (parallel_plane)
     if normal_parallel_plane.Length < EPSILON:
-        # incident parallel to normal
-        normal_parallel_plane = Base.Vector(-normal[2], 0, normal[0])
-        # orthogonal vector to normal
-        if normal_parallel_plane.Length < EPSILON:
-        # to avoid null vector
-            normal_parallel_plane = Base.Vector(-normal[1], normal[0], 0)
-            # another orthogonal vector to normal
+        normal_parallel_plane = one_orthogonal_vector(normal)
     normal_parallel_plane.normalize()
     normal_perpendicular_plane = incident.cross(normal_parallel_plane)
     # orthogonal vector to perpendicular_plane
@@ -218,10 +230,8 @@ def two_orthogonal_vectors(vector):
     orthogonal_1 : Base.Vector
     orthogonal_2 : Base.Vector
     """
-    orthogonal_1 = Base.Vector(-vector[1], vector[0] , 0)
-    if orthogonal_1.Length < EPSILON:
-        orthogonal_1 = Base.Vector(-vector[2], 0, vector[0])
-    orthogonal_2 = Base.Vector(0, -vector[2] , vector[1])
+    orthogonal_1 = one_orthogonal_vector(vector)
+    orthogonal_2 = vector.cross(orthogonal_1)
     return orthogonal_1.normalize(), orthogonal_2.normalize()
 
 def one_orthogonal_vector(vector):
@@ -237,7 +247,22 @@ def one_orthogonal_vector(vector):
     -------
     orthogonal : Base.Vector
     """
-    orthogonal = Base.Vector(-vector[1], vector[0] , 0)
-    if orthogonal.Length < EPSILON:
-        orthogonal = Base.Vector(-vector[2], 0, vector[0])
+    min_pos = np.argmin([abs(vector[0]), abs(vector[1]), abs(vector[2])])
+    if min_pos == 0:
+        orthogonal = Base.Vector(0, vector[2], -vector[1])
+    elif min_pos == 1:
+        orthogonal = Base.Vector(vector[2], 0, -vector[0])
+    else:
+        orthogonal = Base.Vector(vector[1], -vector[0], 0)
     return orthogonal.normalize()
+
+def correct_normal(normal, incident):
+    if normal.dot(incident) > 0:
+        return normal * (-1)
+    else:
+        return normal
+
+def normalize(vector):
+    if vector.Length < EPSILON:
+        vector = vector * INF
+    return vector.normalize()

@@ -27,7 +27,7 @@ class Phenomenon(Enum):
     REFRACTION = 2
     ABSORPTION = 3
     TRANSMITTANCE = 4
-    GOT_ABSORBED = 5
+    ENERGY_ABSORBED = 5
 
 
 class OpticalState(object):
@@ -131,6 +131,20 @@ class OpticalState(object):
 # ---
 # Helper functions for reflexion and refraction
 # ---
+
+@traced(logger)
+def simple_reflexion(incident, normal):
+    normal = correct_normal(normal)
+    c1 = - normal.dot(incident)
+    return incident + normal * 2.0 * c1
+
+def simple_polarization_reflexion(incident, normal, normal_parallel_plane, polarization):
+    c1 = - normal.dot(incident)
+    rotation_angle = rad_to_deg(np.pi - 2.0 * np.arccos(c1))
+    rotation = Base.Rotation(normal_parallel_plane, rotation_angle)
+    return rotation.multVec(polarization)
+
+
 @traced(logger)
 def reflexion(incident, normal, polarization_vector,
               polarization_vector_calculated_before=False):
@@ -163,8 +177,9 @@ def reflexion(incident, normal, polarization_vector,
     # reflexion changes the polarization vector
     if not polarization_vector_calculated_before:
         # we calculate the new polarization vector
-        parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident, normal)
-	    # parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
+        parallel_v, perpendicular_v, normal_parallel_plane = \
+            parallel_orthogonal_components(polarization_vector, incident, normal)
+        # parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
         angle = (np.pi - 2.0 * np.arccos(c1)) * 180.0 / np.pi
         rotation = Base.Rotation(normal_parallel_plane, angle)
         polarization_vector = rotation.multVec(polarization_vector)
@@ -235,7 +250,7 @@ def refraction(incident, normal, n1, n2, polarization_vector, Lambertian_surface
     # cos (incident_angle)
     c2sq = 1.0 - r * r * (1.0 - c1 * c1)
     # cos (refracted_angle) ** 2
-    if c2sq.real < 0:
+    if c2sq.real > 1:
         # total internal reflection
         if not Lambertian_surface:
             return reflexion(incident, normal, polarization_vector)
@@ -302,7 +317,7 @@ def refraction(incident, normal, n1, n2, polarization_vector, Lambertian_surface
             return OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION)
 
 
-			
+
 @traced(logger)
 def shure_refraction(incident, normal, n1, n2, polarization_vector, perpendicular_polarized):
     """Implementation of Snell's law of refraction
