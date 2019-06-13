@@ -1,6 +1,8 @@
 from .materials import Material
 from .logging_unit import logger
 
+MATERIAL_EPSILON = 5 * 10.0 ** (-6.0) # Tolerance for solid containment # 5 nm.
+
 class Scene:
     """
     Class used to define the Scene. It encodes all the objects
@@ -12,7 +14,7 @@ class Scene:
         self.solids = []  # All the solids in the Scene
         self.materials = {}  # Assign the materials to objects
         # self.sum_energy = 0.0 # Energy of the Scene
-        self.epsilon = 5 * 10.0 ** (-6.0)  # Tolerance for solid containment # 5 nm.
+        self.epsilon = MATERIAL_EPSILON
         self.boundbox = None
 
         for obj in objects:
