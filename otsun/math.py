@@ -10,6 +10,7 @@ import time
 EPSILON = 1E-6 
 # Tolerance for considering equal to zero
 INF = 1E20
+# Infinite
 
 def polar_to_cartesian(phi, theta):
     """Convert polar coordinates of unit vector to cartesian
