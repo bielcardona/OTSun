@@ -7,6 +7,11 @@ from FreeCAD import Base
 import random
 import time
 
+EPSILON = 1E-6 
+# Tolerance for considering equal to zero
+INF = 1E20
+# Infinite
+
 def polar_to_cartesian(phi, theta):
     """Convert polar coordinates of unit vector to cartesian
 
@@ -28,6 +33,9 @@ def polar_to_cartesian(phi, theta):
     z = np.cos(theta * rad)
     return Base.Vector(x, y, z)
 
+
+def rad_to_deg(angle):
+    return angle * 180.0 / np.pi
 
 # ---
 # Helper functions for input of functions
@@ -100,8 +108,8 @@ def random_congruential(seed=None):
 # ---
 # Define the random algorithm
 # ---
-# myrandom = random_congruential
-myrandom = random.random
+myrandom = random_congruential
+# myrandom = random.random
 
 # ---
 # Helper function for Cumulative Function Distribution and Randomly generatting distribution
@@ -121,7 +129,10 @@ def cdf_from_pdf_file(data_file):
 
     data_file: file or str
         file or filename where PDF values are stored
-    output: list of float, list of float
+
+    Returns
+    -------
+    list of float, list of float
         x-values and y-values of CDF
     """
     data_array = np.loadtxt(data_file, usecols=(0, 1))
@@ -163,8 +174,9 @@ def parallel_orthogonal_components(vector, incident, normal):
     `incident` (direction of a ray) and
     `normal` (vector orthogonal to a plane),
     decompose `vector` it in
-    a component parallel to the plane (and orthogonal to incident)
-    a component contained in the plane determined by normal and incident
+    a component contained in the reflexion (parallel) plane (determined by normal and incident): p-polarized (parallel) light
+    a component contained in the orthogonal plane to the reflexion plane: s-polarized (perpendicular) light
+    also returns the normal vector to the reflexion plane
 
     Parameters
     ----------
@@ -176,18 +188,71 @@ def parallel_orthogonal_components(vector, incident, normal):
     -------
     parallel : Base.Vector
     orthogonal : Base.Vector
+    normal of the parallel plane: Base.Vector
     """
+    polarization_vector = vector
     normal_parallel_plane = incident.cross(normal)
-    # normal vector of the parallel plane
-    if normal_parallel_plane == Base.Vector(0, 0, 0):
-        # to avoid null vector at mynormal and incident parallel vectors
-        normal_parallel_plane = Base.Vector(1, 0, 0)
+    # orthogonal vector to reflexion plane (parallel_plane)
+    if normal_parallel_plane.Length < EPSILON:
+        normal_parallel_plane = one_orthogonal_vector(normal)
     normal_parallel_plane.normalize()
-    normal_perpendicular_plane = normal_parallel_plane.cross(incident)
-    # normal vector of the perpendicular plane
-    parallel_v = vector - normal_parallel_plane * \
-                 vector.dot(normal_parallel_plane)
-    perpendicular_v = vector - \
-                      normal_perpendicular_plane * \
-                      vector.dot(normal_perpendicular_plane)
-    return parallel_v, perpendicular_v
+    normal_perpendicular_plane = incident.cross(normal_parallel_plane)
+    # orthogonal vector to perpendicular_plane
+    parallel_v = polarization_vector - \
+                 normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+    # parallel_v is the projection of polarization_vector onto parallel_plane
+    perpendicular_v = polarization_vector - \
+                 normal_perpendicular_plane * polarization_vector.dot(normal_perpendicular_plane)
+    # perpendicular_v is the projection of polarization_vector onto the perpendicular_plane
+    return parallel_v, perpendicular_v, normal_parallel_plane
+	
+def two_orthogonal_vectors(vector):
+    """Gives two orthogonal vectors of a vector
+
+    Given `vector` find two orthogonal vectors
+
+    Parameters
+    ----------
+    vector : Base.Vector
+
+    Returns
+    -------
+    orthogonal_1 : Base.Vector
+    orthogonal_2 : Base.Vector
+    """
+    orthogonal_1 = one_orthogonal_vector(vector)
+    orthogonal_2 = vector.cross(orthogonal_1)
+    return orthogonal_1.normalize(), orthogonal_2.normalize()
+
+def one_orthogonal_vector(vector):
+    """Gives one orthogonal vector of a vector
+
+    Given `vector` find one orthogonal vector
+
+    Parameters
+    ----------
+    vector : Base.Vector
+
+    Returns
+    -------
+    orthogonal : Base.Vector
+    """
+    min_pos = np.argmin([abs(vector[0]), abs(vector[1]), abs(vector[2])])
+    if min_pos == 0:
+        orthogonal = Base.Vector(0, vector[2], -vector[1])
+    elif min_pos == 1:
+        orthogonal = Base.Vector(vector[2], 0, -vector[0])
+    else:
+        orthogonal = Base.Vector(vector[1], -vector[0], 0)
+    return orthogonal.normalize()
+
+def correct_normal(normal, incident):
+    if normal.dot(incident) > 0:
+        return normal * (-1)
+    else:
+        return normal
+
+def normalize(vector):
+    if vector.Length < EPSILON:
+        vector = vector * INF
+    return vector.normalize()
