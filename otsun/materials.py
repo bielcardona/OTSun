@@ -866,16 +866,7 @@ class SurfaceMaterial(Material):
         -------
 
         """
-        if isinstance(self, TwoLayerMaterial):
-            if ray.current_direction().dot(normal_vector) < 0:
-                # Ray intercepted on the frontside of the surface
-                material = self.front_material
-            else:
-                # Ray intercepted on the backside of the surface
-                material = self.back_material
-            return material.change_of_optical_state(ray, normal_vector, nearby_material)
-        else:
-            material = self
+        material = self
 
         results = material.decide_phenomenon(ray, normal_vector, nearby_material)
         phenomenon = results[0]
@@ -1677,3 +1668,12 @@ class TwoLayerMaterial(SurfaceMaterial):
                 'name_back_layer': self.name_back_layer
             }, cls=NumpyEncoder
         )
+
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+        if ray.current_direction().dot(normal_vector) < 0:
+            # Ray intercepted on the frontside of the surface
+            material = self.front_material
+        else:
+            # Ray intercepted on the backside of the surface
+            material = self.back_material
+        return material.change_of_optical_state(ray, normal_vector, nearby_material)
