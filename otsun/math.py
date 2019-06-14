@@ -108,8 +108,8 @@ def random_congruential(seed=None):
 # ---
 # Define the random algorithm
 # ---
-myrandom = random_congruential
-# myrandom = random.random
+# myrandom = random_congruential
+myrandom = random.random
 
 # ---
 # Helper function for Cumulative Function Distribution and Randomly generatting distribution
