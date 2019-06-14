@@ -252,13 +252,13 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, Lambertian_
     if c2sq.real < 0:
         # total internal reflection
         if not Lambertian_surface:
-            return reflexion(incident, normal_vector, polarization_vector)
+            return reflexion(incident, normal, polarization_vector)
         else:
-            return lambertian_reflexion(incident, normal_vector)
+            return lambertian_reflexion(incident, normal)
     c2 = sqrt(c2sq)
     # cos (refracted_angle)
     parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident, normal)
-	# parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
+    # parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
     ref_per = perpendicular_v.Length ** 2.0 / polarization_vector.Length ** 2.0
     # weight of perpendicular component: 0 < ref_per < 1
     # We decide the polarization projection onto the parallel / perpendicular plane
@@ -278,13 +278,13 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, Lambertian_
     if myrandom() < reflectance.real:
         # ray reflected
         if not Lambertian_surface:
-            reflected_direction = simple_reflexion(incident, normal_vector)
+            reflected_direction = simple_reflexion(incident, normal)
             if not perpendicular_polarized:
                 # reflexion changes the parallel component of incident polarization
                 polarization_vector = simple_polarization_reflexion(incident, normal, normal_parallel_plane, polarization_vector)
             return OpticalState(polarization_vector, reflected_direction, Phenomenon.REFLEXION)
         else:
-            return lambertian_reflexion(incident, normal_vector)
+            return lambertian_reflexion(incident, normal)
     else:
         # ray refracted: computing the refracted direction
         refracted_direction = incident * r.real + \

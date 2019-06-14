@@ -1539,7 +1539,7 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             polarization_vector = normalize(parallel_v)
         if myrandom() < reflectance:
             # ray reflected
-            reflected_direction = simple_reflexion(incident, normal_vector)
+            reflected_direction = simple_reflexion(incident, normal)
             if not perpendicular_polarized:
                 # reflexion changes the parallel component of incident polarization
                 polarization_vector = simple_polarization_reflexion(

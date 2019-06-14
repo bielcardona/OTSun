@@ -188,7 +188,7 @@ def parallel_orthogonal_components(vector, incident, normal):
     -------
     parallel : Base.Vector
     orthogonal : Base.Vector
-    normal of the parallel plane: Base.Vector
+    normal_of_parallel_plane: Base.Vector
     """
     polarization_vector = vector
     normal_parallel_plane = incident.cross(normal)
