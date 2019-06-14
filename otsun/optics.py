@@ -27,7 +27,7 @@ class Phenomenon(Enum):
     REFRACTION = 2
     ABSORPTION = 3
     TRANSMITTANCE = 4
-    GOT_ABSORBED = 5
+    ENERGY_ABSORBED = 5
 
 
 class OpticalState(object):
