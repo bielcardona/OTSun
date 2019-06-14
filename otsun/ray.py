@@ -244,7 +244,7 @@ class Ray(object):
                 self.finished = True
             if state.phenomenon == Phenomenon.ABSORPTION:
                 self.finished = True
-            if state.phenomenon == Phenomenon.ENERGY_ABSORBED:
+            if state.phenomenon == Phenomenon.GOT_ABSORBED:
                 self.got_absorbed = True
                 self.finished = True
 

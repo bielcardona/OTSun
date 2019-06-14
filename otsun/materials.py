@@ -631,6 +631,7 @@ class PolarizedThinFilm(VolumeMaterial):
             factor_energy_absorbed_thin_film = (1 - reflectance - transmittance) / (1 - reflectance)
             refracted_direction = incident * r.real + \
                                   normal * (r.real * c1 - c2.real)
+            refracted_direction.normalize()
             if not perpendicular_polarized:
                 # refraction changes the parallel component of incident polarization
                 polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, polarization_vector)
@@ -777,7 +778,7 @@ class SurfaceMaterial(Material):
         if properties['energy_collector']:
             return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                  Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ENERGY_ABSORBED,
+                                 Phenomenon.GOT_ABSORBED,
                                  self))
         else:
             return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
@@ -872,6 +873,7 @@ class SurfaceMaterial(Material):
             else:
                 # Ray intercepted on the backside of the surface
                 material = self.back_material
+            return material.change_of_optical_state(ray, normal_vector, nearby_material)
         else:
             material = self
 
@@ -1189,6 +1191,22 @@ class ReflectorSpecularLayer(SurfaceMaterial):
         }
         properties = Material.plain_properties_to_properties(plain_properties)
         super(ReflectorSpecularLayer,self).__init__(name, properties)
+		
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+        properties = self.properties
+        reflectance = properties['probability_of_reflexion'](ray.wavelength)
+        if myrandom() < reflectance:
+            normal_vector = normal_vector			
+            polarization_vector = ray.current_polarization()
+            incident = ray.current_direction()
+            state = reflexion(incident, normal_vector, polarization_vector, False)
+            state.material = ray.current_medium()
+            return state
+        else:
+            # refraction in metallic layer: the ray is killed
+            return OpticalState(Base.Vector(0.0, 0.0, 0.0),
+                                 Base.Vector(0.0, 0.0, 0.0),
+                                 Phenomenon.ABSORPTION, self) 
     
 @traced(logger)
 class ReflectorLambertianLayer(SurfaceMaterial):
@@ -1288,11 +1306,12 @@ class MetallicSpecularLayer(MetallicLayer):
         state = refraction(incident, normal_vector, n1, n2, polarization_vector)
         if state.phenomenon == Phenomenon.REFLEXION:
             state.material = ray.current_medium()
+            return state
         if state.phenomenon == Phenomenon.REFRACTION:
             # refraction in metallic layer: the ray is killed
-            state.material = nearby_material
-            state.phenomenon == Phenomenon.ABSORPTION
-        return state			
+            return OpticalState(Base.Vector(0.0, 0.0, 0.0),
+                                 Base.Vector(0.0, 0.0, 0.0),
+                                 Phenomenon.ABSORPTION, self) 			
 
         
 @traced(logger)
@@ -1341,11 +1360,12 @@ class MetallicLambertianLayer(MetallicLayer):
         state = refraction(incident, normal_vector, n1, n2, polarization_vector, True)
         if state.phenomenon == Phenomenon.REFLEXION:
             state.material = ray.current_medium()
+            return state
         if state.phenomenon == Phenomenon.REFRACTION:
             # refraction in metallic layer: the ray is killed
-            state.material = nearby_material
-            state.phenomenon == Phenomenon.ABSORPTION
-        return state
+            return OpticalState(Base.Vector(0.0, 0.0, 0.0),
+                                 Base.Vector(0.0, 0.0, 0.0),
+                                 Phenomenon.ABSORPTION, self) 
 
 
 @traced(logger)
@@ -1528,7 +1548,7 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             polarization_vector = normalize(parallel_v)
         if myrandom() < reflectance:
             # ray reflected
-            reflected_direction = simple_reflexion(incident, normal).normalize()
+            reflected_direction = simple_reflexion(incident, normal_vector)
             if not perpendicular_polarized:
                 # reflexion changes the parallel component of incident polarization
                 polarization_vector = simple_polarization_reflexion(
@@ -1630,8 +1650,7 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
             # ray refracted: ray energy will be absorbed in the coating absorber
             state = OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                  Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ENERGY_ABSORBED)
-            state.material = self
+                                 Phenomenon.GOT_ABSORBED, self)
             return state
 
 
