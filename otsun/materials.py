@@ -773,12 +773,12 @@ class SurfaceMaterial(Material):
 
         """
         properties = self.properties
-        # TODO @Ramon: GOT_ABSORBED i ABSORPTION sonen massa iguals, no? Cal distingir?
+        # TODO @Ramon: ENERGY_ABSORBED i ABSORPTION sonen massa iguals, no? Cal distingir?
         # Si, es pot canviar per ENERGY_ABSORBED
         if properties['energy_collector']:
             return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                  Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.GOT_ABSORBED,
+                                 Phenomenon.ENERGY_ABSORBED,
                                  self))
         else:
             return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
@@ -1650,7 +1650,7 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
             # ray refracted: ray energy will be absorbed in the coating absorber
             state = OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                  Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.GOT_ABSORBED, self)
+                                 Phenomenon.ENERGY_ABSORBED, self)
             return state
 
 
