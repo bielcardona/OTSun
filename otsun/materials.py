@@ -778,7 +778,7 @@ class SurfaceMaterial(Material):
         if properties['energy_collector']:
             return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                  Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.GOT_ABSORBED,
+                                 Phenomenon.ENERGY_ABSORBED,
                                  self))
         else:
             return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
@@ -1559,6 +1559,7 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             # ray refracted: computing the refracted direction
             refracted_direction = incident * r.real + \
                                   normal * (r.real * c1 - c2.real)
+            refracted_direction.normalize()
             if not perpendicular_polarized:
                 # refraction changes the parallel component of incident polarization
                 polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, polarization_vector)
@@ -1649,7 +1650,7 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
             # ray refracted: ray energy will be absorbed in the coating absorber
             state = OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                  Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.GOT_ABSORBED, self)
+                                 Phenomenon.ENERGY_ABSORBED, self)
             return state
 
 
