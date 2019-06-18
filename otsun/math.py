@@ -108,8 +108,8 @@ def random_congruential(seed=None):
 # ---
 # Define the random algorithm
 # ---
-myrandom = random_congruential
-# myrandom = random.random
+# myrandom = random_congruential
+myrandom = random.random
 
 # ---
 # Helper function for Cumulative Function Distribution and Randomly generatting distribution
@@ -188,7 +188,7 @@ def parallel_orthogonal_components(vector, incident, normal):
     -------
     parallel : Base.Vector
     orthogonal : Base.Vector
-    normal of the parallel plane: Base.Vector
+    normal_of_parallel_plane: Base.Vector
     """
     polarization_vector = vector
     normal_parallel_plane = incident.cross(normal)
@@ -256,3 +256,11 @@ def normalize(vector):
     if vector.Length < EPSILON:
         vector = vector * INF
     return vector.normalize()
+	
+def arccos(x):
+    assert abs(x) < 1 + EPSILON
+    if abs(x) < 1 - EPSILON:
+        return np.arccos(x)
+    if x > 0:
+        return 0
+    return np.pi

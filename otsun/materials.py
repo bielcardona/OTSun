@@ -461,7 +461,7 @@ class PVMaterial(VolumeMaterial):
         alpha = self.properties['extinction_coefficient'](
             ray.wavelength) * 4 * np.pi / (ray.wavelength / 1E6)  # mm-1
         # TODO: @Ramon: Revisar angle (sona raro)
-        angle_incident = np.arccos(
+        angle_incident = arccos(
             - ray.last_normal.dot(ray.current_direction())) * 180.0 / np.pi
         point_1 = ray.points[-1]
         point_2 = ray.points[-2]
@@ -594,9 +594,9 @@ class PolarizedThinFilm(VolumeMaterial):
         # weight of perpendicular component: 0 < ref_per < 1
         if backside:
             # Ray intercepted on the backside of the transparent surface
-            inc_angle = rad_to_deg(np.arccos(c2.real))
+            inc_angle = rad_to_deg(arccos(c2.real))
         else:
-            inc_angle = rad_to_deg(np.arccos(c1))
+            inc_angle = rad_to_deg(arccos(c1))
         reflectance_matrix = properties['Matrix_reflectance_thin_film']
         r_matrix = reflectance_matrix(inc_angle, wavelength)
         # reflectance dependent of incidence angle and wavelength
@@ -773,8 +773,6 @@ class SurfaceMaterial(Material):
 
         """
         properties = self.properties
-        # TODO @Ramon: GOT_ABSORBED i ABSORPTION sonen massa iguals, no? Cal distingir?
-        # Si, es pot canviar per ENERGY_ABSORBED
         if properties['energy_collector']:
             return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                  Base.Vector(0.0, 0.0, 0.0),
@@ -866,16 +864,7 @@ class SurfaceMaterial(Material):
         -------
 
         """
-        if isinstance(self, TwoLayerMaterial):
-            if ray.current_direction().dot(normal_vector) < 0:
-                # Ray intercepted on the frontside of the surface
-                material = self.front_material
-            else:
-                # Ray intercepted on the backside of the surface
-                material = self.back_material
-        else:
-            material = self
-
+        material = self
         results = material.decide_phenomenon(ray, normal_vector, nearby_material)
         phenomenon = results[0]
         if ray.current_polarization() == results[1]:
@@ -1126,7 +1115,7 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         my_normal = normal * 1.0
         if my_normal.dot(incident) > 0:  # Ray intercepted on the backside of the surface
             my_normal = my_normal * (-1.0)
-        angle = np.arccos(my_normal.dot(incident) * (-1.0))
+        angle = arccos(my_normal.dot(incident) * (-1.0))
         angle_deg = angle * 180.0 / np.pi
         if angle_deg < 80.0:
             absorption_ratio = 1.0 - b_constant * (1.0 / np.cos(angle) - 1.0) ** c_constant
@@ -1433,7 +1422,7 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
         properties = self.properties
         normal = correct_normal(normal_vector, incident)
         c1 = - normal.dot(incident)
-        inc_angle = rad_to_deg(np.arccos(c1))
+        inc_angle = rad_to_deg(arccos(c1))
         # incidence angle
         parallel_v, perpendicular_v, normal_parallel_plane = \
             parallel_orthogonal_components(polarization_vector,incident, normal)
@@ -1505,9 +1494,6 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
         wavelength = ray.wavelength
         properties = self.properties
         normal = correct_normal(normal_vector, incident)
-        backside = False
-        if normal != normal_vector:
-            backside = True
         n1 = ray.current_medium().get_n(ray.wavelength)
         n2 = nearby_material.get_n(ray.wavelength)
         r = n1 / n2
@@ -1526,11 +1512,7 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
         # parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
         ref_per = perpendicular_v.Length ** 2.0 / polarization_vector.Length ** 2.0
         # weight of perpendicular component: 0 < ref_per < 1
-        if backside:
-            # Ray intercepted on the backside of the transparent surface
-            inc_angle = rad_to_deg(np.arccos(c2.real))
-        else:
-            inc_angle = rad_to_deg(np.arccos(c1))
+        inc_angle = rad_to_deg(arccos(c1))
         reflectance_matrix = properties['Matrix_reflectance_coating']
         r_matrix = reflectance_matrix(inc_angle, wavelength)
         # reflectance dependent of incidence angle and wavelength
@@ -1547,7 +1529,7 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             polarization_vector = normalize(parallel_v)
         if myrandom() < reflectance:
             # ray reflected
-            reflected_direction = simple_reflexion(incident, normal_vector)
+            reflected_direction = simple_reflexion(incident, normal)
             if not perpendicular_polarized:
                 # reflexion changes the parallel component of incident polarization
                 polarization_vector = simple_polarization_reflexion(
@@ -1617,7 +1599,7 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
         properties = self.properties
         normal = correct_normal(normal_vector, incident)
         c1 = - normal.dot(incident)
-        inc_angle = rad_to_deg(np.arccos(c1))
+        inc_angle = rad_to_deg(arccos(c1))
         # incidence angle
         parallel_v, perpendicular_v, normal_parallel_plane = \
             parallel_orthogonal_components(polarization_vector,incident, normal)
@@ -1677,3 +1659,12 @@ class TwoLayerMaterial(SurfaceMaterial):
                 'name_back_layer': self.name_back_layer
             }, cls=NumpyEncoder
         )
+
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+        if ray.current_direction().dot(normal_vector) < 0:
+            # Ray intercepted on the frontside of the surface
+            material = self.front_material
+        else:
+            # Ray intercepted on the backside of the surface
+            material = self.back_material
+        return material.change_of_optical_state(ray, normal_vector, nearby_material)								   																					
