@@ -38,8 +38,6 @@ class Material(object):
 
     Attributes
     ----------
-    kind : str
-        Holds the type of the material ("Surface" or "Volume")
     classname : str
         String identifying the class
     """
@@ -53,7 +51,6 @@ class Material(object):
     def __init__(self, name, properties=None):
         self.by_name[name] = self
         self.name = name
-        self.kind = ""
         self.classname = ""
         if properties is None:
             properties = {}
@@ -136,6 +133,30 @@ class Material(object):
         _ = cls(name, properties)
 
     @classmethod
+    def load_from_json(cls, info):
+        if type(info).__name__ == 'dict':
+            info = [info]
+        names = []
+        for mat_spec in info:
+            classname = mat_spec['classname']
+            logger.debug(classname)
+            the_class = globals()[classname]
+            name = mat_spec['name']
+            names.append(name)
+            if issubclass(the_class, TwoLayerMaterial):
+                name_front_layer = mat_spec['name_front_layer']
+                name_back_layer = mat_spec['name_back_layer']
+                _ = the_class(name, name_front_layer, name_back_layer)
+            else:
+                plain_properties = mat_spec['plain_properties']
+                properties = the_class.plain_properties_to_properties(plain_properties)
+                _ = the_class(name, properties)
+        if len(names) == 1:
+            return names[0]
+        else:
+            return names
+
+    @classmethod
     def load_from_json_fileobject(cls, f):
         """
         Load materials from a json fileobject
@@ -155,34 +176,7 @@ class Material(object):
             String with the name of the last material imported from the file
         """
         info = json.load(f)
-        if type(info).__name__ == 'dict':
-            info = [info]
-        name = ""
-        for mat_spec in info:
-            classname = mat_spec['classname']
-            logger.debug(classname)
-            kind = mat_spec['kind']
-            name = mat_spec['name']
-            if kind == 'Volume':
-                mat = VolumeMaterial(name, {})
-                plain_properties = mat_spec['plain_properties']
-                properties = Material.plain_properties_to_properties(plain_properties)
-                mat.properties = properties
-                the_class = globals()[classname]
-                mat.__class__ = the_class
-            if kind == 'Surface':
-                if classname == "TwoLayerMaterial":
-                    name_front_layer = mat_spec['name_front_layer']
-                    name_back_layer = mat_spec['name_back_layer']
-                    _ = TwoLayerMaterial(name, name_front_layer, name_back_layer)
-                else:
-                    mat = SurfaceMaterial(name, {})
-                    plain_properties = mat_spec['plain_properties']
-                    properties = Material.plain_properties_to_properties(plain_properties)
-                    mat.properties = properties
-                    the_class = globals()[classname]
-                    mat.__class__ = the_class
-        return name
+        return cls.load_from_json(info)
 
     @classmethod
     def load_from_json_file(cls, filename):
@@ -324,7 +318,6 @@ class VolumeMaterial(Material):
     """
     def __init__(self, name, properties=None):
         super(VolumeMaterial, self).__init__(name, properties)
-        self.kind = 'Volume'
 
 
     def change_of_optical_state(self, ray, normal_vector):
@@ -364,7 +357,6 @@ class VolumeMaterial(Material):
         return json.dumps(
             {
                 'name': self.name,
-                'kind': self.kind,
                 'classname': self.__class__.__name__,
                 'plain_properties': self.properties.get(
                     'plain_properties', None)
@@ -559,7 +551,7 @@ class PolarizedThinFilm(VolumeMaterial):
         Parameters
         ----------
         incident
-        normal
+        normal_vector
         n1
         n2
         polarization_vector
@@ -618,7 +610,7 @@ class PolarizedThinFilm(VolumeMaterial):
                 # reflexion changes the parallel component of incident polarization
                 polarization_vector = simple_polarization_reflexion(
                     incident, normal, normal_parallel_plane, polarization_vector)
-            return (0.0, OpticalState(polarization_vector, reflected_direction, Phenomenon.REFLEXION))
+            return 0.0, OpticalState(polarization_vector, reflected_direction, Phenomenon.REFLEXION)
         else:
             # ray refracted: computing the refracted direction and energy absorbed in the thinfilm
             transmittance_matrix = properties['Matrix_transmittance_thin_film']
@@ -696,7 +688,6 @@ class SurfaceMaterial(Material):
         """
         super(SurfaceMaterial, self).__init__(name, properties)
         self.properties = properties
-        self.kind = 'Surface'
 
     @classmethod
     def create(cls, name, properties):
@@ -916,7 +907,6 @@ class SurfaceMaterial(Material):
         return json.dumps(
             {
                 'name': self.name,
-                'kind': self.kind,
                 'classname': self.__class__.__name__,
                 'plain_properties': self.properties.get(
                     'plain_properties', None),
@@ -1646,23 +1636,21 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
 
 
 @traced(logger)
-class TwoLayerMaterial(SurfaceMaterial):
+class TwoLayerMaterial(Material):
     """
     # TODO: Document
     """
     def __init__(self, name, name_front_layer, name_back_layer):
-        super(SurfaceMaterial, self).__init__(name, {})
+        super(TwoLayerMaterial, self).__init__(name, {})
         self.name_front_layer = name_front_layer
         self.name_back_layer = name_back_layer
         self.front_material = Material.by_name[name_front_layer]
         self.back_material = Material.by_name[name_back_layer]
-        self.kind = 'Surface'
 
     def to_json(self):
         return json.dumps(
             {
                 'name': self.name,
-                'kind': self.kind,
                 'classname': 'TwoLayerMaterial',
                 'name_front_layer': self.name_front_layer,
                 'name_back_layer': self.name_back_layer

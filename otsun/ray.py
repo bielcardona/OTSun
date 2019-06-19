@@ -1,6 +1,6 @@
 from autologging import traced
 from .logging_unit import logger
-from .materials import vacuum_medium, PVMaterial, PolarizedThinFilm
+from .materials import vacuum_medium, PVMaterial, SurfaceMaterial, TwoLayerMaterial
 from .optics import Phenomenon, OpticalState
 import numpy as np
 import Part
@@ -169,7 +169,8 @@ class Ray(object):
             point_plus_delta = current_point + current_direction * self.scene.epsilon
             next_solid = self.scene.solid_at_point(point_plus_delta)
             nearby_material = self.scene.materials.get(next_solid, vacuum_medium)
-            if nearby_material.kind == 'Surface': # solid with surface material on all faces
+            if isinstance(nearby_material, (SurfaceMaterial, TwoLayerMaterial)):
+            # if nearby_material.kind == 'Surface': # solid with surface material on all faces
                 state = nearby_material.change_of_optical_state(self, normal, nearby_material)
             else:
                 state = nearby_material.change_of_optical_state(self, normal)
