@@ -146,11 +146,12 @@ class Material(object):
             if issubclass(the_class, TwoLayerMaterial):
                 name_front_layer = mat_spec['name_front_layer']
                 name_back_layer = mat_spec['name_back_layer']
-                _ = the_class(name, name_front_layer, name_back_layer)
+                mat = TwoLayerMaterial(name, name_front_layer, name_back_layer)
             else:
                 plain_properties = mat_spec['plain_properties']
                 properties = the_class.plain_properties_to_properties(plain_properties)
-                _ = the_class(name, properties)
+                mat = Material(name, properties)
+            mat.__class__ = the_class
         if len(names) == 1:
             return names[0]
         else:
@@ -318,7 +319,6 @@ class VolumeMaterial(Material):
     """
     def __init__(self, name, properties=None):
         super(VolumeMaterial, self).__init__(name, properties)
-
 
     def change_of_optical_state(self, ray, normal_vector):
         """
@@ -776,7 +776,7 @@ class SurfaceMaterial(Material):
                                  self))
 
     def change_of_optical_state_by_reflexion(self, ray, normal_vector,
-                                         polarization_vector_calculated_before):
+                                             polarization_vector_calculated_before):
         """
         # TODO @Ramon: Mirar l'embull del polarization_vector_calculated_before
         # TODO: Document
