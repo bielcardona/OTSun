@@ -256,3 +256,11 @@ def normalize(vector):
     if vector.Length < EPSILON:
         vector = vector * INF
     return vector.normalize()
+	
+def arccos(x):
+    assert abs(x) < 1 + EPSILON
+    if abs(x) < 1 - EPSILON:
+        return np.arccos(x)
+    if x > 0:
+        return 0
+    return np.pi
