@@ -127,6 +127,17 @@ class OpticalState(object):
         self.direction = new_v2
         self.polarization = new_polarization_vector
 
+    def apply_dispersion(self, properties):
+        if properties.get('sigma_1', None):
+            sigma_1 = properties['sigma_1']
+            if properties.get('sigma_2', None):
+                sigma_2 = properties['sigma_2']
+                k = properties.get('k', None) or 0.5
+                state.apply_double_gaussian_dispersion(
+                    normal_vector, sigma_1, sigma_2, k)
+            else:
+                state.apply_single_gaussian_dispersion(normal_vector, sigma_1)
+
 
 # ---
 # Helper functions for reflexion and refraction

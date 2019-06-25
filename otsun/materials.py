@@ -797,15 +797,7 @@ class SurfaceMaterial(Material):
                               ray.current_polarization(),
                               polarization_vector_calculated_before)
             state.material = ray.current_medium()
-            if properties.get('sigma_1',None):
-                sigma_1 = properties['sigma_1']
-                if properties.get('sigma_2',None):
-                    sigma_2 = properties['sigma_2']
-                    k = properties.get('k', None) or 0.5
-                    state.apply_double_gaussian_dispersion(
-                        normal_vector, sigma_1, sigma_2, k)
-                else:
-                    state.apply_single_gaussian_dispersion(normal_vector, sigma_1)
+            state.apply_dispersion(properties)
             return state
         if 'lambertian_material' in properties:
             state = lambertian_reflexion(ray.current_direction(), normal_vector)
@@ -1214,16 +1206,7 @@ class ReflectorSpecularLayer(SurfaceMaterial):
             incident = ray.current_direction()
             state = reflexion(incident, normal_vector, polarization_vector, False)
             state.material = ray.current_medium()			
-            if properties.get('sigma_1',None):
-                normal = correct_normal(normal_vector, incident)
-                sigma_1 = properties['sigma_1']
-                if properties.get('sigma_2',None):
-                    sigma_2 = properties['sigma_2']
-                    k = properties.get('k', None) or 0.5
-                    state.apply_double_gaussian_dispersion(
-                        normal, sigma_1, sigma_2, k)
-                else:
-                    state.apply_single_gaussian_dispersion(normal, sigma_1)
+            state.apply_dispersion(properties)
             return state
         else:
             # refraction in metallic layer: the ray is killed
@@ -1344,16 +1327,7 @@ class MetallicSpecularLayer(MetallicLayer):
         state = refraction(incident, normal_vector, n1, n2, polarization_vector)
         if state.phenomenon == Phenomenon.REFLEXION:
             state.material = ray.current_medium()
-            if properties.get('sigma_1',None):
-                normal = correct_normal(normal_vector, incident)
-                sigma_1 = properties['sigma_1']
-                if properties.get('sigma_2',None):
-                    sigma_2 = properties['sigma_2']
-                    k = properties.get('k', None) or 0.5
-                    state.apply_double_gaussian_dispersion(
-                        normal, sigma_1, sigma_2, k)
-                else:
-                    state.apply_single_gaussian_dispersion(normal, sigma_1)
+            state.apply_dispersion(properties)
             return state
         if state.phenomenon == Phenomenon.REFRACTION:
             # refraction in metallic layer: the ray is killed
@@ -1510,16 +1484,7 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
                     incident, normal, normal_parallel_plane, polarization_vector)
             state = OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION, self)
             state.material = ray.current_medium()
-            if properties.get('sigma_1',None):
-                normal = correct_normal(normal_vector, incident)
-                sigma_1 = properties['sigma_1']
-                if properties.get('sigma_2',None):
-                    sigma_2 = properties['sigma_2']
-                    k = properties.get('k', None) or 0.5
-                    state.apply_double_gaussian_dispersion(
-                        normal, sigma_1, sigma_2, k)
-                else:
-                    state.apply_single_gaussian_dispersion(normal, sigma_1)
+            state.apply_dispersion(properties)
             return state
         else:
             # ray is killed in the coating reflector
