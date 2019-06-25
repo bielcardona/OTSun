@@ -140,11 +140,10 @@ def simple_reflexion(incident, normal):
     reflected = incident + normal * 2.0 * c1
     return reflected.normalize()
 
-
 @traced(logger)
 def simple_polarization_reflexion(incident, normal, normal_parallel_plane, polarization):
     c1 = - normal.dot(incident)
-    angle = rad_to_deg(np.pi - 2.0 * np.arccos(c1))
+    angle = rad_to_deg(np.pi - 2.0 * arccos(c1))
     rotation = Base.Rotation(normal_parallel_plane, angle)
     return rotation.multVec(polarization)
 	
@@ -152,7 +151,7 @@ def simple_polarization_reflexion(incident, normal, normal_parallel_plane, polar
 @traced(logger)
 def simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, polarization_vector):
     c1 = - normal.dot(incident)
-    angle = rad_to_deg(np.arccos(c2.real) - np.arccos(c1))		
+    angle = rad_to_deg(arccos(c2.real) - arccos(c1))		
     rotation = Base.Rotation(normal_parallel_plane, angle)
     return rotation.multVec(polarization_vector)
 

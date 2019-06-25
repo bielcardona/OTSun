@@ -453,7 +453,7 @@ class PVMaterial(VolumeMaterial):
         alpha = self.properties['extinction_coefficient'](
             ray.wavelength) * 4 * np.pi / (ray.wavelength / 1E6)  # mm-1
         # TODO: @Ramon: Revisar angle (sona raro)
-        angle_incident = np.arccos(
+        angle_incident = arccos(
             - ray.last_normal.dot(ray.current_direction())) * 180.0 / np.pi
         point_1 = ray.points[-1]
         point_2 = ray.points[-2]
@@ -586,9 +586,9 @@ class PolarizedThinFilm(VolumeMaterial):
         # weight of perpendicular component: 0 < ref_per < 1
         if backside:
             # Ray intercepted on the backside of the transparent surface
-            inc_angle = rad_to_deg(np.arccos(c2.real))
+            inc_angle = rad_to_deg(arccos(c2.real))
         else:
-            inc_angle = rad_to_deg(np.arccos(c1))
+            inc_angle = rad_to_deg(arccos(c1))
         reflectance_matrix = properties['Matrix_reflectance_thin_film']
         r_matrix = reflectance_matrix(inc_angle, wavelength)
         # reflectance dependent of incidence angle and wavelength
@@ -764,8 +764,6 @@ class SurfaceMaterial(Material):
 
         """
         properties = self.properties
-        # TODO @Ramon: ENERGY_ABSORBED i ABSORPTION sonen massa iguals, no? Cal distingir?
-        # Si, es pot canviar per ENERGY_ABSORBED
         if properties['energy_collector']:
             return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                  Base.Vector(0.0, 0.0, 0.0),
@@ -858,7 +856,6 @@ class SurfaceMaterial(Material):
 
         """
         material = self
-
         results = material.decide_phenomenon(ray, normal_vector, nearby_material)
         phenomenon = results[0]
         if ray.current_polarization() == results[1]:
@@ -1415,7 +1412,7 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
         properties = self.properties
         normal = correct_normal(normal_vector, incident)
         c1 = - normal.dot(incident)
-        inc_angle = rad_to_deg(np.arccos(c1))
+        inc_angle = rad_to_deg(arccos(c1))
         # incidence angle
         parallel_v, perpendicular_v, normal_parallel_plane = \
             parallel_orthogonal_components(polarization_vector,incident, normal)
@@ -1598,7 +1595,7 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
         properties = self.properties
         normal = correct_normal(normal_vector, incident)
         c1 = - normal.dot(incident)
-        inc_angle = rad_to_deg(np.arccos(c1))
+        inc_angle = rad_to_deg(arccos(c1))
         # incidence angle
         parallel_v, perpendicular_v, normal_parallel_plane = \
             parallel_orthogonal_components(polarization_vector,incident, normal)
