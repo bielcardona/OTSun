@@ -1,6 +1,6 @@
 from autologging import traced
 from .logging_unit import logger
-from .materials import vacuum_medium, PVMaterial, SurfaceMaterial, TwoLayerMaterial
+from .materials import vacuum_medium, PVMaterial, SurfaceMaterial, TwoLayerMaterial, PolarizedThinFilm
 from .optics import Phenomenon, OpticalState
 import numpy as np
 import Part
@@ -46,7 +46,7 @@ class Ray(object):
     polarization_vectors : list of Base.Vector
         Polarization of the ray at each iteration
     finished : bool
-    got_absorbed : bool
+    Th_absorbed : bool
     PV_values : list of tuple of floats
         List where each entry is a PV_value (a tuple of floats)
     PV_absorbed : list of float
@@ -69,7 +69,7 @@ class Ray(object):
         self.energy = energy
         self.polarization_vectors = [polarization_vector]
         self.finished = False
-        self.got_absorbed = False
+        self.Th_absorbed= False
         self.PV_values = []
         self.PV_absorbed = []
 
@@ -214,7 +214,7 @@ class Ray(object):
             self.points.append(point)
             if not face:
                 self.finished = True
-                self.got_absorbed = False
+                self.Th_absorbed= False
                 break
 
             # Update optical state
@@ -246,7 +246,7 @@ class Ray(object):
             if state.phenomenon == Phenomenon.ABSORPTION:
                 self.finished = True
             if state.phenomenon == Phenomenon.ENERGY_ABSORBED:
-                self.got_absorbed = True
+                self.Th_absorbed= True
                 self.finished = True
 
     def add_to_document(self, doc):

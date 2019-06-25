@@ -67,7 +67,7 @@ class Experiment:
             self.wavelengths.append(ray.wavelength)
             if show_in_doc:
                 ray.add_to_document(show_in_doc)
-            if ray.got_absorbed:
+            if ray.Th_absorbed:
                 self.captured_energy_Th += ray.energy
                 self.Th_energy.append(ray.energy)
                 self.Th_wavelength.append(ray.wavelength)
