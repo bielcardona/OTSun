@@ -18,13 +18,6 @@ pySunScene.egg-info
 .pytest_cache
 OTSun.egg-info
 dummy
-<<<<<<< HEAD
 docb
 doc/_build
-=======
 doc
-.unison.otsun.py.88dfd3.unison.tmp
-.unison.OTSunWebApp.88dfd3.unison.tmp/Tutorial_3_1e_OTSun_WebApp.pdf
-.unison.OTSunWebApp.88dfd3.unison.tmp/Tutorial_1_1e_OTSun_WebApp.pdf
-.unison.OTSunWebApp.88dfd3.unison.tmp/Tutorial_2_1e_OTSun_WebApp.pdf
->>>>>>> bf6312d9c1581dbd9014a8e24e6a727ba95d47b1

@@ -4,7 +4,8 @@ Implementation of optical effects on rays
 
 from FreeCAD import Base
 import numpy as np
-from .math import *
+from .math import arccos, myrandom, one_orthogonal_vector, correct_normal,\
+    parallel_orthogonal_components, rad_to_deg, normalize
 from enum import Enum
 from numpy.lib.scimath import sqrt
 from autologging import traced
@@ -126,6 +127,17 @@ class OpticalState(object):
         new_polarization_vector = rotation_2.multVec(new_pol_1)
         self.direction = new_v2
         self.polarization = new_polarization_vector
+
+    def apply_dispersion(self, properties, normal_vector):
+        if properties.get('sigma_1', None):
+            sigma_1 = properties['sigma_1']
+            if properties.get('sigma_2', None):
+                sigma_2 = properties['sigma_2']
+                k = properties.get('k', None) or 0.5
+                self.apply_double_gaussian_dispersion(
+                    normal_vector, sigma_1, sigma_2, k)
+            else:
+                self.apply_single_gaussian_dispersion(normal_vector, sigma_1)
 
 
 # ---

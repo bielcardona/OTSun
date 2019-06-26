@@ -8,9 +8,16 @@ for specific materials.
 
 import json
 import zipfile
-# import dill
-from .optics import *
-from .math import *
+from FreeCAD import Base
+from .optics import Phenomenon, OpticalState, reflexion, refraction, matrix_reflectance,\
+    calculate_reflectance, simple_polarization_reflexion, simple_polarization_refraction, \
+    simple_reflexion
+from .math import arccos, parallel_orthogonal_components, rad_to_deg, myrandom, normalize,\
+    constant_function, correct_normal, tabulated_function
+from numpy import sqrt
+import numpy as np
+from autologging import traced
+from logging_unit import logger
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -38,8 +45,6 @@ class Material(object):
 
     Attributes
     ----------
-    kind : str
-        Holds the type of the material ("Surface" or "Volume")
     classname : str
         String identifying the class
     """
@@ -53,7 +58,6 @@ class Material(object):
     def __init__(self, name, properties=None):
         self.by_name[name] = self
         self.name = name
-        self.kind = ""
         self.classname = ""
         if properties is None:
             properties = {}
@@ -136,6 +140,31 @@ class Material(object):
         _ = cls(name, properties)
 
     @classmethod
+    def load_from_json(cls, info):
+        if type(info).__name__ == 'dict':
+            info = [info]
+        names = []
+        for mat_spec in info:
+            classname = mat_spec['classname']
+            logger.debug(classname)
+            the_class = globals()[classname]
+            name = mat_spec['name']
+            names.append(name)
+            if issubclass(the_class, TwoLayerMaterial):
+                name_front_layer = mat_spec['name_front_layer']
+                name_back_layer = mat_spec['name_back_layer']
+                mat = TwoLayerMaterial(name, name_front_layer, name_back_layer)
+            else:
+                plain_properties = mat_spec['plain_properties']
+                properties = the_class.plain_properties_to_properties(plain_properties)
+                mat = Material(name, properties)
+            mat.__class__ = the_class
+        if len(names) == 1:
+            return names[0]
+        else:
+            return names
+
+    @classmethod
     def load_from_json_fileobject(cls, f):
         """
         Load materials from a json fileobject
@@ -155,34 +184,7 @@ class Material(object):
             String with the name of the last material imported from the file
         """
         info = json.load(f)
-        if type(info).__name__ == 'dict':
-            info = [info]
-        name = ""
-        for mat_spec in info:
-            classname = mat_spec['classname']
-            logger.debug(classname)
-            kind = mat_spec['kind']
-            name = mat_spec['name']
-            if kind == 'Volume':
-                mat = VolumeMaterial(name, {})
-                plain_properties = mat_spec['plain_properties']
-                properties = Material.plain_properties_to_properties(plain_properties)
-                mat.properties = properties
-                the_class = globals()[classname]
-                mat.__class__ = the_class
-            if kind == 'Surface':
-                if classname == "TwoLayerMaterial":
-                    name_front_layer = mat_spec['name_front_layer']
-                    name_back_layer = mat_spec['name_back_layer']
-                    _ = TwoLayerMaterial(name, name_front_layer, name_back_layer)
-                else:
-                    mat = SurfaceMaterial(name, {})
-                    plain_properties = mat_spec['plain_properties']
-                    properties = Material.plain_properties_to_properties(plain_properties)
-                    mat.properties = properties
-                    the_class = globals()[classname]
-                    mat.__class__ = the_class
-        return name
+        return cls.load_from_json(info)
 
     @classmethod
     def load_from_json_file(cls, filename):
@@ -324,8 +326,6 @@ class VolumeMaterial(Material):
     """
     def __init__(self, name, properties=None):
         super(VolumeMaterial, self).__init__(name, properties)
-        self.kind = 'Volume'
-
 
     def change_of_optical_state(self, ray, normal_vector):
         """
@@ -364,7 +364,6 @@ class VolumeMaterial(Material):
         return json.dumps(
             {
                 'name': self.name,
-                'kind': self.kind,
                 'classname': self.__class__.__name__,
                 'plain_properties': self.properties.get(
                     'plain_properties', None)
@@ -387,7 +386,7 @@ class SimpleVolumeMaterial(VolumeMaterial):
                 'value': attenuation_coefficient
             }
         }
-        super(SimpleVolumeMaterial,self).__init__(name, {})
+        super(SimpleVolumeMaterial, self).__init__(name, {})
         self.properties = Material.plain_properties_to_properties(plain_properties)
 
 
@@ -410,7 +409,7 @@ class WavelengthVolumeMaterial(VolumeMaterial):
                 'value': [wavelength_values, k_values]
             }
         }
-        super(WavelengthVolumeMaterial,self).__init__(name)
+        super(WavelengthVolumeMaterial, self).__init__(name)
         self.properties = Material.plain_properties_to_properties(plain_properties)
 
 
@@ -441,7 +440,7 @@ class PVMaterial(VolumeMaterial):
                 'value': True
             }
         }
-        super(PVMaterial,self).__init__(name)
+        super(PVMaterial, self).__init__(name)
         self.properties = Material.plain_properties_to_properties(plain_properties)
 
     def get_PV_data(self, ray, energy_before):
@@ -467,7 +466,7 @@ class PVMaterial(VolumeMaterial):
         point_2 = ray.points[-2]
         return (energy_before - ray.energy,
                 (point_2.x, point_2.y, point_2.z, point_1.x, point_1.y, point_1.z,
-                    energy_before, ray.energy, ray.wavelength, alpha, angle_incident)
+                 energy_before, ray.energy, ray.wavelength, alpha, angle_incident)
                 )
 
 class PolarizedThinFilm(VolumeMaterial):
@@ -547,7 +546,7 @@ class PolarizedThinFilm(VolumeMaterial):
                 'value': True
             },
         }
-        super(PolarizedThinFilm,self).__init__(name)
+        super(PolarizedThinFilm, self).__init__(name)
         self.properties = Material.plain_properties_to_properties(plain_properties)
 
     @staticmethod
@@ -559,7 +558,7 @@ class PolarizedThinFilm(VolumeMaterial):
         Parameters
         ----------
         incident
-        normal
+        normal_vector
         n1
         n2
         polarization_vector
@@ -588,8 +587,10 @@ class PolarizedThinFilm(VolumeMaterial):
             # no energy is abosrbed in the thinfilm
         c2 = sqrt(c2sq)
         # cos (refracted_angle)
-        parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident, normal)
-        # parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
+        parallel_v, perpendicular_v, normal_parallel_plane = \
+            parallel_orthogonal_components(polarization_vector, incident, normal)
+        # parallel and perpendicular components of polarization vector
+        # and orthogonal vector of the parallel plane
         ref_per = perpendicular_v.Length ** 2.0 / polarization_vector.Length ** 2.0
         # weight of perpendicular component: 0 < ref_per < 1
         if backside:
@@ -618,7 +619,7 @@ class PolarizedThinFilm(VolumeMaterial):
                 # reflexion changes the parallel component of incident polarization
                 polarization_vector = simple_polarization_reflexion(
                     incident, normal, normal_parallel_plane, polarization_vector)
-            return (0.0, OpticalState(polarization_vector, reflected_direction, Phenomenon.REFLEXION))
+            return 0.0, OpticalState(polarization_vector, reflected_direction, Phenomenon.REFLEXION)
         else:
             # ray refracted: computing the refracted direction and energy absorbed in the thinfilm
             transmittance_matrix = properties['Matrix_transmittance_thin_film']
@@ -634,9 +635,11 @@ class PolarizedThinFilm(VolumeMaterial):
             refracted_direction.normalize()
             if not perpendicular_polarized:
                 # refraction changes the parallel component of incident polarization
-                polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, polarization_vector)
+                polarization_vector = \
+                    simple_polarization_refraction(
+                        incident, normal, normal_parallel_plane, c2, polarization_vector)
             return (factor_energy_absorbed_thin_film,
-                        OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION))
+                    OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION))
 
     def change_of_optical_state(self, ray, normal_vector):
         """
@@ -663,10 +666,11 @@ class PolarizedThinFilm(VolumeMaterial):
             n2 = n_front + 1j * k_front
         factor_energy_absorbed_thin_film, optical_state = (
             self.calculate_state_thin_film(
-                ray.current_direction(), normal_vector, n1,n2,
+                ray.current_direction(), normal_vector, n1, n2,
                 ray.current_polarization(),
                 properties, ray.wavelength))
-        optical_state.extra_data['factor_energy_absorbed_thin_film'] = factor_energy_absorbed_thin_film
+        optical_state.extra_data['factor_energy_absorbed_thin_film'] = \
+            factor_energy_absorbed_thin_film
         if optical_state.phenomenon == Phenomenon.REFRACTION:
             optical_state.material = self
         else:
@@ -696,7 +700,6 @@ class SurfaceMaterial(Material):
         """
         super(SurfaceMaterial, self).__init__(name, properties)
         self.properties = properties
-        self.kind = 'Surface'
 
     @classmethod
     def create(cls, name, properties):
@@ -785,7 +788,7 @@ class SurfaceMaterial(Material):
                                  self))
 
     def change_of_optical_state_by_reflexion(self, ray, normal_vector,
-                                         polarization_vector_calculated_before):
+                                             polarization_vector_calculated_before):
         """
         # TODO @Ramon: Mirar l'embull del polarization_vector_calculated_before
         # TODO: Document
@@ -806,15 +809,7 @@ class SurfaceMaterial(Material):
                               ray.current_polarization(),
                               polarization_vector_calculated_before)
             state.material = ray.current_medium()
-            if properties.get('sigma_1',None):
-                sigma_1 = properties['sigma_1']
-                if properties.get('sigma_2',None):
-                    sigma_2 = properties['sigma_2']
-                    k = properties.get('k', None) or 0.5
-                    state.apply_double_gaussian_dispersion(
-                        normal_vector, sigma_1, sigma_2, k)
-                else:
-                    state.apply_single_gaussian_dispersion(normal_vector, sigma_1)
+            state.apply_dispersion(properties, normal_vector)
             return state
         if 'lambertian_material' in properties:
             state = lambertian_reflexion(ray.current_direction(), normal_vector)
@@ -906,14 +901,13 @@ class SurfaceMaterial(Material):
             Material
         """
         properties = Material.plain_properties_to_properties(plain_properties)
-        material = cls(name,properties)
+        material = cls(name, properties)
         return material
 
     def to_json(self):
         return json.dumps(
             {
                 'name': self.name,
-                'kind': self.kind,
                 'classname': self.__class__.__name__,
                 'plain_properties': self.properties.get(
                     'plain_properties', None),
@@ -948,12 +942,11 @@ class OpaqueSimpleLayer(SurfaceMaterial):
         properties = Material.plain_properties_to_properties(plain_properties)
         super(OpaqueSimpleLayer, self).__init__(name, properties)
 
-
     def change_of_optical_state(self, ray, normal_vector, nearby_material):
         # absorption in opaque material: the ray is killed
         return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                 Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ABSORPTION, self) 
+                            Base.Vector(0.0, 0.0, 0.0),
+                            Phenomenon.ABSORPTION, self)
 
 
 @traced(logger)
@@ -961,7 +954,7 @@ class TransparentSimpleLayer(SurfaceMaterial):
     """
     # TODO: Document
     """
-    def __init__(self,name,pot):
+    def __init__(self, name, pot):
         plain_properties = {
             'probability_of_reflexion': {
                 'type': 'constant',
@@ -1024,14 +1017,15 @@ class AbsorberSimpleLayer(SurfaceMaterial):
         absortion = properties['probability_of_absortion'](ray.wavelength)
         reflectance = 1.0 - absortion
         if myrandom() < reflectance:
-            state = reflexion(ray.current_direction(), normal_vector, ray.current_polarization(), False)
+            state = reflexion(ray.current_direction(),
+                              normal_vector, ray.current_polarization(), False)
             state.material = ray.current_medium()
             return state
         else:
             # absorption in absorber material: the energy is abosrbed
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                 Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ENERGY_ABSORBED, self) 
+                                Base.Vector(0.0, 0.0, 0.0),
+                                Phenomenon.ENERGY_ABSORBED, self)
 
 
 @traced(logger)
@@ -1063,7 +1057,7 @@ class AbsorberLambertianLayer(SurfaceMaterial):
             }
         }
         properties = Material.plain_properties_to_properties(plain_properties)
-        super(AbsorberLambertianLayer,self).__init__(name, properties)
+        super(AbsorberLambertianLayer, self).__init__(name, properties)
 
     def change_of_optical_state(self, ray, normal_vector, nearby_material):
         properties = self.properties
@@ -1077,8 +1071,8 @@ class AbsorberLambertianLayer(SurfaceMaterial):
         else:
             # absorptiontion in absorber material: the ray is killed
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                 Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ENERGY_ABSORBED, self) 
+                                Base.Vector(0.0, 0.0, 0.0),
+                                Phenomenon.ENERGY_ABSORBED, self)
 
 @traced(logger)
 class AbsorberTWModelLayer(SurfaceMaterial):
@@ -1117,7 +1111,7 @@ class AbsorberTWModelLayer(SurfaceMaterial):
             }
         }
         properties = Material.plain_properties_to_properties(plain_properties)
-        super(AbsorberTWModelLayer,self).__init__(name, properties)
+        super(AbsorberTWModelLayer, self).__init__(name, properties)
 
     @staticmethod
     def tw_absorptance_ratio(normal_vector, b_constant, c_constant, incident):
@@ -1171,15 +1165,15 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         else:
             # absorptiontion in absorber material: the ray is killed
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                 Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ENERGY_ABSORBED, self) 
+                                Base.Vector(0.0, 0.0, 0.0),
+                                Phenomenon.ENERGY_ABSORBED, self)
 
 @traced(logger)
 class ReflectorSpecularLayer(SurfaceMaterial):
     """
     # TODO: Document
     """
-    def __init__(self,name, por, sigma_1=None, sigma_2=None, k=None):
+    def __init__(self, name, por, sigma_1=None, sigma_2=None, k=None):
         plain_properties = {
             'probability_of_reflexion': {
                 'type': 'constant',
@@ -1215,8 +1209,8 @@ class ReflectorSpecularLayer(SurfaceMaterial):
             }
         }
         properties = Material.plain_properties_to_properties(plain_properties)
-        super(ReflectorSpecularLayer,self).__init__(name, properties)
-		
+        super(ReflectorSpecularLayer, self).__init__(name, properties)
+
     def change_of_optical_state(self, ray, normal_vector, nearby_material):
         properties = self.properties
         reflectance = properties['probability_of_reflexion'](ray.wavelength)
@@ -1224,24 +1218,15 @@ class ReflectorSpecularLayer(SurfaceMaterial):
             polarization_vector = ray.current_polarization()
             incident = ray.current_direction()
             state = reflexion(incident, normal_vector, polarization_vector, False)
-            state.material = ray.current_medium()			
-            if properties.get('sigma_1',None):
-                normal = correct_normal(normal_vector, incident)
-                sigma_1 = properties['sigma_1']
-                if properties.get('sigma_2',None):
-                    sigma_2 = properties['sigma_2']
-                    k = properties.get('k', None) or 0.5
-                    state.apply_double_gaussian_dispersion(
-                        normal, sigma_1, sigma_2, k)
-                else:
-                    state.apply_single_gaussian_dispersion(normal, sigma_1)
+            state.material = ray.current_medium()
+            state.apply_dispersion(properties, normal_vector)
             return state
         else:
             # refraction in metallic layer: the ray is killed
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                 Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ABSORPTION, self) 
-    
+                                Base.Vector(0.0, 0.0, 0.0),
+                                Phenomenon.ABSORPTION, self)
+
 @traced(logger)
 class ReflectorLambertianLayer(SurfaceMaterial):
     """
@@ -1271,7 +1256,7 @@ class ReflectorLambertianLayer(SurfaceMaterial):
             },
         }
         properties = Material.plain_properties_to_properties(plain_properties)
-        super(ReflectorLambertianLayer,self).__init__(name, properties)
+        super(ReflectorLambertianLayer, self).__init__(name, properties)
 
     def change_of_optical_state(self, ray, normal_vector, nearby_material):
         properties = self.properties
@@ -1284,8 +1269,8 @@ class ReflectorLambertianLayer(SurfaceMaterial):
         else:
             # refraction in metallic layer: the ray is killed
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                 Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ABSORPTION, self) 
+                                Base.Vector(0.0, 0.0, 0.0),
+                                Phenomenon.ABSORPTION, self)
 
 
 @traced(logger)
@@ -1293,7 +1278,8 @@ class MetallicLayer(SurfaceMaterial):
     """
     # TODO: Document
     """
-    # TODO: material obsolet o be que sigui el pare de MetallicSpecularLayer i MetallicLambertianLayer
+    # TODO: material obsolet o be que sigui el pare de
+    # MetallicSpecularLayer i MetallicLambertianLayer
 
 
 @traced(logger)
@@ -1301,7 +1287,7 @@ class MetallicSpecularLayer(MetallicLayer):
     """
     # TODO: Document
     """
-    def __init__(self, name,file_index_of_refraction,
+    def __init__(self, name, file_index_of_refraction,
                  sigma_1=None, sigma_2=None, k=None):
         # file_index_of_refraction with three columns: wavelenth in nm,
         # real(index of refraction), imaginary(index of refraction)
@@ -1344,10 +1330,10 @@ class MetallicSpecularLayer(MetallicLayer):
             }
         }
         properties = Material.plain_properties_to_properties(plain_properties)
-        super(MetallicSpecularLayer,self).__init__(name, properties)
+        super(MetallicSpecularLayer, self).__init__(name, properties)
 
     def change_of_optical_state(self, ray, normal_vector, nearby_material):
-        properties = self.properties	
+        properties = self.properties
         polarization_vector = ray.current_polarization()
         n1 = ray.current_medium().get_n(ray.wavelength)
         n2 = self.get_n(ray.wavelength)
@@ -1355,24 +1341,15 @@ class MetallicSpecularLayer(MetallicLayer):
         state = refraction(incident, normal_vector, n1, n2, polarization_vector)
         if state.phenomenon == Phenomenon.REFLEXION:
             state.material = ray.current_medium()
-            if properties.get('sigma_1',None):
-                normal = correct_normal(normal_vector, incident)
-                sigma_1 = properties['sigma_1']
-                if properties.get('sigma_2',None):
-                    sigma_2 = properties['sigma_2']
-                    k = properties.get('k', None) or 0.5
-                    state.apply_double_gaussian_dispersion(
-                        normal, sigma_1, sigma_2, k)
-                else:
-                    state.apply_single_gaussian_dispersion(normal, sigma_1)
+            state.apply_dispersion(properties, normal_vector)
             return state
         if state.phenomenon == Phenomenon.REFRACTION:
             # refraction in metallic layer: the ray is killed
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                 Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ABSORPTION, self) 			
+                                Base.Vector(0.0, 0.0, 0.0),
+                                Phenomenon.ABSORPTION, self)
 
-        
+
 @traced(logger)
 class MetallicLambertianLayer(MetallicLayer):
     """
@@ -1409,9 +1386,9 @@ class MetallicLambertianLayer(MetallicLayer):
             },
         }
         properties = Material.plain_properties_to_properties(plain_properties)
-        super(MetallicLambertianLayer,self).__init__(name, properties)
-		
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):	
+        super(MetallicLambertianLayer, self).__init__(name, properties)
+
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):
         polarization_vector = ray.current_polarization()
         n1 = ray.current_medium().get_n(ray.wavelength)
         n2 = self.get_n(ray.wavelength)
@@ -1423,8 +1400,8 @@ class MetallicLambertianLayer(MetallicLayer):
         if state.phenomenon == Phenomenon.REFRACTION:
             # refraction in metallic layer: the ray is killed
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                 Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ABSORPTION, self) 
+                                Base.Vector(0.0, 0.0, 0.0),
+                                Phenomenon.ABSORPTION, self)
 
 
 @traced(logger)
@@ -1484,8 +1461,8 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
             }
         }
         properties = Material.plain_properties_to_properties(plain_properties)
-        super(PolarizedCoatingReflectorLayer,self).__init__(name, properties)
-    
+        super(PolarizedCoatingReflectorLayer, self).__init__(name, properties)
+
     def change_of_optical_state(self, ray, normal_vector, nearby_material):
         polarization_vector = ray.current_polarization()
         incident = ray.current_direction()
@@ -1496,7 +1473,7 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
         inc_angle = rad_to_deg(arccos(c1))
         # incidence angle
         parallel_v, perpendicular_v, normal_parallel_plane = \
-            parallel_orthogonal_components(polarization_vector,incident, normal)
+            parallel_orthogonal_components(polarization_vector, incident, normal)
         ref_per = perpendicular_v.Length ** 2.0 / polarization_vector.Length ** 2.0
         reflectance_matrix = properties['Matrix_reflectance_coating']
         r_matrix = reflectance_matrix(inc_angle, wavelength)
@@ -1521,22 +1498,13 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
                     incident, normal, normal_parallel_plane, polarization_vector)
             state = OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION, self)
             state.material = ray.current_medium()
-            if properties.get('sigma_1',None):
-                normal = correct_normal(normal_vector, incident)
-                sigma_1 = properties['sigma_1']
-                if properties.get('sigma_2',None):
-                    sigma_2 = properties['sigma_2']
-                    k = properties.get('k', None) or 0.5
-                    state.apply_double_gaussian_dispersion(
-                        normal, sigma_1, sigma_2, k)
-                else:
-                    state.apply_single_gaussian_dispersion(normal, sigma_1)
+            state.apply_dispersion(properties, normal_vector)
             return state
         else:
             # ray is killed in the coating reflector
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                 Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ABSORPTION) 
+                                Base.Vector(0.0, 0.0, 0.0),
+                                Phenomenon.ABSORPTION)
 
 
 @traced(logger)
@@ -1569,9 +1537,9 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             },
         }
         properties = Material.plain_properties_to_properties(plain_properties)
-        super(PolarizedCoatingTransparentLayer,self).__init__(name, properties)
+        super(PolarizedCoatingTransparentLayer, self).__init__(name, properties)
 
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):	
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):
         polarization_vector = ray.current_polarization()
         incident = ray.current_direction()
         wavelength = ray.wavelength
@@ -1591,8 +1559,10 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             return state
         c2 = sqrt(c2sq)
         # cos (refracted_angle)
-        parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident, normal)
-        # parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
+        parallel_v, perpendicular_v, normal_parallel_plane = \
+            parallel_orthogonal_components(polarization_vector, incident, normal)
+        # parallel and perpendicular components of polarization vector
+        # and orthogonal vector of the parallel plane
         ref_per = perpendicular_v.Length ** 2.0 / polarization_vector.Length ** 2.0
         # weight of perpendicular component: 0 < ref_per < 1
         inc_angle = rad_to_deg(arccos(c1))
@@ -1619,7 +1589,7 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
                     incident, normal, normal_parallel_plane, polarization_vector)
             state = OpticalState(polarization_vector, reflected_direction, Phenomenon.REFLEXION)
             state.material = ray.current_medium()
-            return state 
+            return state
         else:
             # ray refracted: computing the refracted direction
             refracted_direction = incident * r.real + \
@@ -1627,10 +1597,12 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             refracted_direction.normalize()
             if not perpendicular_polarized:
                 # refraction changes the parallel component of incident polarization
-                polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, polarization_vector)
+                polarization_vector = \
+                    simple_polarization_refraction(incident, normal, normal_parallel_plane,
+                                                   c2, polarization_vector)
             state = OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION)
             state.material = nearby_material
-            return state 	
+            return state
 
 
 
@@ -1673,7 +1645,7 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
             },
         }
         properties = Material.plain_properties_to_properties(plain_properties)
-        super(PolarizedCoatingAbsorberLayer,self).__init__(name, properties)
+        super(PolarizedCoatingAbsorberLayer, self).__init__(name, properties)
 
     def change_of_optical_state(self, ray, normal_vector, nearby_material):
         polarization_vector = ray.current_polarization()
@@ -1685,7 +1657,7 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
         inc_angle = rad_to_deg(arccos(c1))
         # incidence angle
         parallel_v, perpendicular_v, normal_parallel_plane = \
-            parallel_orthogonal_components(polarization_vector,incident, normal)
+            parallel_orthogonal_components(polarization_vector, incident, normal)
         ref_per = perpendicular_v.Length ** 2.0 / polarization_vector.Length ** 2.0
         reflectance_matrix = properties['Matrix_reflectance_coating']
         r_matrix = reflectance_matrix(inc_angle, wavelength)
@@ -1708,7 +1680,7 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
                 # reflexion changes the parallel component of incident polarization
                 polarization_vector = simple_polarization_reflexion(
                     incident, normal, normal_parallel_plane, polarization_vector)
-            state =  OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION, self)
+            state = OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION, self)
             state.material = ray.current_medium()
             return state
         else:
@@ -1720,23 +1692,21 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
 
 
 @traced(logger)
-class TwoLayerMaterial(SurfaceMaterial):
+class TwoLayerMaterial(Material):
     """
     # TODO: Document
     """
     def __init__(self, name, name_front_layer, name_back_layer):
-        super(SurfaceMaterial, self).__init__(name, {})
+        super(TwoLayerMaterial, self).__init__(name, {})
         self.name_front_layer = name_front_layer
         self.name_back_layer = name_back_layer
         self.front_material = Material.by_name[name_front_layer]
         self.back_material = Material.by_name[name_back_layer]
-        self.kind = 'Surface'
 
     def to_json(self):
         return json.dumps(
             {
                 'name': self.name,
-                'kind': self.kind,
                 'classname': 'TwoLayerMaterial',
                 'name_front_layer': self.name_front_layer,
                 'name_back_layer': self.name_back_layer
@@ -1750,4 +1720,4 @@ class TwoLayerMaterial(SurfaceMaterial):
         else:
             # Ray intercepted on the backside of the surface
             material = self.back_material
-        return material.change_of_optical_state(ray, normal_vector, nearby_material)								   																					
+        return material.change_of_optical_state(ray, normal_vector, nearby_material)

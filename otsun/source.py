@@ -4,10 +4,12 @@ Module that implements rays and its sources
 
 import itertools
 import Part
+from FreeCAD import Base
 from .materials import vacuum_medium
 from .ray import Ray
-from .optics import *
-from .math import pick_random_from_cdf
+from .optics import dispersion_from_main_direction, random_polarization
+import numpy as np
+from .math import pick_random_from_cdf, myrandom
 from .logging_unit import logger
 from autologging import traced
 
