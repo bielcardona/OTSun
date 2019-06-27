@@ -11,7 +11,7 @@ import zipfile
 from FreeCAD import Base
 from .optics import Phenomenon, OpticalState, reflexion, refraction, matrix_reflectance,\
     calculate_reflectance, simple_polarization_reflexion, simple_polarization_refraction, \
-    simple_reflexion
+    simple_reflexion, shure_refraction
 from .math import arccos, parallel_orthogonal_components, rad_to_deg, myrandom, normalize,\
     constant_function, correct_normal, tabulated_function
 from numpy import sqrt
@@ -979,6 +979,37 @@ class TransparentSimpleLayer(SurfaceMaterial):
         }
         properties = Material.plain_properties_to_properties(plain_properties)
         super(TransparentSimpleLayer, self).__init__(name, properties)
+
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+        n1 = ray.current_medium().get_n(ray.wavelength)
+        n2 = nearby_material.get_n(ray.wavelength)
+        if n1 == n2:  # transparent_simple_layer
+            state = OpticalState(ray.current_polarization(),
+                                 ray.current_direction(), Phenomenon.REFRACTION, nearby_material)
+        else:
+            state = shure_refraction(ray.current_direction(), normal_vector, n1, n2,
+                                     ray.current_polarization(),
+                                     perpendicular_polarized)
+            state.material = nearby_material
+        return state
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+        properties = self.properties
+        reflectance = properties['probability_of_reflexion'](ray.wavelength)
+        if myrandom() < reflectance:
+            polarization_vector = ray.current_polarization()
+            incident = ray.current_direction()
+            state = reflexion(incident, normal_vector, polarization_vector, False)
+            state.material = ray.current_medium()
+            state.apply_dispersion(properties, normal_vector)
+            return state
+        else:
+            # refraction in transparent layer
+            n1 = ray.current_medium().get_n(ray.wavelength)
+            n2 = nearby_material.get_n(ray.wavelength)
+            state = shure_refraction(ray.current_direction(), normal_vector, n1, n2,
+                                     ray.current_polarization())
+            state.material = nearby_material
+            return state
 
 
 @traced(logger)
