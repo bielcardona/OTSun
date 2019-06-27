@@ -629,7 +629,7 @@ class PolarizedThinFilm(VolumeMaterial):
                 transmittance = calculate_reflectance(t_matrix, inc_angle, wavelength)[0]
             else:
                 transmittance = calculate_reflectance(t_matrix, inc_angle, wavelength)[1]
-            factor_energy_absorbed_thin_film = (1 - reflectance - transmittance) / (1 - reflectance)
+            factor_energy_absorbed = (1 - reflectance - transmittance) / (1 - reflectance)
             refracted_direction = incident * r.real + \
                                   normal * (r.real * c1 - c2.real)
             refracted_direction.normalize()
@@ -638,7 +638,7 @@ class PolarizedThinFilm(VolumeMaterial):
                 polarization_vector = \
                     simple_polarization_refraction(
                         incident, normal, normal_parallel_plane, c2, polarization_vector)
-            return (factor_energy_absorbed_thin_film,
+            return (factor_energy_absorbed,
                     OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION))
 
     def change_of_optical_state(self, ray, normal_vector):
@@ -664,13 +664,13 @@ class PolarizedThinFilm(VolumeMaterial):
             n2 = n_back + 1j * k_back
         else:
             n2 = n_front + 1j * k_front
-        factor_energy_absorbed_thin_film, optical_state = (
+        factor_energy_absorbed, optical_state = (
             self.calculate_state_thin_film(
                 ray.current_direction(), normal_vector, n1, n2,
                 ray.current_polarization(),
                 properties, ray.wavelength))
-        optical_state.extra_data['factor_energy_absorbed_thin_film'] = \
-            factor_energy_absorbed_thin_film
+        optical_state.extra_data['factor_energy_absorbed'] = \
+            factor_energy_absorbed
         if optical_state.phenomenon == Phenomenon.REFRACTION:
             optical_state.material = self
         else:
@@ -1513,15 +1513,24 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
     # TODO: Document
     """
     def __init__(self, name, coating_file):
-        data_material = np.loadtxt(coating_file, usecols=(0, 1, 2, 3))
+        # coatingmaterial calculated by TMM method, six columns:
+        # wavelength in nm, angle in deg.,
+        # reflectance s-polarized (perpendicular),
+        # reflectance p-polarized (parallel),  transmittance s-polarized,
+        # transmittance p-polarized
+        # the values in coating_material should be in the corresponding
+        # order columns
+        data = np.loadtxt(coating_file)
+        data_reflectance = data[:, [0, 1, 2, 3]]
+        data_transmittance = data[:, [0, 1, 4, 5]]
         plain_properties = {
             'Matrix_reflectance_coating': {
                 'type': 'matrix',
-                'value': data_material
+                'value': data_reflectance
             },
-            'probability_of_absortion': {
-                'type': 'constant',
-                'value': 0
+            'Matrix_transmittance_coating': {
+                'type': 'matrix',
+                'value': data_transmittance
             },
             'energy_collector': {
                 'type': 'scalar',
@@ -1591,20 +1600,27 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             state.material = ray.current_medium()
             return state
         else:
-            # ray refracted: computing the refracted direction
+            # ray refracted: computing the refracted direction and energy absorbed in coating
+            transmittance_matrix = properties['Matrix_transmittance_coating']
+            t_matrix = transmittance_matrix(inc_angle, wavelength)
+            # transmittance dependent of incidence angle and wavelength
+            if perpendicular_polarized:
+                transmittance = calculate_reflectance(t_matrix, inc_angle, wavelength)[0]
+            else:
+                transmittance = calculate_reflectance(t_matrix, inc_angle, wavelength)[1]
+            factor_energy_absorbed = (1 - reflectance - transmittance) / (1 - reflectance)
             refracted_direction = incident * r.real + \
                                   normal * (r.real * c1 - c2.real)
             refracted_direction.normalize()
             if not perpendicular_polarized:
                 # refraction changes the parallel component of incident polarization
                 polarization_vector = \
-                    simple_polarization_refraction(incident, normal, normal_parallel_plane,
-                                                   c2, polarization_vector)
-            state = OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION)
-            state.material = nearby_material
-            return state
-
-
+                    simple_polarization_refraction(
+                        incident, normal, normal_parallel_plane, c2, polarization_vector)
+            optical_state = OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION, nearby_material)
+            optical_state.extra_data['factor_energy_absorbed'] = \
+                factor_energy_absorbed
+            return optical_state
 
 @traced(logger)
 class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):

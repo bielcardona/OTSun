@@ -269,7 +269,7 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, Lambertian_
     c2 = sqrt(c2sq)
     # cos (refracted_angle)
     parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident, normal)
-	# parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
+    # parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
     ref_per = perpendicular_v.Length ** 2.0 / polarization_vector.Length ** 2.0
     # weight of perpendicular component: 0 < ref_per < 1
     # We decide the polarization projection onto the parallel / perpendicular plane

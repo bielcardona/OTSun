@@ -225,8 +225,8 @@ class Ray(object):
             self.update_energy()
             # TODO: The following line is not elegant.
             #  Provisional solution for updating energy when passed a thin film
-            if 'factor_energy_absorbed_thin_film' in state.extra_data:
-                factor = state.extra_data['factor_energy_absorbed_thin_film']
+            if 'factor_energy_absorbed' in state.extra_data:
+                factor = state.extra_data['factor_energy_absorbed']
                 self.energy = self.energy * (1 - factor)
 
             # Treat PV material
