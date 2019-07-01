@@ -981,18 +981,6 @@ class TransparentSimpleLayer(SurfaceMaterial):
         super(TransparentSimpleLayer, self).__init__(name, properties)
 
     def change_of_optical_state(self, ray, normal_vector, nearby_material):
-        n1 = ray.current_medium().get_n(ray.wavelength)
-        n2 = nearby_material.get_n(ray.wavelength)
-        if n1 == n2:  # transparent_simple_layer
-            state = OpticalState(ray.current_polarization(),
-                                 ray.current_direction(), Phenomenon.REFRACTION, nearby_material)
-        else:
-            state = shure_refraction(ray.current_direction(), normal_vector, n1, n2,
-                                     ray.current_polarization(),
-                                     perpendicular_polarized)
-            state.material = nearby_material
-        return state
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
         properties = self.properties
         reflectance = properties['probability_of_reflexion'](ray.wavelength)
         if myrandom() < reflectance:
@@ -1006,9 +994,15 @@ class TransparentSimpleLayer(SurfaceMaterial):
             # refraction in transparent layer
             n1 = ray.current_medium().get_n(ray.wavelength)
             n2 = nearby_material.get_n(ray.wavelength)
-            state = shure_refraction(ray.current_direction(), normal_vector, n1, n2,
-                                     ray.current_polarization())
-            state.material = nearby_material
+            if n1 == n2:  # transparent_simple_layer
+                state = OpticalState(ray.current_polarization(),
+                                     ray.current_direction(),
+                                     Phenomenon.REFRACTION,
+                                     nearby_material)
+            else:
+                state = shure_refraction(ray.current_direction(), normal_vector,
+                                         n1, n2,ray.current_polarization())
+                state.material = nearby_material
             return state
 
 
