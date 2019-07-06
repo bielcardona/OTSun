@@ -1,22 +1,32 @@
+"""
+Testing for the following materials:
+TransparentSimpleLayer
+AbsorberSimpleLayer
+PolarizedThinFilm
+PVMaterial
+WavelengthVolumeMaterial
+MetallicLambertianLayer
+TwoLayerMaterial
+"""
+
 import sys
+otsun_path = "D:\\Ramon_2015\\RECERCA\\RETOS-2015\\Tareas\\OTSun_local\\"
+sys.path.append(otsun_path)
 import otsun
 import os
 import FreeCAD
 from FreeCAD import Base
 import Part
 import numpy as np
-
 import random
 random.seed(1)
 
 MyProject = 'Perovskite_Stack_200nm.FCStd'
 FreeCAD.openDocument(MyProject)
 
-
-doc = FreeCAD.ActiveDocument
-
-
-# Materials Solar Cell Stack
+# ---
+# Materials
+# ---
 otsun.TransparentSimpleLayer("Trans", 1.0)
 otsun.AbsorberSimpleLayer("Abs", 1.0)
 otsun.TwoLayerMaterial("Trans_Abs", "Trans", "Abs")
@@ -35,12 +45,12 @@ otsun.MetallicLambertianLayer("Ag", file_Ag)
 # ---
 polarization_vector = None
 show_in_doc = None
-# show_in_doc = doc
 # --------- end
 
 # ---
 # Inputs for Spectral Analysis
 # ---
+doc = FreeCAD.ActiveDocument
 phi = 0.0 # default value zero
 phi = phi + 1.E-9
 theta = 0.0 # default value zero
@@ -49,7 +59,7 @@ wavelength_ini = 500.0 # default value 280.0
 wavelength_end = 502.0 # default value 4000.0
 wavelength_end = wavelength_end + 1E-4
 wavelength_step = 2.0 # default value 10.0
-number_of_rays = 100 # number of rays per wavelength # default value 1000
+number_of_rays = 20 # number of rays per wavelength # default value 1000
 aperture_collector_Th = 1000. * 1000. * 1.0 # default value zero
 aperture_collector_PV = 1000. * 1000. * 1.0 # default value zero
 # for direction of the source two options: Buie model or main_direction 
@@ -62,8 +72,6 @@ internal_quantum_efficiency = 1.0 # default option equal to 1.0
 # internal_quantum_efficiency = 'data.txt'  
 data_file_spectrum = 'ASTMG173-direct.txt'
 # --------- end
-
-
 
 # ---
 # Magnitudes used for outputs in Spectral Analysis
@@ -154,6 +162,9 @@ if captured_energy_PV > 1E-9:
 
 FreeCAD.closeDocument(FreeCAD.ActiveDocument.Name)
 
+print table_Th, table_PV
+print 0.2 > table_Th[0][1] > 0.0 and 0.2 > table_Th[1][1] > 0.0 and 0.98 > table_PV[0][1] > 0.75 and 0.98 > table_PV[1][1] > 0.75
+
 def test_3():
-    assert 0.1 > table_Th[0][1] > 0.0 and 0.1 > table_Th[1][1] > 0.0 and 0.98 > table_PV[0][1] > 0.75 and 0.98 > table_PV[1][1] > 0.75
+    assert 0.2 > table_Th[0][1] > 0.0 and 0.2 > table_Th[1][1] > 0.0 and 0.98 > table_PV[0][1] > 0.75 and 0.98 > table_PV[1][1] > 0.75
 

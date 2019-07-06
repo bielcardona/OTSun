@@ -1,40 +1,36 @@
+"""
+Testing (with Buie Model as solar direction) for the following materials:
+SimpleVolumeMaterial
+OpaqueSimpleLayer
+TransparentSimpleLayer
+ReflectorSpecularLayer
+AbsorberLambertianLayer
+TwoLayerMaterial
+"""
+
 import sys
-## sys.path.append("D:Ramon_2015/RECERCA/RETOS-2015/Tareas/Proves-FreeCAD-2") # change for your path
-#sys.path.append("")
-#sys.path.append("/usr/lib/freecad/lib")
+##otsun_path = "D:\\Ramon_2015\\RECERCA\\RETOS-2015\\Tareas\\OTSun_local\\"
+##sys.path.append(otsun_path)
 import otsun
-## import my_materials
 import FreeCAD
 from FreeCAD import Base
 import Part
-import time
 import numpy as np
-
 import random
-random.seed(1)
-
-## reload(raytrace)
+random.seed(1000)
 
 MyProject = 'test_PTC.FCStd'
 FreeCAD.openDocument(MyProject)
-
-# import logging
-# from autologging import TRACE
-# logger = logging.root
-# logger.setLevel(TRACE)
-# handler = logging.StreamHandler(sys.stdout)
-# handler.setLevel(TRACE)
-# formatter = logging.Formatter('%(levelname)s:%(name)s:%(funcName)s:%(message)s')
-# handler.setFormatter(formatter)
-# logger.addHandler(handler)
 
 # ---
 # Materials
 # ---
 otsun.SimpleVolumeMaterial("Glass1", 1.473, 0.015)
-otsun.ReflectorSpecularLayer("Mir", 0.885, 4.4)
+otsun.OpaqueSimpleLayer("Opa1")
+otsun.TransparentSimpleLayer("AR1",0.95)
+otsun.ReflectorSpecularLayer("Mir", 0.885, 4.4, 20, 0.9)
 otsun.TwoLayerMaterial("Mir1", "Mir", "Mir")
-otsun.AbsorberTWModelLayer("Abs1", 0.9427, 0.017, 1.8)
+otsun.AbsorberLambertianLayer("Abs1",0.92)
 
 # ---
 # Inputs for Total Analysis
@@ -56,6 +52,7 @@ CSR = 0.05
 Buie_model = otsun.BuieDistribution(CSR)
 direction_distribution = Buie_model
 # for integral results three options: ASTMG173-direct (default option), ASTMG173-total, upload data_file_spectrum
+##data_file_spectrum = 'D:\\Ramon_2015\\RECERCA\\RETOS-2015\\Tareas\\OTSun_local\\tests\\ASTMG173-direct.txt'
 data_file_spectrum = 'ASTMG173-direct.txt'
 # --------- end
 
@@ -75,12 +72,11 @@ current_scene = otsun.Scene(sel)
 results = []
 for ph in np.arange(phi_ini, phi_end, phi_step):
     for th in np.arange(theta_ini, theta_end, theta_step):
-        main_direction = otsun.polar_to_cartesian(ph, th) * -1.0 # Sun direction vector
+        main_direction = otsun.polar_to_cartesian(ph, th) * -1.0
         emitting_region = otsun.SunWindow(current_scene, main_direction)
         l_s = otsun.LightSource(current_scene, emitting_region, light_spectrum, 1.0, direction_distribution, polarization_vector)
         exp = otsun.Experiment(current_scene, l_s, number_of_rays, show_in_doc)
         exp.run(show_in_doc)
-        t1 = time.time()
         if aperture_collector_Th != 0.0:
             efficiency_from_source_Th = (exp.captured_energy_Th /aperture_collector_Th) / (exp.number_of_rays/exp.light_source.emitting_region.aperture)
         else:
@@ -92,6 +88,9 @@ for ph in np.arange(phi_ini, phi_end, phi_step):
         results.append((ph, th, efficiency_from_source_Th, efficiency_from_source_PV))
 
 FreeCAD.closeDocument(FreeCAD.ActiveDocument.Name)
+
+print results
+print 0.9 > results[0][2] > 0.6 and 0.7 > results[1][2] > 0.4 and results[0][3] == 0.0 and results[1][3] == 0.0
 
 def test_1():
     assert 0.9 > results[0][2] > 0.6 and 0.7 > results[1][2] > 0.4 and results[0][3] == 0.0 and results[1][3] == 0.0
