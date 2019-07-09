@@ -11,7 +11,7 @@ import zipfile
 from FreeCAD import Base
 from .optics import Phenomenon, OpticalState, reflexion, refraction, matrix_reflectance,\
     calculate_reflectance, simple_polarization_reflexion, simple_polarization_refraction, \
-    simple_reflexion, shure_refraction
+    simple_reflexion, shure_refraction, lambertian_reflexion
 from .math import arccos, parallel_orthogonal_components, rad_to_deg, myrandom, normalize,\
     constant_function, correct_normal, tabulated_function
 from numpy import sqrt
