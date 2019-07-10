@@ -70,7 +70,14 @@ def tabulated_function(xvalues, yvalues):
     function
         Function that interpolates by straight line segments the input data
     """
-    return lambda x: np.interp(x, xvalues, yvalues)
+    cached = {}
+    def function_to_cache(x):
+        if x in cached:
+            return cached[x]
+        value = np.interp(x, xvalues, yvalues)
+        cached[x] = value
+        return value
+    return function_to_cache
 
 
 # ---

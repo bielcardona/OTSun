@@ -469,8 +469,15 @@ def matrix_reflectance(data_material):
         w = min(steps[steps > 0.0])
     except ValueError:
         w = 1E-4
-    return lambda x, y: [row for row in data_material if
+    cached = {}
+    def function_to_cache(x,y):
+        if (x,y) in cached:
+            return cached[(x,y)]
+        value = [row for row in data_material if
                          (x + a > row[1] > x - a) and (y + w > row[0] > y - w)]
+        cached[(x,y)] = value
+        return value
+    return function_to_cache
 
 
 @traced(logger)
