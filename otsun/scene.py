@@ -1,5 +1,6 @@
 from .materials import Material
 from .logging_unit import logger
+from .math import correct_normal
 
 class Scene:
     """
@@ -72,3 +73,8 @@ class Scene:
             if face.isInside(point, self.epsilon, True):
                 return face
         return None
+
+    def next_solid_at_point_in_direction(self, point, normal, direction):
+        external_normal = correct_normal(normal, direction)
+        point_plus_epsilon = point + external_normal * (-2) * self.epsilon
+        return self.solid_at_point(point_plus_epsilon)

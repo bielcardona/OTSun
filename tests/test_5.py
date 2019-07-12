@@ -4,14 +4,14 @@ for the following materials:
 WavelengthVolumeMaterial
 OpaqueSimpleLayer
 PolarizedCoatingTransparentLayer
-MetallicSpecularLayer
-PolarizedCoatingAbsorberLayer
+PolarizedCoatingReflectorLayer
+AbsorberTWModelLayer
 TwoLayerMaterial
 """
 
 import sys
-otsun_path = "D:\\Ramon_2015\\RECERCA\\RETOS-2015\\Tareas\\OTSun_local\\"
-sys.path.append(otsun_path)
+## otsun_path = "D:\\Ramon_2015\\RECERCA\\RETOS-2015\\Tareas\\OTSun_local\\"
+## sys.path.append(otsun_path)
 import otsun
 import FreeCAD
 from FreeCAD import Base
@@ -49,15 +49,10 @@ otsun.OpaqueSimpleLayer("Opa1")
 file_AR1 = 'AR-J.txt'
 otsun.PolarizedCoatingTransparentLayer("file_AR1", file_AR1)
 otsun.TwoLayerMaterial("AR1", "file_AR1", "file_AR1")
-file_Ag = 'Ag_Yang.txt'
-otsun.MetallicSpecularLayer("Mir", file_Ag, 4.4, 20, 0.9)
+file_Coating_Ag = 'Air_Ag_Air.txt'
+otsun.PolarizedCoatingReflectorLayer("Mir", file_Coating_Ag, 4.4, 20, 0.9)
 otsun.TwoLayerMaterial("Mir1", "Mir", "Mir")
-file_Abs_Coating = 'Si3N4Reflectancia.txt'
-otsun.PolarizedCoatingAbsorberLayer("Abs1", file_Abs_Coating)
-# otsun.AbsorberLambertianLayer("Abs1",0.92)
-
-
-
+otsun.AbsorberTWModelLayer("Abs1", 0.9427, 0.017, 1.8)
 # ---
 # Inputs for Total Analysis
 # ---
@@ -97,7 +92,7 @@ current_scene = otsun.Scene(sel)
 results = []
 for ph in np.arange(phi_ini, phi_end, phi_step):
     for th in np.arange(theta_ini, theta_end, theta_step):
-        main_direction = otsun.polar_to_cartesian(ph, th) * -1.0 # Sun direction vector
+        main_direction = otsun.polar_to_cartesian(ph, th) * -1.0
         emitting_region = otsun.SunWindow(current_scene, main_direction)
         l_s = otsun.LightSource(current_scene, emitting_region, light_spectrum, 1.0, direction_distribution, polarization_vector)
         exp = otsun.Experiment(current_scene, l_s, number_of_rays, show_in_doc)
@@ -117,5 +112,5 @@ FreeCAD.closeDocument(FreeCAD.ActiveDocument.Name)
 print results
 print 0.9 > results[0][2] > 0.7 and 0.85 > results[1][2] > 0.5 and results[0][3] == 0.0 and results[1][3] == 0.0
 
-def test_2():
+def test_5():
     assert 0.9 > results[0][2] > 0.7 and 0.85 > results[1][2] > 0.5 and results[0][3] == 0.0 and results[1][3] == 0.0

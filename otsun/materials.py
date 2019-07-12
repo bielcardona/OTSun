@@ -219,8 +219,11 @@ class Material(object):
         try:
             with zipfile.ZipFile(filename) as z:
                 for matfile in z.namelist():
-                    with z.open(matfile) as f:
-                        cls.load_from_json_fileobject(f)
+                    try:
+                        with z.open(matfile) as f:
+                            cls.load_from_json_fileobject(f)
+                    except:
+                        logger.exception("File %s in zip contains errors", matfile)
         except IOError:
             logger.exception("error in processing file %s", filename)
 
