@@ -73,7 +73,7 @@ aperture_collector_PV = 1000. * 1000. * 1.0 # default value zero
 # for direction of the source two options: Buie model or main_direction 
 direction_distribution = None # default option main_direction
 # CSR = 0.05
-# Buie_model = raytrace.BuieDistribution(CSR)
+# Buie_model = raytrace.buie_distribution(CSR)
 # direction_distribution = Buie_model
 # for the internal quantum efficiency two options: constant value =< 1.0, or data file 
 internal_quantum_efficiency = 1.0 # default option equal to 1.0

@@ -70,7 +70,7 @@ aperture_collector_PV = 0.0
 # for direction of the source two options: Buie model or main_direction 
 # direction_distribution = None # default option main_direction
 CSR = 0.05
-Buie_model = otsun.BuieDistribution(CSR)
+Buie_model = otsun.buie_distribution(CSR)
 direction_distribution = None
 # for integral results three options: ASTMG173-direct (default option), ASTMG173-total, upload data_file_spectrum
 data_file_spectrum = 'ASTMG173-direct.txt'
