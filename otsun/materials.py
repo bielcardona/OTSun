@@ -709,15 +709,13 @@ class SurfaceMaterial(Material):
         _ = cls(name, properties)
 
 
-    def compute_probabilities_and_polarizations(self, ray, normal_vector, nearby_material):
+    def compute_probabilities(self, ray):
         """
         # TODO: Document
 
         Parameters
         ----------
         ray
-        normal_vector
-        nearby_material
 
         Returns
         -------
@@ -737,10 +735,10 @@ class SurfaceMaterial(Material):
         except KeyError:
             pot = 0.0
 
-        return [por, poa, pot], ray.current_polarization(), False
+        return [por, poa, pot]
 
 
-    def decide_phenomenon(self, ray, normal_vector, nearby_material):
+    def decide_phenomenon(self, ray):
         """
         # TODO: Document
 
@@ -759,135 +757,49 @@ class SurfaceMaterial(Material):
             Phenomenon.ABSORPTION,
             Phenomenon.TRANSMITTANCE]
 
-        probabilities, polarization_vector, perpendicular_polarized = \
-            self.compute_probabilities_and_polarizations(ray, normal_vector,
-                                                         nearby_material)
+        probabilities = self.compute_probabilities(ray)
         phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
-        return phenomenon, polarization_vector, perpendicular_polarized
+        return phenomenon
 
-    def change_of_optical_state_by_absortion(self, ray, normal_vector):
-        """
-        # TODO: Document
-
-        Parameters
-        ----------
-        ray
-        normal_vector
-
-        Returns
-        -------
-
-        """
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+        phenomenon = self.decide_phenomenon(ray)
         properties = self.properties
-        if properties['energy_collector']:
-            return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                 Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ENERGY_ABSORBED,
-                                 self))
-        else:
-            return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                 Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ABSORPTION,
-                                 self))
-
-    def change_of_optical_state_by_reflexion(self, ray, normal_vector,
-                                             polarization_vector_calculated_before):
-        """
-        # TODO @Ramon: Mirar l'embull del polarization_vector_calculated_before
-        # TODO: Document
-
-        Parameters
-        ----------
-        ray
-        normal_vector
-        polarization_vector_calculated_before
-
-        Returns
-        -------
-
-        """
-        properties = self.properties
-        if 'specular_material' in properties:
-            state = reflexion(ray.current_direction(), normal_vector,
-                              ray.current_polarization(),
-                              polarization_vector_calculated_before)
+        if phenomenon == Phenomenon.REFLEXION:
+            polarization_vector = ray.current_polarization()
+            incident = ray.current_direction()
+            if self.properties.get('lambertian_material', False):
+                state = lambertian_reflexion(ray.current_direction(), normal_vector)
+            else:
+                state = reflexion(incident, normal_vector, polarization_vector, False)
             state.material = ray.current_medium()
             state.apply_dispersion(properties, normal_vector)
             return state
-        if 'lambertian_material' in properties:
-            state = lambertian_reflexion(ray.current_direction(), normal_vector)
-            state.material = ray.current_medium()
+        if phenomenon == Phenomenon.ABSORPTION:
+            if self.properties.get('energy_collector', False):
+                return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
+                                     Base.Vector(0.0, 0.0, 0.0),
+                                     Phenomenon.ENERGY_ABSORBED,
+                                     self))
+            else:
+                return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
+                                     Base.Vector(0.0, 0.0, 0.0),
+                                     Phenomenon.ABSORPTION,
+                                     self))
+        if phenomenon == Phenomenon.TRANSMITTANCE:
+            # refraction in transparent layer
+            n1 = ray.current_medium().get_n(ray.wavelength)
+            n2 = nearby_material.get_n(ray.wavelength)
+            if n1 == n2:  # transparent_simple_layer
+                state = OpticalState(ray.current_polarization(),
+                                     ray.current_direction(),
+                                     Phenomenon.REFRACTION,
+                                     nearby_material)
+            else:
+                state = shure_refraction(ray.current_direction(), normal_vector,
+                                         n1, n2, ray.current_polarization())
+                state.material = nearby_material
             return state
 
-    def change_of_optical_state_by_transmitance(self, ray, normal_vector,
-                                                nearby_material,
-                                                perpendicular_polarized):
-        """
-        # TODO: Document
-
-        Parameters
-        ----------
-        ray
-        normal_vector
-        nearby_material
-        perpendicular_polarized
-
-        Returns
-        -------
-
-        """
-        n1 = ray.current_medium().get_n(ray.wavelength)
-        n2 = nearby_material.get_n(ray.wavelength)
-        if n1 == n2:  # transparent_simple_layer
-            state = OpticalState(ray.current_polarization(),
-                                 ray.current_direction(), Phenomenon.REFRACTION, nearby_material)
-        else:
-            state = shure_refraction(ray.current_direction(), normal_vector, n1, n2,
-                                     ray.current_polarization(),
-                                     perpendicular_polarized)
-            state.material = nearby_material
-        return state
-
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
-        """
-        # TODO: Document
-
-        Parameters
-        ----------
-        ray
-        normal_vector
-        nearby_material
-
-        Returns
-        -------
-
-        """
-        material = self
-        results = material.decide_phenomenon(ray, normal_vector, nearby_material)
-        phenomenon = results[0]
-        if ray.current_polarization() == results[1]:
-            # polarization_vector not calculated
-            polarization_vector_calculated_before = False
-        else:
-            # polarization_vector calculated before
-            polarization_vector_calculated_before = True
-        ## ray.polarization_vectors[-1] = results[1]
-        # TODO: Caution!!!! previous line!
-        perpendicular_polarized = results[2]  # True or False
-        if phenomenon == Phenomenon.REFLEXION:
-            state = material.change_of_optical_state_by_reflexion(
-                ray, normal_vector,
-                polarization_vector_calculated_before)
-            return state
-        elif phenomenon == Phenomenon.ABSORPTION:
-            state = material.change_of_optical_state_by_absortion(
-                ray, normal_vector)
-            return state
-        elif phenomenon == Phenomenon.TRANSMITTANCE:
-            state = material.change_of_optical_state_by_transmitance(
-                ray, normal_vector, nearby_material,
-                perpendicular_polarized)
-            return state
 
     @classmethod
     def from_plain_properties(cls, name, plain_properties):
@@ -945,12 +857,6 @@ class OpaqueSimpleLayer(SurfaceMaterial):
         properties = Material.plain_properties_to_properties(plain_properties)
         super(OpaqueSimpleLayer, self).__init__(name, properties)
 
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
-        # absorption in opaque material: the ray is killed
-        return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                            Base.Vector(0.0, 0.0, 0.0),
-                            Phenomenon.ABSORPTION, self)
-
 
 @traced(logger)
 class TransparentSimpleLayer(SurfaceMaterial):
@@ -982,31 +888,6 @@ class TransparentSimpleLayer(SurfaceMaterial):
         }
         properties = Material.plain_properties_to_properties(plain_properties)
         super(TransparentSimpleLayer, self).__init__(name, properties)
-
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
-        properties = self.properties
-        reflectance = properties['probability_of_reflexion'](ray.wavelength)
-        if myrandom() < reflectance:
-            polarization_vector = ray.current_polarization()
-            incident = ray.current_direction()
-            state = reflexion(incident, normal_vector, polarization_vector, False)
-            state.material = ray.current_medium()
-            state.apply_dispersion(properties, normal_vector)
-            return state
-        else:
-            # refraction in transparent layer
-            n1 = ray.current_medium().get_n(ray.wavelength)
-            n2 = nearby_material.get_n(ray.wavelength)
-            if n1 == n2:  # transparent_simple_layer
-                state = OpticalState(ray.current_polarization(),
-                                     ray.current_direction(),
-                                     Phenomenon.REFRACTION,
-                                     nearby_material)
-            else:
-                state = shure_refraction(ray.current_direction(), normal_vector,
-                                         n1, n2,ray.current_polarization())
-                state.material = nearby_material
-            return state
 
 
 @traced(logger)
@@ -1040,21 +921,6 @@ class AbsorberSimpleLayer(SurfaceMaterial):
         properties = Material.plain_properties_to_properties(plain_properties)
         super(AbsorberSimpleLayer, self).__init__(name, properties)
 
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
-        properties = self.properties
-        absortion = properties['probability_of_absortion'](ray.wavelength)
-        reflectance = 1.0 - absortion
-        if myrandom() < reflectance:
-            state = reflexion(ray.current_direction(),
-                              normal_vector, ray.current_polarization(), False)
-            state.material = ray.current_medium()
-            return state
-        else:
-            # absorption in absorber material: the energy is abosrbed
-            return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                Base.Vector(0.0, 0.0, 0.0),
-                                Phenomenon.ENERGY_ABSORBED, self)
-
 
 @traced(logger)
 class AbsorberLambertianLayer(SurfaceMaterial):
@@ -1087,20 +953,6 @@ class AbsorberLambertianLayer(SurfaceMaterial):
         properties = Material.plain_properties_to_properties(plain_properties)
         super(AbsorberLambertianLayer, self).__init__(name, properties)
 
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
-        properties = self.properties
-        absortion = properties['probability_of_absortion'](ray.wavelength)
-        reflectance = 1.0 - absortion
-        if myrandom() < reflectance:
-            polarization_vector = ray.current_polarization()
-            state = lambertian_reflexion(ray.current_direction(), normal_vector)
-            state.material = ray.current_medium()
-            return state
-        else:
-            # absorptiontion in absorber material: the ray is killed
-            return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                Base.Vector(0.0, 0.0, 0.0),
-                                Phenomenon.ENERGY_ABSORBED, self)
 
 @traced(logger)
 class ReflectorSpecularLayer(SurfaceMaterial):
@@ -1145,21 +997,6 @@ class ReflectorSpecularLayer(SurfaceMaterial):
         properties = Material.plain_properties_to_properties(plain_properties)
         super(ReflectorSpecularLayer, self).__init__(name, properties)
 
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
-        properties = self.properties
-        reflectance = properties['probability_of_reflexion'](ray.wavelength)
-        if myrandom() < reflectance:
-            polarization_vector = ray.current_polarization()
-            incident = ray.current_direction()
-            state = reflexion(incident, normal_vector, polarization_vector, False)
-            state.material = ray.current_medium()
-            state.apply_dispersion(properties, normal_vector)
-            return state
-        else:
-            # refraction in metallic layer: the ray is killed
-            return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                Base.Vector(0.0, 0.0, 0.0),
-                                Phenomenon.ABSORPTION, self)
 
 @traced(logger)
 class ReflectorLambertianLayer(SurfaceMaterial):
@@ -1191,20 +1028,6 @@ class ReflectorLambertianLayer(SurfaceMaterial):
         }
         properties = Material.plain_properties_to_properties(plain_properties)
         super(ReflectorLambertianLayer, self).__init__(name, properties)
-
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
-        properties = self.properties
-        reflectance = properties['probability_of_reflexion'](ray.wavelength)
-        if myrandom() < reflectance:
-            incident = ray.current_direction()
-            state = lambertian_reflexion(incident, normal_vector)
-            state.material = ray.current_medium()
-            return state
-        else:
-            # refraction in metallic layer: the ray is killed
-            return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                Base.Vector(0.0, 0.0, 0.0),
-                                Phenomenon.ABSORPTION, self)
 
 
 @traced(logger)
