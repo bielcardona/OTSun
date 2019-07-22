@@ -1103,100 +1103,6 @@ class AbsorberLambertianLayer(SurfaceMaterial):
                                 Phenomenon.ENERGY_ABSORBED, self)
 
 @traced(logger)
-class AbsorberTWModelLayer(SurfaceMaterial):
-    """
-    # TODO: Document
-    """
-    def __init__(self, name, poa, b_constant, c_constant):
-        plain_properties = {
-            'probability_of_reflexion': {
-                'type': 'constant',
-                'value': 1 - poa
-            },
-            'probability_of_absortion': {
-                'type': 'constant',
-                'value': poa
-            },
-            'probability_of_transmitance': {
-                'type': 'constant',
-                'value': 0.0
-            },
-            'energy_collector': {
-                'type': 'scalar',
-                'value': True
-            },
-            'TW_model': {
-                'type': 'scalar',
-                'value': True
-            },
-            'b_constant': {
-                'type': 'scalar',
-                'value': b_constant
-            },
-            'c_constant': {
-                'type': 'scalar',
-                'value': c_constant
-            }
-        }
-        properties = Material.plain_properties_to_properties(plain_properties)
-        super(AbsorberTWModelLayer, self).__init__(name, properties)
-
-    @staticmethod
-    def tw_absorptance_ratio(normal_vector, b_constant, c_constant, incident):
-        """Angular Solar Absorptance model for selective absorber material.
-
-        Given by the formula 1 - b * (1/cos - 1) ** c, based on:
-        Tesfamichael, T., and Wackelgard, E., 2000, "Angular Solar Absorptance and
-        Incident Angle Modifier of Selective Absorbers for Solar Thermal Collectors,"
-        Sol. Energy, 68, pp. 335-341.
-
-        Parameters
-        ----------
-        normal : Base.Vector
-            normal vector of the surface at the point of incidence
-        b_constant : float
-        c_constant : float
-        incident : Base.Vector
-            direction vector of the incident ray
-
-        Returns
-        -------
-        float
-
-        """
-        # We assume the normal is normalized.
-        normal = correct_normal(normal_vector, incident)
-        c1 = - normal.dot(incident)
-        inc_angle = rad_to_deg(arccos(c1))
-        # incidence angle
-        if inc_angle < 80.0:
-            absorption_ratio = 1.0 - b_constant * abs((1.0 / c1 - 1.0)) ** c_constant
-        else:
-            y0 = 1.0 - b_constant * (1.0 / np.cos(80.0 * np.pi / 180.0) - 1.0) ** c_constant
-            m = y0 / 10.0
-            absorption_ratio = y0 - m * (inc_angle - 80.0)
-        return absorption_ratio
-
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
-        properties = self.properties
-        b_constant = properties['b_constant']
-        c_constant = properties['c_constant']
-        absortion_ratio = self.tw_absorptance_ratio(
-            normal_vector, b_constant, c_constant, ray.current_direction())
-        absortion = properties['probability_of_absortion'](ray.wavelength) * absortion_ratio
-        reflectance = 1.0 - absortion
-        if myrandom() < reflectance:
-            polarization_vector = ray.current_polarization()
-            state = reflexion(ray.current_direction(), normal_vector, polarization_vector, False)
-            state.material = ray.current_medium()
-            return state
-        else:
-            # absorptiontion in absorber material: the ray is killed
-            return OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                Base.Vector(0.0, 0.0, 0.0),
-                                Phenomenon.ENERGY_ABSORBED, self)
-
-@traced(logger)
 class ReflectorSpecularLayer(SurfaceMaterial):
     """
     # TODO: Document
@@ -1299,6 +1205,102 @@ class ReflectorLambertianLayer(SurfaceMaterial):
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                 Base.Vector(0.0, 0.0, 0.0),
                                 Phenomenon.ABSORPTION, self)
+
+
+@traced(logger)
+class AbsorberTWModelLayer(SurfaceMaterial):
+    """
+    # TODO: Document
+    """
+    def __init__(self, name, poa, b_constant, c_constant):
+        plain_properties = {
+            'probability_of_reflexion': {
+                'type': 'constant',
+                'value': 1 - poa
+            },
+            'probability_of_absortion': {
+                'type': 'constant',
+                'value': poa
+            },
+            'probability_of_transmitance': {
+                'type': 'constant',
+                'value': 0.0
+            },
+            'energy_collector': {
+                'type': 'scalar',
+                'value': True
+            },
+            'TW_model': {
+                'type': 'scalar',
+                'value': True
+            },
+            'b_constant': {
+                'type': 'scalar',
+                'value': b_constant
+            },
+            'c_constant': {
+                'type': 'scalar',
+                'value': c_constant
+            }
+        }
+        properties = Material.plain_properties_to_properties(plain_properties)
+        super(AbsorberTWModelLayer, self).__init__(name, properties)
+
+    @staticmethod
+    def tw_absorptance_ratio(normal_vector, b_constant, c_constant, incident):
+        """Angular Solar Absorptance model for selective absorber material.
+
+        Given by the formula 1 - b * (1/cos - 1) ** c, based on:
+        Tesfamichael, T., and Wackelgard, E., 2000, "Angular Solar Absorptance and
+        Incident Angle Modifier of Selective Absorbers for Solar Thermal Collectors,"
+        Sol. Energy, 68, pp. 335-341.
+
+        Parameters
+        ----------
+        normal : Base.Vector
+            normal vector of the surface at the point of incidence
+        b_constant : float
+        c_constant : float
+        incident : Base.Vector
+            direction vector of the incident ray
+
+        Returns
+        -------
+        float
+
+        """
+        # We assume the normal is normalized.
+        normal = correct_normal(normal_vector, incident)
+        c1 = - normal.dot(incident)
+        inc_angle = rad_to_deg(arccos(c1))
+        # incidence angle
+        if inc_angle < 80.0:
+            absorption_ratio = 1.0 - b_constant * abs((1.0 / c1 - 1.0)) ** c_constant
+        else:
+            y0 = 1.0 - b_constant * (1.0 / np.cos(80.0 * np.pi / 180.0) - 1.0) ** c_constant
+            m = y0 / 10.0
+            absorption_ratio = y0 - m * (inc_angle - 80.0)
+        return absorption_ratio
+
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+        properties = self.properties
+        b_constant = properties['b_constant']
+        c_constant = properties['c_constant']
+        absortion_ratio = self.tw_absorptance_ratio(
+            normal_vector, b_constant, c_constant, ray.current_direction())
+        absortion = properties['probability_of_absortion'](ray.wavelength) * absortion_ratio
+        reflectance = 1.0 - absortion
+        if myrandom() < reflectance:
+            polarization_vector = ray.current_polarization()
+            state = reflexion(ray.current_direction(), normal_vector, polarization_vector, False)
+            state.material = ray.current_medium()
+            return state
+        else:
+            # absorptiontion in absorber material: the ray is killed
+            return OpticalState(Base.Vector(0.0, 0.0, 0.0),
+                                Base.Vector(0.0, 0.0, 0.0),
+                                Phenomenon.ENERGY_ABSORBED, self)
+
 
 
 @traced(logger)
