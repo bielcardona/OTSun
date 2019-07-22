@@ -1306,8 +1306,6 @@ class MetallicLayer(SurfaceMaterial):
     """
     # TODO: Document
     """
-    # TODO: material obsolet o be que sigui el pare de
-    # MetallicSpecularLayer i MetallicLambertianLayer
 
 
 @traced(logger)
@@ -1324,25 +1322,13 @@ class MetallicSpecularLayer(MetallicLayer):
         n_values = data_refraction[:, 1]
         k_values = data_refraction[:, 2]
         plain_properties = {
-            'index_of_refraction': {
+            'index_of_refraction': { # TODO: @Ramon Crec que aixo no s'empra per res
                 'type': 'tabulated',
                 'value': [wavelength_values, n_values]
             },
             'extinction_coefficient': {
                 'type': 'tabulated',
                 'value': [wavelength_values, k_values]
-            },
-            'energy_collector': {
-                'type': 'scalar',
-                'value': False
-            },
-            'specular_material': {
-                'type': 'scalar',
-                'value': True
-            },
-            'metallic_material': {
-                'type': 'scalar',
-                'value': True
             },
             'sigma_1': {
                 'type': 'scalar',
@@ -1400,18 +1386,6 @@ class MetallicLambertianLayer(MetallicLayer):
                 'type': 'tabulated',
                 'value': [wavelength_values, k_values]
             },
-            'energy_collector': {
-                'type': 'scalar',
-                'value': False
-            },
-            'lambertian_material': {
-                'type': 'scalar',
-                'value': True
-            },
-            'metallic_material': {
-                'type': 'scalar',
-                'value': True
-            },
         }
         properties = Material.plain_properties_to_properties(plain_properties)
         super(MetallicLambertianLayer, self).__init__(name, properties)
@@ -1458,22 +1432,6 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
             'Matrix_reflectance_coating': {
                 'type': 'matrix',
                 'value': data_material
-            },
-            'probability_of_absortion': {
-                'type': 'constant',
-                'value': 0
-            },
-            'energy_collector': {
-                'type': 'scalar',
-                'value': False
-            },
-            'specular_material': {
-                'type': 'scalar',
-                'value': True
-            },
-            'transparent_material': {
-                'type': 'scalar',
-                'value': False
             },
             'sigma_1': {
                 'type': 'scalar',
@@ -1559,18 +1517,6 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             'Matrix_transmittance_coating': {
                 'type': 'matrix',
                 'value': data_transmittance
-            },
-            'energy_collector': {
-                'type': 'scalar',
-                'value': False
-            },
-            'specular_material': {
-                'type': 'scalar',
-                'value': False
-            },
-            'transparent_material': {
-                'type': 'scalar',
-                'value': True
             },
         }
         properties = Material.plain_properties_to_properties(plain_properties)
@@ -1670,22 +1616,6 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
             'probability_of_transmitance': {
                 'type': 'constant',
                 'value': 0
-            },
-            'energy_collector': {
-                'type': 'scalar',
-                'value': True
-            },
-            'specular_material': {
-                'type': 'scalar',
-                'value': True
-            },
-            'transparent_material': {
-                'type': 'scalar',
-                'value': False
-            },
-            'lambertian_material': {
-                'type': 'scalar',
-                'value': False
             },
         }
         properties = Material.plain_properties_to_properties(plain_properties)
