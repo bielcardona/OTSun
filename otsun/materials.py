@@ -1239,42 +1239,7 @@ class PolarizedCoatingLayer(SurfaceMaterial):
     def __init__(self, *args):
         super(PolarizedCoatingLayer, self).__init__(*args)
 
-
-
-@traced(logger)
-class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
-    """
-    # TODO: Document
-    """
-    def __init__(self, name, coating_file, sigma_1=None, sigma_2=None, k=None):
-        # coating_material with four columns: wavelenth in nm,
-        # angle in deg., reflectance s-polarized (perpendicular),
-        # reflectance p-polarized (parallel)
-        # the values in coating_material should be in the corresponding
-        # order columns
-        data_material = np.loadtxt(coating_file, usecols=(0, 1, 2, 3))
-        plain_properties = {
-            'Matrix_reflectance_coating': {
-                'type': 'matrix',
-                'value': data_material
-            },
-            'sigma_1': {
-                'type': 'scalar',
-                'value': sigma_1
-            },
-            'sigma_2': {
-                'type': 'scalar',
-                'value': sigma_2
-            },
-            'k': {
-                'type': 'scalar',
-                'value': k
-            }
-        }
-        properties = Material.plain_properties_to_properties(plain_properties)
-        super(PolarizedCoatingReflectorLayer, self).__init__(name, properties)
-
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+    def precompute_change_of_optical_state(self, ray, normal_vector, nearby_material):
         polarization_vector = ray.current_polarization()
         incident = ray.current_direction()
         wavelength = ray.wavelength
@@ -1312,10 +1277,90 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
             state.apply_dispersion(properties, normal_vector)
             return state
         else:
+            return (inc_angle, incident, perpendicular_polarized,
+                    reflectance, normal_parallel_plane)
+
+
+@traced(logger)
+class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
+    """
+    # TODO: Document
+    """
+    def __init__(self, name, coating_file, sigma_1=None, sigma_2=None, k=None):
+        # coating_material with four columns: wavelenth in nm,
+        # angle in deg., reflectance s-polarized (perpendicular),
+        # reflectance p-polarized (parallel)
+        # the values in coating_material should be in the corresponding
+        # order columns
+        data_material = np.loadtxt(coating_file, usecols=(0, 1, 2, 3))
+        plain_properties = {
+            'Matrix_reflectance_coating': {
+                'type': 'matrix',
+                'value': data_material
+            },
+            'sigma_1': {
+                'type': 'scalar',
+                'value': sigma_1
+            },
+            'sigma_2': {
+                'type': 'scalar',
+                'value': sigma_2
+            },
+            'k': {
+                'type': 'scalar',
+                'value': k
+            }
+        }
+        properties = Material.plain_properties_to_properties(plain_properties)
+        super(PolarizedCoatingReflectorLayer, self).__init__(name, properties)
+
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+        new_state = self.precompute_change_of_optical_state(
+            ray, normal_vector, nearby_material)
+        if isinstance(new_state, OpticalState):
+            return new_state
+        else:
             # ray is killed in the coating reflector
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                 Base.Vector(0.0, 0.0, 0.0),
                                 Phenomenon.ABSORPTION)
+
+@traced(logger)
+class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
+    """
+    # TODO: Document
+    """
+    def __init__(self, name, coating_file):
+        # coating_material with four columns: wavelenth in nm, angle in deg.,
+        # reflectance s-polarized (perpendicular),
+        # reflectance p-polarized (parallel)
+        # the values in coating_material should be in the corresponding order
+        # columns
+        data_material = np.loadtxt(coating_file, usecols=(0, 1, 2, 3))
+        plain_properties = {
+            'Matrix_reflectance_coating': {
+                'type': 'matrix',
+                'value': data_material
+            },
+            'probability_of_transmitance': {
+                'type': 'constant',
+                'value': 0
+            },
+        }
+        properties = Material.plain_properties_to_properties(plain_properties)
+        super(PolarizedCoatingAbsorberLayer, self).__init__(name, properties)
+
+    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+        new_state = self.precompute_change_of_optical_state(
+            ray, normal_vector, nearby_material)
+        if isinstance(new_state, OpticalState):
+            return new_state
+        else:
+            # ray refracted: ray energy will be absorbed in the coating absorber
+            state = OpticalState(Base.Vector(0.0, 0.0, 0.0),
+                                 Base.Vector(0.0, 0.0, 0.0),
+                                 Phenomenon.ENERGY_ABSORBED, self)
+            return state
 
 
 @traced(logger)
@@ -1366,39 +1411,14 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             state.material = ray.current_medium()
             return state
         c2 = sqrt(c2sq)
-        # cos (refracted_angle)
-        parallel_v, perpendicular_v, normal_parallel_plane = \
-            parallel_orthogonal_components(polarization_vector, incident, normal)
-        # parallel and perpendicular components of polarization vector
-        # and orthogonal vector of the parallel plane
-        ref_per = perpendicular_v.Length ** 2.0 / polarization_vector.Length ** 2.0
-        # weight of perpendicular component: 0 < ref_per < 1
-        inc_angle = rad_to_deg(arccos(c1))
-        reflectance_matrix = properties['Matrix_reflectance_coating']
-        r_matrix = reflectance_matrix(inc_angle, wavelength)
-        # reflectance dependent of incidence angle and wavelength
-        # We decide the polarization projection onto the parallel / perpendicular plane
-        if myrandom() < ref_per:
-            reflectance = calculate_reflectance(r_matrix, inc_angle, wavelength)[0]
-            # reflectance for s-polarized (perpendicular) light
-            perpendicular_polarized = True
-            polarization_vector = normalize(perpendicular_v)
+
+        new_state = self.precompute_change_of_optical_state(
+            ray, normal_vector, nearby_material)
+        if isinstance(new_state, OpticalState):
+            return new_state
         else:
-            reflectance = calculate_reflectance(r_matrix, inc_angle, wavelength)[1]
-            # reflectance for p-polarized (parallel) light
-            perpendicular_polarized = False
-            polarization_vector = normalize(parallel_v)
-        if myrandom() < reflectance:
-            # ray reflected
-            reflected_direction = simple_reflexion(incident, normal)
-            if not perpendicular_polarized:
-                # reflexion changes the parallel component of incident polarization
-                polarization_vector = simple_polarization_reflexion(
-                    incident, normal, normal_parallel_plane, polarization_vector)
-            state = OpticalState(polarization_vector, reflected_direction, Phenomenon.REFLEXION)
-            state.material = ray.current_medium()
-            return state
-        else:
+            (inc_angle, incident, perpendicular_polarized,
+             reflectance, normal_parallel_plane) = new_state
             # ray refracted: computing the refracted direction and energy absorbed in coating
             transmittance_matrix = properties['Matrix_transmittance_coating']
             t_matrix = transmittance_matrix(inc_angle, wavelength)
@@ -1420,74 +1440,6 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             optical_state.extra_data['factor_energy_absorbed'] = \
                 factor_energy_absorbed
             return optical_state
-
-@traced(logger)
-class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
-    """
-    # TODO: Document
-    """
-    def __init__(self, name, coating_file):
-        # coating_material with four columns: wavelenth in nm, angle in deg.,
-        # reflectance s-polarized (perpendicular),
-        # reflectance p-polarized (parallel)
-        # the values in coating_material should be in the corresponding order
-        # columns
-        data_material = np.loadtxt(coating_file, usecols=(0, 1, 2, 3))
-        plain_properties = {
-            'Matrix_reflectance_coating': {
-                'type': 'matrix',
-                'value': data_material
-            },
-            'probability_of_transmitance': {
-                'type': 'constant',
-                'value': 0
-            },
-        }
-        properties = Material.plain_properties_to_properties(plain_properties)
-        super(PolarizedCoatingAbsorberLayer, self).__init__(name, properties)
-
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
-        polarization_vector = ray.current_polarization()
-        incident = ray.current_direction()
-        wavelength = ray.wavelength
-        properties = self.properties
-        normal = correct_normal(normal_vector, incident)
-        c1 = - normal.dot(incident)
-        inc_angle = rad_to_deg(arccos(c1))
-        # incidence angle
-        parallel_v, perpendicular_v, normal_parallel_plane = \
-            parallel_orthogonal_components(polarization_vector, incident, normal)
-        ref_per = perpendicular_v.Length ** 2.0 / polarization_vector.Length ** 2.0
-        reflectance_matrix = properties['Matrix_reflectance_coating']
-        r_matrix = reflectance_matrix(inc_angle, wavelength)
-        # reflectance dependent of incidence angle and wavelength
-        # We decide the polarization projection onto the parallel / perpendicular plane
-        if myrandom() < ref_per:
-            reflectance = calculate_reflectance(r_matrix, inc_angle, wavelength)[0]
-            # reflectance for s-polarized (perpendicular) light
-            perpendicular_polarized = True
-            polarization_vector = normalize(perpendicular_v)
-        else:
-            reflectance = calculate_reflectance(r_matrix, inc_angle, wavelength)[1]
-            # reflectance for p-polarized (parallel) light
-            perpendicular_polarized = False
-            polarization_vector = normalize(parallel_v)
-        if myrandom() < reflectance:
-            # ray reflected
-            reflected = simple_reflexion(incident, normal).normalize()
-            if not perpendicular_polarized:
-                # reflexion changes the parallel component of incident polarization
-                polarization_vector = simple_polarization_reflexion(
-                    incident, normal, normal_parallel_plane, polarization_vector)
-            state = OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION, self)
-            state.material = ray.current_medium()
-            return state
-        else:
-            # ray refracted: ray energy will be absorbed in the coating absorber
-            state = OpticalState(Base.Vector(0.0, 0.0, 0.0),
-                                 Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ENERGY_ABSORBED, self)
-            return state
 
 
 @traced(logger)
