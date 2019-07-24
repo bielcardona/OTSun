@@ -273,6 +273,64 @@ def arccos(x):
         return 0
     return np.pi
 
+
+def _calculate_a1(CSR, SD):
+    """ Parameter a1 needed for the normalization of the probability distribution in the disk region
+    """
+
+    th = np.arange(0.0, SD, 0.001)
+    values = [ 2.0 * np.pi * np.cos(0.326 * angle) / np.cos(0.305 * angle) * angle
+        for angle in th]
+    a1 = (1.0 - CSR) / np.trapz(values, dx=0.001)
+    return a1
+
+
+def _circumsolar__density_distribution(angle, CSR):
+    gamma = 2.2 * np.log(0.52 * CSR) * CSR ** (0.43) - 0.1
+    kappa = 0.9 * np.log(13.5 * CSR) * CSR ** (-0.3)
+    return 2.0 * np.pi * np.exp(kappa) * angle ** (gamma + 1.0)
+
+
+def _calculate_a2(CSR, SD, SS):
+    """ Parameter a2 needed for the normalization of the probability distribution in the circumsolar region"""
+    f = _circumsolar__density_distribution
+    th = np.arange(SD, SS, 0.001)
+    f_th = np.vectorize(f)
+    a2 = CSR / np.trapz(f_th(th, CSR), dx=0.001)
+    return a2
+
+
+def _calculate_CDF_disk_region(a1, SD):
+    """
+    Cumulative Distribution Function in the solar disk region
+    """
+    th = np.arange(0.0, SD, 0.001)
+    values = [2.0 * np.pi * np.cos(0.326 * angle) / np.cos(0.305 * angle) * angle
+        for angle in th]
+    cumulative = np.cumsum(values)
+    CDF = (th, a1 * cumulative / 1000.0)
+    return CDF
+
+def _th_solar_disk_region(u, CDF):
+    """ Random angle based on the probability distribution in the circumsolar region"""
+    # TODO: It is recomputed every time? @Ramon
+    # CDF = CDF_Disk_Region # calculate_CDF_disk_region(a1, SD)
+    idx = (np.abs(CDF[1] - u)).argmin()
+    return CDF[0][idx]
+
+
+def _th_circumsolar_region(u, CSR, SD, a2):
+    """ Random angle based on the CDF in the circumsolar region"""
+    gamma = 2.2 * np.log(0.52 * CSR) * CSR ** (0.43) - 0.1
+    kappa = 0.9 * np.log(13.5 * CSR) * CSR ** (-0.3)
+    u_csr = (u - 1.0) + CSR  # Since CSR-CDF starts at zero
+    f1 = u_csr * (gamma + 2.0) / (a2 * 2 * np.pi * np.exp(kappa))
+    f2 = SD ** (gamma + 2.0)
+    exp = (1.0 / (gamma + 2.0))
+    th_u = np.power(f1 + f2, exp)
+    return th_u
+
+
 def buie_distribution(CircumSolarRatio):
     """
     Implementation of the Buie Distribution for Sun emission
@@ -291,121 +349,23 @@ def buie_distribution(CircumSolarRatio):
     angle distribution for random input: function
         Function that interpolates by straight line segments the input data
     """
-    def calculate_a1(CSR, SD):
-        """ Parameter a1 needed for the normalization of the probability distribution in the disk region
-        #TODO: Say one sentence @Ramon
-
-        Parameters
-        ----------
-        CSR
-        SD
-
-        Returns
-        -------
-
-        """
-
-        def solar_disk__density_distribution(angle):
-            """
-            #TODO: Say one sentence @Ramon
-
-            Parameters
-            ----------
-            angle : float
-
-            Returns
-            -------
-            float
-            """
-            return 2.0 * np.pi * np.cos(0.326 * angle) / np.cos(0.305 * angle) * angle
-        f = solar_disk__density_distribution
-        th = np.arange(0.0, SD, 0.001)
-        f_th = np.vectorize(f)
-        a1 = (1.0 - CSR) / np.trapz(f_th(th), dx=0.001)
-        return a1
-
-    def calculate_a2(CSR, SD, SS):
-        """ Parameter a2 needed for the normalization of the probability distribution in the circumsolar region"""
-        def circumsolar__density_distribution(angle, CSR):
-            gamma = 2.2 * np.log(0.52 * CSR) * CSR ** (0.43) - 0.1
-            kappa = 0.9 * np.log(13.5 * CSR) * CSR ** (-0.3)
-            return 2.0 * np.pi * np.exp(kappa) * angle ** (gamma + 1.0)
-        f = circumsolar__density_distribution
-        th = np.arange(SD, SS, 0.001)
-        f_th = np.vectorize(f)
-        a2 = CSR / np.trapz(f_th(th, CSR), dx=0.001)
-        return a2
-
-    def calculate_CDF_disk_region(a1, SD):
-        """
-        Cumulative Distribution Function in the solar disk region
-
-        Parameters
-        ----------
-        a1 : float
-        SD : float
-            Parameters of the model
-
-        Returns
-        -------
-        tuple of np.ndarray
-        """
-        def solar_disk__density_distribution(angle):
-            """
-            #TODO: Say one sentence @Ramon
-
-            Parameters
-            ----------
-            angle : float
-
-            Returns
-            -------
-            float
-            """
-            return 2.0 * np.pi * np.cos(0.326 * angle) / np.cos(0.305 * angle) * angle
-        f = solar_disk__density_distribution
-        th = np.arange(0.0, SD, 0.001)
-        f_th = np.vectorize(f)
-        cumulative = np.cumsum(f_th(th))
-        CDF = (th, a1 * cumulative / 1000.0)
-        return CDF
-
     CSR = CircumSolarRatio
     SD = 4.65
     # Solar Disk in mrad
     SS = 43.6
     # Solar Size in mrad
-    a1 = calculate_a1(CSR, SD)
-#     normalization constant for the disk region
-    a2 = calculate_a2(CSR, SD, SS)
-#    normalization constant for the circumsolar region
-    CDF_Disk_Region = calculate_CDF_disk_region(a1,SD)
-#    Buie distribution for the disk region
-
-    def th_solar_disk_region(u, a1, SD):
-        """ Random angle based on the probability distribution in the circumsolar region"""
-        # TODO: It is recomputed every time? @Ramon
-        CDF = calculate_CDF_disk_region(a1, SD)
-        idx = (np.abs(CDF[1] - u)).argmin()
-        return CDF[0][idx]
-
-    def th_circumsolar_region(u, CSR, SD, a2):
-        """ Random angle based on the CDF in the circumsolar region"""
-        gamma = 2.2 * np.log(0.52 * CSR) * CSR ** (0.43) - 0.1
-        kappa = 0.9 * np.log(13.5 * CSR) * CSR ** (-0.3)
-        u_csr = (u - 1.0) + CSR  # Since CSR-CDF starts at zero
-        f1 = u_csr * (gamma + 2.0) / (a2 * 2 * np.pi * np.exp(kappa))
-        f2 = SD ** (gamma + 2.0)
-        exp = (1.0 / (gamma + 2.0))
-        th_u = np.power(f1 + f2, exp)
-        return th_u
-    random_array = np.arange(0.0, 1.001, 0.001)
-    ang_distr = {}
-    for u in random_array:
+    a1 = _calculate_a1(CSR, SD)
+    #     normalization constant for the disk region
+    a2 = _calculate_a2(CSR, SD, SS)
+    #    normalization constant for the circumsolar region
+    CDF_Disk_Region = _calculate_CDF_disk_region(a1,SD)
+    #    Buie distribution for the disk region
+    u_values = np.arange(0.0, 1.001, 0.001)
+    dist_values = []
+    for u in u_values:
         if u < 1.0 - CSR:
-            ang_distr[u] = th_solar_disk_region(u, a1, SD) / 1000.0 * 180.0 / np.pi
+            dist_values.append(_th_solar_disk_region(u,CDF_Disk_Region) / 1000.0 * 180.0 / np.pi)
         else:
-            ang_distr[u] = th_circumsolar_region(u, CSR, SD, a2) / 1000.0 * 180.0 / np.pi
-    ang_distribution = collections.OrderedDict(sorted(ang_distr.items()))
-    f = tabulated_function(ang_distribution.keys(), ang_distribution.values())
+            dist_values.append(_th_circumsolar_region(u, CSR, SD, a2) / 1000.0 * 180.0 / np.pi)
+    f = tabulated_function(u_values, dist_values)
     return f

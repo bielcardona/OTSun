@@ -23,8 +23,7 @@ scene or are absorbed, and in this last case the collected energy (among
 other data) is stored for future analysis.
 
 We comment now the main classes that have been implemented, together
-with its basic functionallity. The complete documentation can be found
-in XXXXXX.
+with its basic functionallity.
 
 The ``Experiment`` class
 ------------------------
