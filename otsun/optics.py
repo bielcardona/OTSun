@@ -5,7 +5,7 @@ Implementation of optical effects on rays
 from FreeCAD import Base
 import numpy as np
 from .math import arccos, myrandom, one_orthogonal_vector, correct_normal,\
-    parallel_orthogonal_components, rad_to_deg, normalize
+    parallel_orthogonal_components, rad_to_deg, normalize, memoize
 from enum import Enum
 from numpy.lib.scimath import sqrt
 from autologging import traced
@@ -470,14 +470,13 @@ def matrix_reflectance(data_material):
     except ValueError:
         w = 1E-4
     cached = {}
-    def function_to_cache(x,y):
-        if (x,y) in cached:
-            return cached[(x,y)]
-        value = [row for row in data_material if
-                         (x + a > row[1] > x - a) and (y + w > row[0] > y - w)]
-        cached[(x,y)] = value
-        return value
-    return function_to_cache
+
+    @memoize
+    def internal_matrix_reflectance(x,y):
+        return [row for row in data_material if
+                (x + a > row[1] > x - a) and (y + w > row[0] > y - w)]
+
+    return internal_matrix_reflectance
 
 
 @traced(logger)

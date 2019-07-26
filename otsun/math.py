@@ -6,12 +6,26 @@ import numpy as np
 from FreeCAD import Base
 import random
 import time
-import collections
+from functools import wraps
 
 EPSILON = 1E-6 
 # Tolerance for considering equal to zero
 INF = 1E20
 # Infinite
+
+
+def memoize(function):
+    cache = {}
+    @wraps(function)
+    def wrapper(*args):
+        if args in cache:
+            return cache[args]
+        else:
+            val = function(*args)
+            cache[args] = val
+            return val
+    return wrapper
+
 
 def polar_to_cartesian(phi, theta):
     """Convert polar coordinates of unit vector to cartesian
@@ -38,9 +52,12 @@ def polar_to_cartesian(phi, theta):
 def rad_to_deg(angle):
     return angle * 180.0 / np.pi
 
+
 # ---
 # Helper functions for input of functions
 # ---
+
+
 def constant_function(c):
     """Create a constant function
 
@@ -71,14 +88,12 @@ def tabulated_function(xvalues, yvalues):
     function
         Function that interpolates by straight line segments the input data
     """
-    cached = {}
-    def function_to_cache(x):
-        if x in cached:
-            return cached[x]
-        value = np.interp(x, xvalues, yvalues)
-        cached[x] = value
-        return value
-    return function_to_cache
+
+    @memoize
+    def this_tabulated_function(x):
+        return np.interp(x, xvalues, yvalues)
+
+    return this_tabulated_function
 
 
 # ---
@@ -122,6 +137,7 @@ myrandom = random.random
 # ---
 # Helper function for Cumulative Function Distribution and Randomly generatting distribution
 # ---
+
 
 def cdf_from_pdf_file(data_file):
     """
@@ -175,6 +191,7 @@ def pick_random_from_cdf(cdf):
     """
     return np.interp(random.random(), cdf[1], cdf[0])
 
+
 def parallel_orthogonal_components(vector, incident, normal):
     """Decomposition of vector in components
 
@@ -213,7 +230,8 @@ def parallel_orthogonal_components(vector, incident, normal):
                  normal_perpendicular_plane * polarization_vector.dot(normal_perpendicular_plane)
     # perpendicular_v is the projection of polarization_vector onto the perpendicular_plane
     return parallel_v, perpendicular_v, normal_parallel_plane
-	
+
+
 def two_orthogonal_vectors(vector):
     """Gives two orthogonal vectors of a vector
 
@@ -231,6 +249,7 @@ def two_orthogonal_vectors(vector):
     orthogonal_1 = one_orthogonal_vector(vector)
     orthogonal_2 = vector.cross(orthogonal_1)
     return orthogonal_1.normalize(), orthogonal_2.normalize()
+
 
 def one_orthogonal_vector(vector):
     """Gives one orthogonal vector of a vector
@@ -254,17 +273,20 @@ def one_orthogonal_vector(vector):
         orthogonal = Base.Vector(vector[1], -vector[0], 0)
     return orthogonal.normalize()
 
+
 def correct_normal(normal, incident):
     if normal.dot(incident) > 0:
         return normal * (-1)
     else:
         return normal
 
+
 def normalize(vector):
     if vector.Length < EPSILON:
         vector = vector * INF
     return vector.normalize()
-	
+
+
 def arccos(x):
     assert abs(x) < 1 + EPSILON
     if abs(x) < 1 - EPSILON:

@@ -11,13 +11,13 @@ TwoLayerMaterial
 import sys
 ##otsun_path = "D:\\Ramon_2015\\RECERCA\\RETOS-2015\\Tareas\\OTSun_local\\"
 ##sys.path.append(otsun_path)
+import random
+random.seed(1)
 import otsun
 import FreeCAD
 from FreeCAD import Base
 import Part
 import numpy as np
-import random
-random.seed(1000)
 
 MyProject = 'test_PTC.FCStd'
 FreeCAD.openDocument(MyProject)
