@@ -9,9 +9,9 @@ for specific materials.
 import json
 import zipfile
 from FreeCAD import Base
-from .optics import Phenomenon, OpticalState, reflexion, refraction, matrix_reflectance,\
-    calculate_reflectance, simple_polarization_reflexion, simple_polarization_refraction, \
-    simple_reflexion, shure_refraction, lambertian_reflexion
+from .optics import Phenomenon, OpticalState, reflection, refraction, matrix_reflectance,\
+    calculate_reflectance, simple_polarization_reflection, simple_polarization_refraction, \
+    simple_reflection, shure_refraction, lambertian_reflection
 from .math import arccos, parallel_orthogonal_components, rad_to_deg, myrandom, normalize,\
     constant_function, correct_normal, tabulated_function
 from numpy import sqrt
@@ -585,7 +585,7 @@ class PolarizedThinFilm(VolumeMaterial):
         # cos (refracted_angle) ** 2
         if c2sq.real < 0:
             # total internal reflection
-            state = reflexion(incident, normal, polarization_vector)
+            state = reflection(incident, normal, polarization_vector)
             return (0.0, state)
             # no energy is abosrbed in the thinfilm
         c2 = sqrt(c2sq)
@@ -617,10 +617,10 @@ class PolarizedThinFilm(VolumeMaterial):
             polarization_vector = normalize(parallel_v)
         if myrandom() < reflectance:
             # ray reflected
-            reflected_direction = simple_reflexion(incident, normal).normalize()
+            reflected_direction = simple_reflection(incident, normal).normalize()
             if not perpendicular_polarized:
-                # reflexion changes the parallel component of incident polarization
-                polarization_vector = simple_polarization_reflexion(
+                # reflection changes the parallel component of incident polarization
+                polarization_vector = simple_polarization_reflection(
                     incident, normal, normal_parallel_plane, polarization_vector)
             return 0.0, OpticalState(polarization_vector, reflected_direction, Phenomenon.REFLEXION)
         else:
@@ -694,11 +694,11 @@ class SurfaceMaterial(Material):
         Initializes a Surface Material. The properties parameter must be a
         dict with the physical properties
         describing the material. At least, the following must be provided:
-        'probability_of_reflexion': probability that a photon gets reflected,
+        'probability_of_reflection': probability that a photon gets reflected,
         as a function of its wavelength.
-        'probability_of_absortion': probability that a photon gets absorbed,
+        'probability_of_absorption': probability that a photon gets absorbed,
         as a function of its wavelength.
-        'probability_of_transmitance': probability that a photon passes through
+        'probability_of_transmittance': probability that a photon passes through
         the material, as a function of its wavelength.
         """
         super(SurfaceMaterial, self).__init__(name, properties)
@@ -723,15 +723,15 @@ class SurfaceMaterial(Material):
         """
         properties = self.properties
         try:
-            por = properties['probability_of_reflexion'](ray.wavelength)
+            por = properties['probability_of_reflection'](ray.wavelength)
         except KeyError:
             por = 1.0
         try:
-            poa = properties['probability_of_absortion'](ray.wavelength)
+            poa = properties['probability_of_absorption'](ray.wavelength)
         except KeyError:
             poa = 1 - por
         try:
-            pot = properties['probability_of_transmitance'](ray.wavelength)
+            pot = properties['probability_of_transmittance'](ray.wavelength)
         except KeyError:
             pot = 0.0
 
@@ -768,9 +768,9 @@ class SurfaceMaterial(Material):
             polarization_vector = ray.current_polarization()
             incident = ray.current_direction()
             if self.properties.get('lambertian_material', False):
-                state = lambertian_reflexion(ray.current_direction(), normal_vector)
+                state = lambertian_reflection(ray.current_direction(), normal_vector)
             else:
-                state = reflexion(incident, normal_vector, polarization_vector, False)
+                state = reflection(incident, normal_vector, polarization_vector, False)
             state.material = ray.current_medium()
             state.apply_dispersion(properties, normal_vector)
             return state
@@ -837,15 +837,15 @@ class OpaqueSimpleLayer(SurfaceMaterial):
     """
     def __init__(self, name):
         plain_properties = {
-            'probability_of_reflexion': {
+            'probability_of_reflection': {
                 'type': 'constant',
                 'value': 0.0
             },
-            'probability_of_absortion': {
+            'probability_of_absorption': {
                 'type': 'constant',
                 'value': 1.0
             },
-            'probability_of_transmitance': {
+            'probability_of_transmittance': {
                 'type': 'constant',
                 'value': 0.0
             },
@@ -865,15 +865,15 @@ class TransparentSimpleLayer(SurfaceMaterial):
     """
     def __init__(self, name, pot):
         plain_properties = {
-            'probability_of_reflexion': {
+            'probability_of_reflection': {
                 'type': 'constant',
                 'value': 1 - pot
             },
-            'probability_of_absortion': {
+            'probability_of_absorption': {
                 'type': 'constant',
                 'value': 0.0
             },
-            'probability_of_transmitance': {
+            'probability_of_transmittance': {
                 'type': 'constant',
                 'value': pot
             },
@@ -897,15 +897,15 @@ class AbsorberSimpleLayer(SurfaceMaterial):
     """
     def __init__(self, name, poa):
         plain_properties = {
-            'probability_of_reflexion': {
+            'probability_of_reflection': {
                 'type': 'constant',
                 'value': 1 - poa
             },
-            'probability_of_absortion': {
+            'probability_of_absorption': {
                 'type': 'constant',
                 'value': poa
             },
-            'probability_of_transmitance': {
+            'probability_of_transmittance': {
                 'type': 'constant',
                 'value': 0.0
             },
@@ -929,15 +929,15 @@ class AbsorberLambertianLayer(SurfaceMaterial):
     """
     def __init__(self, name, poa):
         plain_properties = {
-            'probability_of_reflexion': {
+            'probability_of_reflection': {
                 'type': 'constant',
                 'value': 1 - poa
             },
-            'probability_of_absortion': {
+            'probability_of_absorption': {
                 'type': 'constant',
                 'value': poa
             },
-            'probability_of_transmitance': {
+            'probability_of_transmittance': {
                 'type': 'constant',
                 'value': 0.0
             },
@@ -961,15 +961,15 @@ class ReflectorSpecularLayer(SurfaceMaterial):
     """
     def __init__(self, name, por, sigma_1=None, sigma_2=None, k=None):
         plain_properties = {
-            'probability_of_reflexion': {
+            'probability_of_reflection': {
                 'type': 'constant',
                 'value': por
             },
-            'probability_of_absortion': {
+            'probability_of_absorption': {
                 'type': 'constant',
                 'value': 1 - por
             },
-            'probability_of_transmitance': {
+            'probability_of_transmittance': {
                 'type': 'constant',
                 'value': 0.0
             },
@@ -1005,15 +1005,15 @@ class ReflectorLambertianLayer(SurfaceMaterial):
     """
     def __init__(self, name, por):
         plain_properties = {
-            'probability_of_reflexion': {
+            'probability_of_reflection': {
                 'type': 'constant',
                 'value': por
             },
-            'probability_of_absortion': {
+            'probability_of_absorption': {
                 'type': 'constant',
                 'value': 1 - por
             },
-            'probability_of_transmitance': {
+            'probability_of_transmittance': {
                 'type': 'constant',
                 'value': 0.0
             },
@@ -1037,15 +1037,15 @@ class AbsorberTWModelLayer(SurfaceMaterial):
     """
     def __init__(self, name, poa, b_constant, c_constant):
         plain_properties = {
-            'probability_of_reflexion': {
+            'probability_of_reflection': {
                 'type': 'constant',
                 'value': 1 - poa
             },
-            'probability_of_absortion': {
+            'probability_of_absorption': {
                 'type': 'constant',
                 'value': poa
             },
-            'probability_of_transmitance': {
+            'probability_of_transmittance': {
                 'type': 'constant',
                 'value': 0.0
             },
@@ -1109,17 +1109,17 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         properties = self.properties
         b_constant = properties['b_constant']
         c_constant = properties['c_constant']
-        absortion_ratio = self.tw_absorptance_ratio(
+        absorption_ratio = self.tw_absorptance_ratio(
             normal_vector, b_constant, c_constant, ray.current_direction())
-        absortion = properties['probability_of_absortion'](ray.wavelength) * absortion_ratio
-        reflectance = 1.0 - absortion
+        absorption = properties['probability_of_absorption'](ray.wavelength) * absorption_ratio
+        reflectance = 1.0 - absorption
         if myrandom() < reflectance:
             polarization_vector = ray.current_polarization()
-            state = reflexion(ray.current_direction(), normal_vector, polarization_vector, False)
+            state = reflection(ray.current_direction(), normal_vector, polarization_vector, False)
             state.material = ray.current_medium()
             return state
         else:
-            # absorptiontion in absorber material: the ray is killed
+            # absorption in absorber material: the ray is killed
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                 Base.Vector(0.0, 0.0, 0.0),
                                 Phenomenon.ENERGY_ABSORBED, self)
@@ -1267,10 +1267,10 @@ class PolarizedCoatingLayer(SurfaceMaterial):
             polarization_vector = normalize(parallel_v)
         if myrandom() < reflectance:
             # ray reflected
-            reflected = simple_reflexion(incident, normal).normalize()
+            reflected = simple_reflection(incident, normal).normalize()
             if not perpendicular_polarized:
-                # reflexion changes the parallel component of incident polarization
-                polarization_vector = simple_polarization_reflexion(
+                # reflection changes the parallel component of incident polarization
+                polarization_vector = simple_polarization_reflection(
                     incident, normal, normal_parallel_plane, polarization_vector)
             state = OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION, self)
             state.material = ray.current_medium()
@@ -1342,7 +1342,7 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
                 'type': 'matrix',
                 'value': data_material
             },
-            'probability_of_transmitance': {
+            'probability_of_transmittance': {
                 'type': 'constant',
                 'value': 0
             },
@@ -1407,7 +1407,7 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
         # cos (refracted_angle) ** 2
         if c2sq.real < 0:
             # total internal reflection
-            state = reflexion(incident, normal, polarization_vector)
+            state = reflection(incident, normal, polarization_vector)
             state.material = ray.current_medium()
             return state
         c2 = sqrt(c2sq)

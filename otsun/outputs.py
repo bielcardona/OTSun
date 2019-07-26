@@ -33,13 +33,13 @@ def twoD_array_to_constant_step(twoD_array, step, wavelength_min, wavelength_max
     return np.array(array_inter)
 
 
-def spectral_response(optical_absortion_wavelength, iqe):
+def spectral_response(optical_absorption_wavelength, iqe):
     q_e = 1.60217662E-19
     h = 6.62607E-34
     c = 299792458.0
     hc = h * c
     SR = []
-    opt_wavelength = optical_absortion_wavelength
+    opt_wavelength = optical_absorption_wavelength
     if np.isreal(iqe):
         SR = [[opt[0], iqe * opt[0] * opt[1] * q_e * 1E-9 / hc, ] for opt in opt_wavelength]
     else:

@@ -141,19 +141,19 @@ class OpticalState(object):
 
 
 # ---
-# Helper functions for reflexion and refraction
+# Helper functions for reflection and refraction
 # ---
 
 
 @traced(logger)
-def simple_reflexion(incident, normal):
+def simple_reflection(incident, normal):
     normal = correct_normal(normal, incident)
     c1 = - normal.dot(incident)
     reflected = incident + normal * 2.0 * c1
     return reflected.normalize()
 
 @traced(logger)
-def simple_polarization_reflexion(incident, normal, normal_parallel_plane, polarization):
+def simple_polarization_reflection(incident, normal, normal_parallel_plane, polarization):
     c1 = - normal.dot(incident)
     angle = rad_to_deg(np.pi - 2.0 * arccos(c1))
     rotation = Base.Rotation(normal_parallel_plane, angle)
@@ -169,10 +169,10 @@ def simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, 
 
 
 @traced(logger)
-def reflexion(incident, normal_vector, polarization_vector,
+def reflection(incident, normal_vector, polarization_vector,
               polarization_vector_calculated_before=False):
     """
-    Implementation of law of reflexion for incident and polarization vector.
+    Implementation of law of reflection for incident and polarization vector.
 
     Parameters
     ----------
@@ -191,18 +191,18 @@ def reflexion(incident, normal_vector, polarization_vector,
         optical state of the reflected ray
     """
     normal = correct_normal(normal_vector, incident)
-    reflected = simple_reflexion(incident, normal)
-    # reflexion changes the polarization vector
+    reflected = simple_reflection(incident, normal)
+    # reflection changes the polarization vector
     if not polarization_vector_calculated_before:
         # we calculate the new polarization vector
         parallel_v, perpendicular_v, normal_parallel_plane = \
             parallel_orthogonal_components(polarization_vector, incident, normal)
-        polarization_vector = simple_polarization_reflexion(incident, normal, normal_parallel_plane, polarization_vector)
+        polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane, polarization_vector)
     return OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION)
 
 
 @traced(logger)
-def lambertian_reflexion(incident, normal_vector):
+def lambertian_reflection(incident, normal_vector):
     """
     Implementation of lambertian reflection for diffusely reflecting surface
 
@@ -263,9 +263,9 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, Lambertian_
     if c2sq.real < 0:
         # total internal reflection
         if not Lambertian_surface:
-            return reflexion(incident, normal, polarization_vector)
+            return reflection(incident, normal, polarization_vector)
         else:
-            return lambertian_reflexion(incident, normal)
+            return lambertian_reflection(incident, normal)
     c2 = sqrt(c2sq)
     # cos (refracted_angle)
     parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident, normal)
@@ -289,13 +289,13 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, Lambertian_
     if myrandom() < reflectance.real:
         # ray reflected
         if not Lambertian_surface:
-            reflected_direction = simple_reflexion(incident, normal)
+            reflected_direction = simple_reflection(incident, normal)
             if not perpendicular_polarized:
-                # reflexion changes the parallel component of incident polarization
-                polarization_vector = simple_polarization_reflexion(incident, normal, normal_parallel_plane, polarization_vector)
+                # reflection changes the parallel component of incident polarization
+                polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane, polarization_vector)
             return OpticalState(polarization_vector, reflected_direction, Phenomenon.REFLEXION)
         else:
-            return lambertian_reflexion(incident, normal)
+            return lambertian_reflection(incident, normal)
     else:
         # ray refracted: computing the refracted direction
         refracted_direction = incident * r.real + \
@@ -337,9 +337,9 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector):
     if c2sq.real < 0:
         # total internal reflection
         if not Lambertian_surface:
-            return reflexion(incident, normal, polarization_vector)
+            return reflection(incident, normal, polarization_vector)
         else:
-            return lambertian_reflexion(incident, normal)
+            return lambertian_reflection(incident, normal)
     c2 = sqrt(c2sq)
     # cos (refracted_angle)
     parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident, normal)

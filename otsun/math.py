@@ -199,9 +199,9 @@ def parallel_orthogonal_components(vector, incident, normal):
     `incident` (direction of a ray) and
     `normal` (vector orthogonal to a plane),
     decompose `vector` it in
-    a component contained in the reflexion (parallel) plane (determined by normal and incident): p-polarized (parallel) light
-    a component contained in the orthogonal plane to the reflexion plane: s-polarized (perpendicular) light
-    also returns the normal vector to the reflexion plane
+    a component contained in the reflection (parallel) plane (determined by normal and incident): p-polarized (parallel) light
+    a component contained in the orthogonal plane to the reflection plane: s-polarized (perpendicular) light
+    also returns the normal vector to the reflection plane
 
     Parameters
     ----------
@@ -217,7 +217,7 @@ def parallel_orthogonal_components(vector, incident, normal):
     """
     polarization_vector = vector
     normal_parallel_plane = incident.cross(normal)
-    # orthogonal vector to reflexion plane (parallel_plane)
+    # orthogonal vector to reflection plane (parallel_plane)
     if normal_parallel_plane.Length < EPSILON:
         normal_parallel_plane = one_orthogonal_vector(normal)
     normal_parallel_plane.normalize()

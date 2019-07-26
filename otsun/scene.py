@@ -2,6 +2,7 @@ from .materials import Material
 from .logging_unit import logger
 from .math import correct_normal
 
+
 class Scene:
     """
     Class used to define the Scene. It encodes all the objects
