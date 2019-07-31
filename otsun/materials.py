@@ -350,7 +350,7 @@ class VolumeMaterial(Material):
         wavelength = ray.wavelength
         if isinstance(ray.current_medium(), PolarizedThinFilm):
             return OpticalState(ray.current_polarization(),
-                                ray.current_direction(), Phenomenon.REFRACTION, self)
+                                ray.current_direction(), Phenomenon.REFRACTION, self) # TODO: Set solid
         else:
             n1 = ray.current_medium().get_n(wavelength)
             n2 = self.get_n(wavelength)
@@ -358,9 +358,9 @@ class VolumeMaterial(Material):
                 ray.current_direction(), normal_vector, n1, n2,
                 ray.current_polarization())
             if optical_state.phenomenon == Phenomenon.REFRACTION:
-                optical_state.material = self
+                optical_state.material = self # TODO: Set solid
             else:
-                optical_state.material = ray.current_medium()
+                optical_state.material = ray.current_medium() # TODO: Set solid
             return optical_state
 
     def to_json(self):
@@ -622,7 +622,8 @@ class PolarizedThinFilm(VolumeMaterial):
                 # reflection changes the parallel component of incident polarization
                 polarization_vector = simple_polarization_reflection(
                     incident, normal, normal_parallel_plane, polarization_vector)
-            return 0.0, OpticalState(polarization_vector, reflected_direction, Phenomenon.REFLEXION)
+            return 0.0, OpticalState(polarization_vector, reflected_direction,
+                                     Phenomenon.REFLEXION) # TODO: Set solid
         else:
             # ray refracted: computing the refracted direction and energy absorbed in the thinfilm
             transmittance_matrix = properties['Matrix_transmittance_thin_film']
@@ -642,7 +643,8 @@ class PolarizedThinFilm(VolumeMaterial):
                     simple_polarization_refraction(
                         incident, normal, normal_parallel_plane, c2, polarization_vector)
             return (factor_energy_absorbed,
-                    OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION))
+                    OpticalState(polarization_vector, refracted_direction,
+                                 Phenomenon.REFRACTION)) # TODO: Set solid
 
     def change_of_optical_state(self, ray, normal_vector):
         """
@@ -675,9 +677,9 @@ class PolarizedThinFilm(VolumeMaterial):
         optical_state.extra_data['factor_energy_absorbed'] = \
             factor_energy_absorbed
         if optical_state.phenomenon == Phenomenon.REFRACTION:
-            optical_state.material = self
+            optical_state.material = self # TODO: Set solid
         else:
-            optical_state.material = ray.current_medium()
+            optical_state.material = ray.current_medium() # TODO: Set solid
         return optical_state
 
 
@@ -771,7 +773,7 @@ class SurfaceMaterial(Material):
                 state = lambertian_reflection(ray.current_direction(), normal_vector)
             else:
                 state = reflection(incident, normal_vector, polarization_vector, False)
-            state.material = ray.current_medium()
+            state.material = ray.current_medium() # TODO: Set solid
             state.apply_dispersion(properties, normal_vector)
             return state
         if phenomenon == Phenomenon.ABSORPTION:
@@ -779,12 +781,12 @@ class SurfaceMaterial(Material):
                 return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                      Base.Vector(0.0, 0.0, 0.0),
                                      Phenomenon.ENERGY_ABSORBED,
-                                     self))
+                                     self))  # TODO: Set solid
             else:
                 return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                      Base.Vector(0.0, 0.0, 0.0),
                                      Phenomenon.ABSORPTION,
-                                     self))
+                                     self))  # TODO: Set solid
         if phenomenon == Phenomenon.TRANSMITTANCE:
             # refraction in transparent layer
             n1 = ray.current_medium().get_n(ray.wavelength)
@@ -793,11 +795,11 @@ class SurfaceMaterial(Material):
                 state = OpticalState(ray.current_polarization(),
                                      ray.current_direction(),
                                      Phenomenon.REFRACTION,
-                                     nearby_material)
+                                     nearby_material) # TODO: Set solid
             else:
                 state = shure_refraction(ray.current_direction(), normal_vector,
                                          n1, n2, ray.current_polarization())
-                state.material = nearby_material
+                state.material = nearby_material  # TODO: Set solid
             return state
 
 
@@ -1116,13 +1118,13 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         if myrandom() < reflectance:
             polarization_vector = ray.current_polarization()
             state = reflection(ray.current_direction(), normal_vector, polarization_vector, False)
-            state.material = ray.current_medium()
+            state.material = ray.current_medium() # TODO: Set solid
             return state
         else:
             # absorption in absorber material: the ray is killed
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                 Base.Vector(0.0, 0.0, 0.0),
-                                Phenomenon.ENERGY_ABSORBED, self)
+                                Phenomenon.ENERGY_ABSORBED, self) # TODO: Set solid
 
 
 
@@ -1179,14 +1181,14 @@ class MetallicSpecularLayer(MetallicLayer):
         incident = ray.current_direction()
         state = refraction(incident, normal_vector, n1, n2, polarization_vector)
         if state.phenomenon == Phenomenon.REFLEXION:
-            state.material = ray.current_medium()
+            state.material = ray.current_medium()  # TODO: Set solid
             state.apply_dispersion(properties, normal_vector)
             return state
         if state.phenomenon == Phenomenon.REFRACTION:
             # refraction in metallic layer: the ray is killed
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                 Base.Vector(0.0, 0.0, 0.0),
-                                Phenomenon.ABSORPTION, self)
+                                Phenomenon.ABSORPTION, self) # TODO: Set solid
 
 
 @traced(logger)
@@ -1222,13 +1224,13 @@ class MetallicLambertianLayer(MetallicLayer):
         incident = ray.current_direction()
         state = refraction(incident, normal_vector, n1, n2, polarization_vector, True)
         if state.phenomenon == Phenomenon.REFLEXION:
-            state.material = ray.current_medium()
+            state.material = ray.current_medium() # TODO: Set solid
             return state
         if state.phenomenon == Phenomenon.REFRACTION:
             # refraction in metallic layer: the ray is killed
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                 Base.Vector(0.0, 0.0, 0.0),
-                                Phenomenon.ABSORPTION, self)
+                                Phenomenon.ABSORPTION, self) # TODO: Set solid
 
 
 @traced(logger)
@@ -1273,7 +1275,7 @@ class PolarizedCoatingLayer(SurfaceMaterial):
                 polarization_vector = simple_polarization_reflection(
                     incident, normal, normal_parallel_plane, polarization_vector)
             state = OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION, self)
-            state.material = ray.current_medium()
+            state.material = ray.current_medium() # TODO: Set solid
             state.apply_dispersion(properties, normal_vector)
             return state
         else:
@@ -1323,7 +1325,7 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
             # ray is killed in the coating reflector
             return OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                 Base.Vector(0.0, 0.0, 0.0),
-                                Phenomenon.ABSORPTION)
+                                Phenomenon.ABSORPTION) # TODO: Set solid
 
 @traced(logger)
 class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
@@ -1359,7 +1361,7 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
             # ray refracted: ray energy will be absorbed in the coating absorber
             state = OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                  Base.Vector(0.0, 0.0, 0.0),
-                                 Phenomenon.ENERGY_ABSORBED, self)
+                                 Phenomenon.ENERGY_ABSORBED, self) # TODO: Set solid
             return state
 
 
@@ -1408,7 +1410,7 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
         if c2sq.real < 0:
             # total internal reflection
             state = reflection(incident, normal, polarization_vector)
-            state.material = ray.current_medium()
+            state.material = ray.current_medium() # TODO: Set solid
             return state
         c2 = sqrt(c2sq)
 
@@ -1436,7 +1438,8 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
                 polarization_vector = \
                     simple_polarization_refraction(
                         incident, normal, normal_parallel_plane, c2, polarization_vector)
-            optical_state = OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION, nearby_material)
+            optical_state = OpticalState(polarization_vector, refracted_direction,
+                                         Phenomenon.REFRACTION, nearby_material) # TODO: Set solid
             optical_state.extra_data['factor_energy_absorbed'] = \
                 factor_energy_absorbed
             return optical_state

@@ -45,6 +45,8 @@ class OpticalState(object):
         direction vector of the ray
     phenomenon : Phenomenon
         last phenomenon that the ray experimented
+    solid : Shape
+        solid where the ray is located
     material : Material
         Material where the ray is located
     extra_data : dict
@@ -55,7 +57,7 @@ class OpticalState(object):
         self.polarization = polarization
         self.direction = direction
         self.phenomenon = phenomenon
-        self.material = material
+        self.material = material # TODO: Set solid
         if extra_data is None:
             extra_data = {}
         self.extra_data = extra_data
@@ -198,7 +200,7 @@ def reflection(incident, normal_vector, polarization_vector,
         parallel_v, perpendicular_v, normal_parallel_plane = \
             parallel_orthogonal_components(polarization_vector, incident, normal)
         polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane, polarization_vector)
-    return OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION)
+    return OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION) # TODO: Set solid
 
 
 @traced(logger)
@@ -227,7 +229,8 @@ def lambertian_reflection(incident, normal_vector):
             dot = normal.dot(random_vector)
     new_direction = random_vector		
     random_polarization_vector = random_polarization(new_direction)
-    return OpticalState(random_polarization_vector, new_direction, Phenomenon.REFLEXION)
+    return OpticalState(random_polarization_vector,
+                        new_direction, Phenomenon.REFLEXION) # TODO: Set solid
 
 
 @traced(logger)
@@ -293,7 +296,8 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, Lambertian_
             if not perpendicular_polarized:
                 # reflection changes the parallel component of incident polarization
                 polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane, polarization_vector)
-            return OpticalState(polarization_vector, reflected_direction, Phenomenon.REFLEXION)
+            return OpticalState(polarization_vector, reflected_direction,
+                                Phenomenon.REFLEXION) # TODO: Set solid
         else:
             return lambertian_reflection(incident, normal)
     else:
@@ -307,7 +311,8 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, Lambertian_
                 # avoiding invalid solutions for metallic materials
                 c2 = - normal.dot(refracted_direction)
             polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, polarization_vector)
-        return OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION)
+        return OpticalState(polarization_vector, refracted_direction,
+                            Phenomenon.REFRACTION) # TODO: Set solid
 
 			
 @traced(logger)
@@ -336,7 +341,8 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector):
     # cos (refracted_angle) ** 2
     if c2sq.real < 0:
         # total internal reflection
-        if not Lambertian_surface:
+        ## if not Lambertian_surface: # Todo Ramon: Lambertian no esta definit aqui
+        if True:
             return reflection(incident, normal, polarization_vector)
         else:
             return lambertian_reflection(incident, normal)
@@ -352,7 +358,8 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector):
         # avoiding invalid solutions for metallic materials
         c2 = - normal.dot(refracted_direction)
     polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, polarization_vector)
-    return OpticalState(polarization_vector, refracted_direction, Phenomenon.REFRACTION)
+    return OpticalState(polarization_vector, refracted_direction,
+                        Phenomenon.REFRACTION) # TODO: Set solid
 
 
 # ---

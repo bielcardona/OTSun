@@ -13,6 +13,7 @@ class Scene:
         self.faces = []  # All the faces in the Scene
         self.solids = []  # All the solids in the Scene
         self.materials = {}  # Assign the materials to objects
+        self.boundaries = {} # Assign boundary faces to solids
         # self.sum_energy = 0.0 # Energy of the Scene
         self.epsilon = 5 * 10.0 ** (-6.0)  # Tolerance for solid containment # 5 nm.
         self.boundbox = None
@@ -28,6 +29,7 @@ class Scene:
             if solids:  # Object is a solid
                 for solid in solids:
                     self.materials[solid] = material
+                    self.boundaries[solid] = faces
             else:  # Object is made of faces
                 for face in faces:
                     self.materials[face] = material
