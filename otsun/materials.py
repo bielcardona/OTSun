@@ -227,7 +227,6 @@ class Material(object):
         except IOError:
             logger.exception("error in processing file %s", filename)
 
-
     def get_n(self, wavelength):
         """
         Returns the (complex) refractive index at a certain wavelength
