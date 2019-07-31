@@ -9,15 +9,30 @@ TwoLayerMaterial
 """
 
 import sys
-##otsun_path = "D:\\Ramon_2015\\RECERCA\\RETOS-2015\\Tareas\\OTSun_local\\"
-##sys.path.append(otsun_path)
-import random
-random.seed(1)
 import otsun
 import FreeCAD
 from FreeCAD import Base
 import Part
 import numpy as np
+import random
+random.seed(1)
+
+import logging
+logger = otsun.logger
+logger.setLevel(logging.DEBUG)
+
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# add formatter to ch
+ch.setFormatter(formatter)
+
+# add ch to logger
+logger.addHandler(ch)
 
 MyProject = 'test_PTC.FCStd'
 FreeCAD.openDocument(MyProject)
