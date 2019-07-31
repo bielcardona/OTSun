@@ -1,4 +1,4 @@
-from .math import random_congruential
+#from .math import random_congruential
 import time
 import numpy as np
 
@@ -57,7 +57,7 @@ class Experiment:
         self.PV_wavelength = []
         self.PV_values = []
         self.points_absorber_Th = []
-        random_congruential(time.time()) # TODO: change location
+        #random_congruential(time.time()) # TODO: change location
 
     def run(self, show_in_doc=None):
         """Runs the experiment and plots the rays in the document specified (if any)"""

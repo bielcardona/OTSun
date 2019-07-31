@@ -96,36 +96,36 @@ def tabulated_function(xvalues, yvalues):
     return this_tabulated_function
 
 
-# ---
-# Helper function for random Linear congruential generator
-# ---
-_previous = None
-def random_congruential(seed=None):
-    """Random Linear congruential generator based on  MTH$RANDOM
-
-    Parameters
-    ----------
-    seed : float
-        seed to use in the generation of random numbers
-
-    Returns
-    -------
-    float
-
-    """
-    # http://daviddeley.com/random/random4.htm
-    a = 69069.0
-    c = 1.0
-    m = 2.0 ** 32.0
-    rm = 1.0 / m
-    global _previous
-    if not seed:
-        if not _previous:
-            _previous = time.time()
-    else:
-        _previous = seed
-    _previous = np.remainder(_previous * a + c, m)
-    return _previous * rm
+# # ---
+# # Helper function for random Linear congruential generator
+# # ---
+# _previous = None
+# def random_congruential(seed=None):
+#     """Random Linear congruential generator based on  MTH$RANDOM
+#
+#     Parameters
+#     ----------
+#     seed : float
+#         seed to use in the generation of random numbers
+#
+#     Returns
+#     -------
+#     float
+#
+#     """
+#     # http://daviddeley.com/random/random4.htm
+#     a = 69069.0
+#     c = 1.0
+#     m = 2.0 ** 32.0
+#     rm = 1.0 / m
+#     global _previous
+#     if not seed:
+#         if not _previous:
+#             _previous = time.time()
+#     else:
+#         _previous = seed
+#     _previous = np.remainder(_previous * a + c, m)
+#     return _previous * rm
 
 
 # ---
