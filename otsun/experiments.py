@@ -1,6 +1,7 @@
-#from .math import random_congruential
+# from .math import random_congruential
 import time
 import numpy as np
+
 
 class Experiment:
     """
@@ -57,11 +58,11 @@ class Experiment:
         self.PV_wavelength = []
         self.PV_values = []
         self.points_absorber_Th = []
-        #random_congruential(time.time()) # TODO: change location
+        # random_congruential(time.time()) # TODO: change location
 
     def run(self, show_in_doc=None):
         """Runs the experiment and plots the rays in the document specified (if any)"""
-        for _ in np.arange(0,self.number_of_rays,1):
+        for _ in np.arange(0, self.number_of_rays, 1):
             ray = self.light_source.emit_ray()
             ray.run()
             self.wavelengths.append(ray.wavelength)
@@ -72,9 +73,9 @@ class Experiment:
                 self.Th_energy.append(ray.energy)
                 self.Th_wavelength.append(ray.wavelength)
                 self.points_absorber_Th.append((ray.energy,
-                                             ray.points[-1].x, ray.points[-1].y, ray.points[-1].z,
-                                             ray.points[-2].x, ray.points[-2].y, ray.points[-2].z,
-                                             ray.last_normal.x, ray.last_normal.y, ray.last_normal.z))
+                                                ray.points[-1].x, ray.points[-1].y, ray.points[-1].z,
+                                                ray.points[-2].x, ray.points[-2].y, ray.points[-2].z,
+                                                ray.last_normal.x, ray.last_normal.y, ray.last_normal.z))
             else:
                 self.Th_energy.append(0.0)
                 # TODO: Review... ray.wavelength always added to Th_wavelength
@@ -87,7 +88,7 @@ class Experiment:
                 self.PV_wavelength.append(ray.wavelength)
                 length = len(ray.PV_values)
                 if length > 0:
-                    for z in np.arange(0,length,1):
+                    for z in np.arange(0, length, 1):
                         # TODO: Review... no ho entenc (pq no afegir directament tot?) Ramon please check
                         self.PV_values.append(ray.PV_values[z])
             else:
