@@ -8,6 +8,7 @@ import Part
 LOW_ENERGY = 1E-4 
 # Zero energy level 
 
+
 @traced(logger)
 class Ray(object):
     """
@@ -69,7 +70,7 @@ class Ray(object):
         self.energy = energy
         self.polarization_vectors = [polarization_vector]
         self.finished = False
-        self.Th_absorbed= False
+        self.Th_absorbed = False
         self.PV_values = []
         self.PV_absorbed = []
 
@@ -133,7 +134,7 @@ class Ray(object):
         if not intersections:
             return p1, None
         closest_pair = min(intersections,
-                          key=lambda (pair): p0.distanceToPoint(pair[0]))
+                           key=lambda (pair): p0.distanceToPoint(pair[0]))
         return tuple(closest_pair)
 
     def next_state_and_normal(self, face):
@@ -184,11 +185,11 @@ class Ray(object):
         point_2 = self.points[-2]
         if 'extinction_coefficient' in material.properties:
             alpha = material.properties['extinction_coefficient'](self.wavelength) * \
-                    4 * np.pi / (self.wavelength / 1E6) # mm-1
+                    4 * np.pi / (self.wavelength / 1E6)  # mm-1
             d = point_1.distanceToPoint(point_2)
             self.energy = self.energy * np.exp(- alpha * d)
         if 'attenuation_coefficient' in material.properties:
-            alpha = material.properties['attenuation_coefficient'](self.wavelength) # mm-1
+            alpha = material.properties['attenuation_coefficient'](self.wavelength)  # mm-1
             d = point_1.distanceToPoint(point_2)
             self.energy = self.energy * np.exp(- alpha * d)
 
@@ -214,7 +215,7 @@ class Ray(object):
             self.points.append(point)
             if not face:
                 self.finished = True
-                self.Th_absorbed= False
+                self.Th_absorbed = False
                 break
 
             # Update optical state
@@ -246,7 +247,7 @@ class Ray(object):
             if state.phenomenon == Phenomenon.ABSORPTION:
                 self.finished = True
             if state.phenomenon == Phenomenon.ENERGY_ABSORBED:
-                self.Th_absorbed= True
+                self.Th_absorbed = True
                 self.finished = True
 
     def add_to_document(self, doc):
@@ -260,4 +261,3 @@ class Ray(object):
         lshape_wire = Part.makePolygon(self.points)
         my_shape_ray = doc.addObject("Part::Feature", "Ray")
         my_shape_ray.Shape = lshape_wire
-

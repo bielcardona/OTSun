@@ -796,7 +796,8 @@ class SurfaceMaterial(Material):
                                      nearby_material)  # TODO: Set solid
             else:
                 state = shure_refraction(ray.current_direction(), normal_vector,
-                                         n1, n2, ray.current_polarization())
+                                         n1, n2, ray.current_polarization(),
+                                         self.properties.get('lambertian_material', False))
                 state.material = nearby_material  # TODO: Set solid
             return state
 

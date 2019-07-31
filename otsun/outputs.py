@@ -9,11 +9,11 @@ def spectrum_to_constant_step(file_in, wavelength_step, wavelength_min, waveleng
     return np.array(array_inter)
 
 
-def make_histogram_from_experiment_results(reults_wavelength, resutls_energy, step_wavelength, aperture_collector,
+def make_histogram_from_experiment_results(results_wavelength, results_energy, step_wavelength, aperture_collector,
                                            aperture_source):
-    y_energy = np.array(np.concatenate(resutls_energy))
+    y_energy = np.array(np.concatenate(results_energy))
     y_energy = (y_energy / aperture_collector) / (1.0 / aperture_source)
-    x_wavelength = np.array(np.concatenate(reults_wavelength))
+    x_wavelength = np.array(np.concatenate(results_wavelength))
     data_ = np.array([x_wavelength, y_energy])
     data_ = data_.T
     bins_ = np.arange(int(np.amin(x_wavelength)), np.amax(x_wavelength) + step_wavelength * 1.1, step_wavelength)
@@ -38,7 +38,6 @@ def spectral_response(optical_absorption_wavelength, iqe):
     h = 6.62607E-34
     c = 299792458.0
     hc = h * c
-    SR = []
     opt_wavelength = optical_absorption_wavelength
     if np.isreal(iqe):
         SR = [[opt[0], iqe * opt[0] * opt[1] * q_e * 1E-9 / hc, ] for opt in opt_wavelength]
@@ -65,4 +64,3 @@ def integral_from_data_file(file_in):
     source_spectrum = np.loadtxt(file_in, usecols=(0, 1))
     integral = np.trapz(source_spectrum[:, 1], x=source_spectrum[:, 0])
     return integral
-

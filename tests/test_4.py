@@ -142,7 +142,9 @@ energy_emitted = np.trapz(source_spectrum[:,1], x = source_spectrum[:,0])
 # ---
 if captured_energy_Th > 1E-9:
     data_Th_points_absorber = np.array(np.concatenate(Th_points_absorber))
-    table_Th = otsun.make_histogram_from_experiment_results(Th_wavelength, Th_energy, wavelength_step, aperture_collector_Th, exp.light_source.emitting_region.aperture)
+    table_Th = otsun.make_histogram_from_experiment_results(Th_wavelength, Th_energy, wavelength_step,
+                                                            aperture_collector_Th,
+                                                            exp.light_source.emitting_region.aperture)
     spectrum_by_table_Th = source_spectrum[:,1] * table_Th[:,1]		
     power_absorbed_from_source_Th = np.trapz(spectrum_by_table_Th, x = source_spectrum[:,0])
     efficiency_from_source_Th = power_absorbed_from_source_Th / energy_emitted
@@ -158,7 +160,9 @@ if captured_energy_Th > 1E-9:
 if captured_energy_PV > 1E-9:
 
     data_PV_values = np.array(np.concatenate(PV_values))
-    table_PV = otsun.make_histogram_from_experiment_results(PV_wavelength, PV_energy, wavelength_step, aperture_collector_PV, exp.light_source.emitting_region.aperture)
+    table_PV = otsun.make_histogram_from_experiment_results(PV_wavelength, PV_energy, wavelength_step,
+                                                            aperture_collector_PV,
+                                                            exp.light_source.emitting_region.aperture)
     spectrum_by_table_PV = source_spectrum[:,1] * table_PV[:,1]		
     power_absorbed_from_source_PV = np.trapz(spectrum_by_table_PV, x = source_spectrum[:,0])
     efficiency_from_source_PV = power_absorbed_from_source_PV / energy_emitted

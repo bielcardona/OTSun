@@ -3,15 +3,14 @@ Module that implements rays and its sources
 """
 
 import itertools
+
 import Part
-from FreeCAD import Base
-from .materials import vacuum_medium
-from .ray import Ray
-from .optics import dispersion_from_main_direction, random_polarization, dispersion_polarization
 import numpy as np
+from FreeCAD import Base
+
 from .math import pick_random_from_cdf, myrandom, tabulated_function
-from .logging_unit import logger
-from autologging import traced
+from .optics import dispersion_from_main_direction, random_polarization, dispersion_polarization
+from .ray import Ray
 
 
 class SunWindow(object):
@@ -150,6 +149,7 @@ class SunWindow(object):
                                ], True)
         doc.addObject("Part::Feature", "SunWindow").Shape = sw
 
+
 class LightSource(object):
     """
     Sets up a light source with a given scene, a given emitting region and a given light spectrum.
@@ -188,6 +188,7 @@ class LightSource(object):
         ray = Ray(self.scene, point, direction, wavelength, self.initial_energy, polarization_vector)
         return ray
 
+
 # Auxiliary functions for buie_distribution
 
 def _calculate_a1(CSR, SD):
@@ -195,14 +196,14 @@ def _calculate_a1(CSR, SD):
     """
 
     th = np.arange(0.0, SD, 0.001)
-    values = [ 2.0 * np.pi * np.cos(0.326 * angle) / np.cos(0.305 * angle) * angle
-        for angle in th]
+    values = [2.0 * np.pi * np.cos(0.326 * angle) / np.cos(0.305 * angle) * angle
+              for angle in th]
     a1 = (1.0 - CSR) / np.trapz(values, dx=0.001)
     return a1
 
 
 def _circumsolar__density_distribution(angle, CSR):
-    gamma = 2.2 * np.log(0.52 * CSR) * CSR ** (0.43) - 0.1
+    gamma = 2.2 * np.log(0.52 * CSR) * CSR ** 0.43 - 0.1
     kappa = 0.9 * np.log(13.5 * CSR) * CSR ** (-0.3)
     return 2.0 * np.pi * np.exp(kappa) * angle ** (gamma + 1.0)
 
@@ -222,10 +223,11 @@ def _calculate_CDF_disk_region(a1, SD):
     """
     th = np.arange(0.0, SD, 0.001)
     values = [2.0 * np.pi * np.cos(0.326 * angle) / np.cos(0.305 * angle) * angle
-        for angle in th]
+              for angle in th]
     cumulative = np.cumsum(values)
     CDF = (th, a1 * cumulative / 1000.0)
     return CDF
+
 
 def _th_solar_disk_region(u, CDF):
     """ Random angle based on the probability distribution in the circumsolar region"""
@@ -274,13 +276,13 @@ def buie_distribution(CircumSolarRatio):
     #     normalization constant for the disk region
     a2 = _calculate_a2(CSR, SD, SS)
     #    normalization constant for the circumsolar region
-    CDF_Disk_Region = _calculate_CDF_disk_region(a1,SD)
+    CDF_Disk_Region = _calculate_CDF_disk_region(a1, SD)
     #    Buie distribution for the disk region
     u_values = np.arange(0.0, 1.001, 0.001)
     dist_values = []
     for u in u_values:
         if u < 1.0 - CSR:
-            dist_values.append(_th_solar_disk_region(u,CDF_Disk_Region) / 1000.0 * 180.0 / np.pi)
+            dist_values.append(_th_solar_disk_region(u, CDF_Disk_Region) / 1000.0 * 180.0 / np.pi)
         else:
             dist_values.append(_th_circumsolar_region(u, CSR, SD, a2) / 1000.0 * 180.0 / np.pi)
     f = tabulated_function(u_values, dist_values)

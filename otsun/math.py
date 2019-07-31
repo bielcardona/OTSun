@@ -223,11 +223,11 @@ def parallel_orthogonal_components(vector, incident, normal):
     normal_parallel_plane.normalize()
     normal_perpendicular_plane = incident.cross(normal_parallel_plane)
     # orthogonal vector to perpendicular_plane
-    parallel_v = polarization_vector - \
-                 normal_parallel_plane * polarization_vector.dot(normal_parallel_plane)
+    parallel_v = (polarization_vector -
+                  normal_parallel_plane * polarization_vector.dot(normal_parallel_plane))
     # parallel_v is the projection of polarization_vector onto parallel_plane
-    perpendicular_v = polarization_vector - \
-                 normal_perpendicular_plane * polarization_vector.dot(normal_perpendicular_plane)
+    perpendicular_v = (polarization_vector -
+                       normal_perpendicular_plane * polarization_vector.dot(normal_perpendicular_plane))
     # perpendicular_v is the projection of polarization_vector onto the perpendicular_plane
     return parallel_v, perpendicular_v, normal_parallel_plane
 
