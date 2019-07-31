@@ -4,17 +4,20 @@ Implementation of optical effects on rays
 
 from FreeCAD import Base
 import numpy as np
-from .math import arccos, myrandom, one_orthogonal_vector, correct_normal,\
+from .math import arccos, myrandom, one_orthogonal_vector, correct_normal, \
     parallel_orthogonal_components, rad_to_deg, normalize, memoize
 from enum import Enum
 from numpy.lib.scimath import sqrt
 from autologging import traced
 from .logging_unit import logger
+
 # from .materials import Material, vacuum_medium
 
-EPSILON = 1E-6 
+EPSILON = 1E-6
 # Tolerance for considering equal to zero
 INF = 1E20
+
+
 # Infinite
 
 class Phenomenon(Enum):
@@ -52,12 +55,12 @@ class OpticalState(object):
     extra_data : dict
         Dictionary where materials can put extra data
     """
-    
-    def __init__(self, polarization, direction, phenomenon, material = None, extra_data = None):
+
+    def __init__(self, polarization, direction, phenomenon, material=None, extra_data=None):
         self.polarization = polarization
         self.direction = direction
         self.phenomenon = phenomenon
-        self.material = material # TODO: Set solid
+        self.material = material  # TODO: Set solid
         if extra_data is None:
             extra_data = {}
         self.extra_data = extra_data
@@ -154,25 +157,26 @@ def simple_reflection(incident, normal):
     reflected = incident + normal * 2.0 * c1
     return reflected.normalize()
 
+
 @traced(logger)
 def simple_polarization_reflection(incident, normal, normal_parallel_plane, polarization):
     c1 = - normal.dot(incident)
     angle = rad_to_deg(np.pi - 2.0 * arccos(c1))
     rotation = Base.Rotation(normal_parallel_plane, angle)
     return rotation.multVec(polarization)
-	
+
 
 @traced(logger)
 def simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, polarization_vector):
     c1 = - normal.dot(incident)
-    angle = rad_to_deg(arccos(c2.real) - arccos(c1))		
+    angle = rad_to_deg(arccos(c2.real) - arccos(c1))
     rotation = Base.Rotation(normal_parallel_plane, angle)
     return rotation.multVec(polarization_vector)
 
 
 @traced(logger)
 def reflection(incident, normal_vector, polarization_vector,
-              polarization_vector_calculated_before=False):
+               polarization_vector_calculated_before=False):
     """
     Implementation of law of reflection for incident and polarization vector.
 
@@ -199,8 +203,9 @@ def reflection(incident, normal_vector, polarization_vector,
         # we calculate the new polarization vector
         parallel_v, perpendicular_v, normal_parallel_plane = \
             parallel_orthogonal_components(polarization_vector, incident, normal)
-        polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane, polarization_vector)
-    return OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION) # TODO: Set solid
+        polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane,
+                                                             polarization_vector)
+    return OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION)  # TODO: Set solid
 
 
 @traced(logger)
@@ -212,7 +217,7 @@ def lambertian_reflection(incident, normal_vector):
     ----------
     incident : Base.Vector
         vector incident
-    normal : Base.Vector
+    normal_vector : Base.Vector
         vector normal to the surface
 
     Returns
@@ -222,26 +227,26 @@ def lambertian_reflection(incident, normal_vector):
     """
     normal = correct_normal(normal_vector, incident)
     dot = - 1.0
-    while (dot <= 0.01): 
+    while dot <= 0.01:
         random_vector = Base.Vector(myrandom() - 0.5, myrandom() - 0.5, myrandom() - 0.5)
         if random_vector.Length < 1:
             random_vector.normalize()
             dot = normal.dot(random_vector)
-    new_direction = random_vector		
+    new_direction = random_vector
     random_polarization_vector = random_polarization(new_direction)
     return OpticalState(random_polarization_vector,
-                        new_direction, Phenomenon.REFLEXION) # TODO: Set solid
+                        new_direction, Phenomenon.REFLEXION)  # TODO: Set solid
 
 
 @traced(logger)
-def refraction(incident, normal_vector, n1, n2, polarization_vector, Lambertian_surface = False):
+def refraction(incident, normal_vector, n1, n2, polarization_vector, lambertian_surface=False):
     """Implementation of Fresnel equations of refraction
 
     Parameters
     ----------
     incident : Base.Vector
         direction vector of the incident ray	
-    normal: Base.Vector
+    normal_vector: Base.Vector
         normal vector of the surface at the point of incidence
     n1: complex
         complex refractive index where ray is currently traveling
@@ -249,6 +254,7 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, Lambertian_
         complex refractive index of nearby material
     polarization_vector: Base.Vector
         Polarization vector of the ray
+    lambertian_surface
 
     Returns
     -------
@@ -265,13 +271,14 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, Lambertian_
     # cos (refracted_angle) ** 2
     if c2sq.real < 0:
         # total internal reflection
-        if not Lambertian_surface:
+        if not lambertian_surface:
             return reflection(incident, normal, polarization_vector)
         else:
             return lambertian_reflection(incident, normal)
     c2 = sqrt(c2sq)
     # cos (refracted_angle)
-    parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident, normal)
+    parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident,
+                                                                                        normal)
     # parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
     ref_per = perpendicular_v.Length ** 2.0 / polarization_vector.Length ** 2.0
     # weight of perpendicular component: 0 < ref_per < 1
@@ -291,13 +298,14 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, Lambertian_
     # The ray can be reflected or refracted 
     if myrandom() < reflectance.real:
         # ray reflected
-        if not Lambertian_surface:
+        if not lambertian_surface:
             reflected_direction = simple_reflection(incident, normal)
             if not perpendicular_polarized:
                 # reflection changes the parallel component of incident polarization
-                polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane, polarization_vector)
+                polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane,
+                                                                     polarization_vector)
             return OpticalState(polarization_vector, reflected_direction,
-                                Phenomenon.REFLEXION) # TODO: Set solid
+                                Phenomenon.REFLEXION)  # TODO: Set solid
         else:
             return lambertian_reflection(incident, normal)
     else:
@@ -310,13 +318,14 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, Lambertian_
             if c2sq.real > 1:
                 # avoiding invalid solutions for metallic materials
                 c2 = - normal.dot(refracted_direction)
-            polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, polarization_vector)
+            polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2,
+                                                                 polarization_vector)
         return OpticalState(polarization_vector, refracted_direction,
-                            Phenomenon.REFRACTION) # TODO: Set solid
+                            Phenomenon.REFRACTION)  # TODO: Set solid
 
-			
+
 @traced(logger)
-def shure_refraction(incident, normal_vector, n1, n2, polarization_vector):
+def shure_refraction(incident, normal_vector, n1, n2, polarization_vector, lambertian_surface=False):
     """Implementation of Snell's law of refraction
 
     Parameters
@@ -326,13 +335,14 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector):
     n1
     n2
     polarization_vector
+    lambertian_surface
 
     Returns
     -------
 
     """
     # TODO: document
-	
+
     normal = correct_normal(normal_vector, incident)
     r = n1 / n2
     c1 = - normal.dot(incident)
@@ -341,25 +351,25 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector):
     # cos (refracted_angle) ** 2
     if c2sq.real < 0:
         # total internal reflection
-        ## if not Lambertian_surface: # Todo Ramon: Lambertian no esta definit aqui
-        if True:
+        if not lambertian_surface:
             return reflection(incident, normal, polarization_vector)
         else:
             return lambertian_reflection(incident, normal)
     c2 = sqrt(c2sq)
     # cos (refracted_angle)
-    parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident, normal)
+    parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident,
+                                                                                        normal)
     # parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
     # ray refracted: computing the refracted direction
-    refracted_direction = incident * r.real + \
-                          normal * (r.real * c1 - c2.real)
+    refracted_direction = incident * r.real + normal * (r.real * c1 - c2.real)
     refracted_direction.normalize()
     if c2sq.real > 1:
         # avoiding invalid solutions for metallic materials
         c2 = - normal.dot(refracted_direction)
-    polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, polarization_vector)
+    polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2,
+                                                         polarization_vector)
     return OpticalState(polarization_vector, refracted_direction,
-                        Phenomenon.REFRACTION) # TODO: Set solid
+                        Phenomenon.REFRACTION)  # TODO: Set solid
 
 
 # ---
@@ -454,8 +464,8 @@ def matrix_reflectance(data_material):
     data_material: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular),
     reflectance p-polarized (parallel)
     the values should be in the corresponding order columns with constants steps
-	We generate a matrix for the interpolation depending on the x=angle and
-	y=wavelength values (lambda values)
+    We generate a matrix for the interpolation depending on the x=angle and
+    y=wavelength values (lambda values)
 
     Parameters
     ----------
@@ -476,10 +486,9 @@ def matrix_reflectance(data_material):
         w = min(steps[steps > 0.0])
     except ValueError:
         w = 1E-4
-    cached = {}
 
     @memoize
-    def internal_matrix_reflectance(x,y):
+    def internal_matrix_reflectance(x, y):
         return [row for row in data_material if
                 (x + a > row[1] > x - a) and (y + w > row[0] > y - w)]
 
@@ -504,7 +513,7 @@ def calculate_reflectance(m_reflectance, angle, wavelength):
     tuple of float or tuple of np.complex
     """
     if len(m_reflectance) == 0:  # wavelength experiments out of range of the data_material
-        return  0.0, 0.0
+        return 0.0, 0.0
     r_matrix = np.mat(m_reflectance)
     if len(r_matrix) == 1:
         # interpolation is not needed
@@ -555,5 +564,3 @@ def calculate_reflectance(m_reflectance, angle, wavelength):
         y_values = [r1, r2]
         r_par = np.interp(wavelength, x_values, y_values)
         return r_per, r_par
-
-

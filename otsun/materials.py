@@ -353,9 +353,7 @@ class VolumeMaterial(Material):
         else:
             n1 = ray.current_medium().get_n(wavelength)
             n2 = self.get_n(wavelength)
-            optical_state = refraction(
-                ray.current_direction(), normal_vector, n1, n2,
-                ray.current_polarization())
+            optical_state = refraction(ray.current_direction(), normal_vector, n1, n2, ray.current_polarization())
             if optical_state.phenomenon == Phenomenon.REFRACTION:
                 optical_state.material = self  # TODO: Set solid
             else:

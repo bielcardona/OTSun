@@ -199,7 +199,7 @@ def parallel_orthogonal_components(vector, incident, normal):
     `incident` (direction of a ray) and
     `normal` (vector orthogonal to a plane),
     decompose `vector` it in
-    a component contained in the reflection (parallel) plane (determined by normal and incident): p-polarized (parallel) light
+    a component contained in the reflection (parallel) plane (det. by normal and incident): p-polarized (parallel) light
     a component contained in the orthogonal plane to the reflection plane: s-polarized (perpendicular) light
     also returns the normal vector to the reflection plane
 
@@ -294,5 +294,3 @@ def arccos(x):
     if x > 0:
         return 0
     return np.pi
-
-
