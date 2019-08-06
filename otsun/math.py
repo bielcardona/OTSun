@@ -13,18 +13,10 @@ EPSILON = 1E-6
 INF = 1E20
 # Infinite
 
-
-def memoize(function):
-    cache = {}
-    @wraps(function)
-    def wrapper(*args):
-        if args in cache:
-            return cache[args]
-        else:
-            val = function(*args)
-            cache[args] = val
-            return val
-    return wrapper
+try:
+    from functools import lru_cache
+except ImportError:
+    from backports.functools_lru_cache import lru_cache
 
 
 def polar_to_cartesian(phi, theta):
@@ -89,7 +81,8 @@ def tabulated_function(xvalues, yvalues):
         Function that interpolates by straight line segments the input data
     """
 
-    @memoize
+    # @memoize
+    @lru_cache(maxsize=None)
     def this_tabulated_function(x):
         return np.interp(x, xvalues, yvalues)
 
