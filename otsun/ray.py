@@ -8,6 +8,13 @@ import Part
 LOW_ENERGY = 1E-4 
 # Zero energy level 
 
+def _interval_intersects(x1,x2,y1,y2):
+    return x1 <= y2 and y1 <= x2
+
+def _bb_intersects(bb1,bb2):
+    return (_interval_intersects(bb1.XMin, bb1.XMax, bb2.XMin, bb2.XMax) and
+            _interval_intersects(bb1.YMin, bb1.YMax, bb2.YMin, bb2.YMax) and
+            _interval_intersects(bb1.ZMin, bb1.ZMax, bb2.ZMin, bb2.ZMax) )
 
 @traced(logger)
 class Ray(object):
@@ -127,7 +134,11 @@ class Ray(object):
         p1 = p0 + direction * max_distance
         segment = Part.Line(p0, p1)
         shape_segment = segment.toShape()
+        bb1 = shape_segment.BoundBox
         for face in self.scene.faces:
+            bb2 = face.BoundBox
+            if not _bb_intersects(bb1, bb2):
+                continue
             punts = face.section(shape_segment).Vertexes
             for punt in punts:
                 intersections.append([punt.Point, face])
