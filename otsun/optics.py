@@ -458,6 +458,13 @@ def random_polarization(direction):
 # Helper function for reflectance depending on the wavelength for coatings layers.
 # ---
 
+def _round_or_floor_ceil(x):
+    xround = int(round(x))
+    if abs(x-xround) < 1E-4:
+        return [xround]
+    xfloor = int(np.floor(x))
+    return [xfloor, xfloor+1]
+
 @traced(logger)
 def matrix_reflectance(data_material):
     """
@@ -478,19 +485,36 @@ def matrix_reflectance(data_material):
     # TODO: document
     steps = np.diff(data_material[:, 1])
     try:
-        a = min(steps[steps > 0.0])
+        delta_a = min(steps[steps > 0.0])
     except ValueError:
-        a = 1E-4
+        delta_a = 1E-4
+    min_a = min(data_material[:,1])
     steps = np.diff(data_material[:, 0])
     try:
-        w = min(steps[steps > 0.0])
+        delta_w = min(steps[steps > 0.0])
     except ValueError:
-        w = 1E-4
+        delta_w = 1E-4
+    min_w = min(data_material[:,0])
+    data_dict = {}
+    for row in data_material:
+        data_dict[(int(round((row[0]-min_w)/delta_w)),
+                   int(round((row[1]-min_a)/delta_a)))] = row
 
-    @memoize
+#    @memoize
+    # @lru_cache(maxsize=None)
     def internal_matrix_reflectance(x, y):
-        return [row for row in data_material if
-                (x + a > row[1] > x - a) and (y + w > row[0] > y - w)]
+        index_a = (x - min_a)/delta_a
+        index_w = (y - min_w)/delta_w
+        index_a_ints = _round_or_floor_ceil(index_a)
+        index_w_ints = _round_or_floor_ceil(index_w)
+        rows = []
+        for i_a in index_a_ints:
+            for i_w in index_w_ints:
+                try:
+                    rows.append(data_dict[(i_w,i_a)])
+                except KeyError:
+                    pass
+        return rows
 
     return internal_matrix_reflectance
 
