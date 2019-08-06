@@ -5,7 +5,7 @@ Implementation of optical effects on rays
 from FreeCAD import Base
 import numpy as np
 from .math import arccos, myrandom, one_orthogonal_vector, correct_normal, \
-    parallel_orthogonal_components, rad_to_deg, normalize, memoize
+    parallel_orthogonal_components, rad_to_deg, normalize
 from enum import Enum
 from numpy.lib.scimath import sqrt
 from autologging import traced
