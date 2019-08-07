@@ -1,7 +1,9 @@
 .idea
 *.pyc
+*~
 Vagrantfile
 .vagrant
+.cache
 bootstrap.sh
 launch.json
 settings.json

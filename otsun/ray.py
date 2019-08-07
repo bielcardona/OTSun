@@ -145,7 +145,7 @@ class Ray(object):
         if not intersections:
             return p1, None
         closest_pair = min(intersections,
-                           key=lambda (pair): p0.distanceToPoint(pair[0]))
+                           key=lambda pair: p0.distanceToPoint(pair[0]))
         return tuple(closest_pair)
 
     def next_state_and_normal(self, face):

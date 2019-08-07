@@ -176,8 +176,8 @@ if captured_energy_PV > 1E-9:
 
 FreeCAD.closeDocument(FreeCAD.ActiveDocument.Name)
 
-print table_Th, table_PV
-print 0.1 > table_Th[0][1] > 0.0 and 0.1 > table_Th[1][1] > 0.0 and 0.98 > table_PV[0][1] > 0.75 and 0.98 > table_PV[1][1] > 0.75
+print (table_Th, table_PV)
+print (0.1 > table_Th[0][1] > 0.0 and 0.1 > table_Th[1][1] > 0.0 and 0.98 > table_PV[0][1] > 0.75 and 0.98 > table_PV[1][1] > 0.75)
 
 def test_4():
     assert 0.1 > table_Th[0][1] > 0.0 and 0.1 > table_Th[1][1] > 0.0 and 0.98 > table_PV[0][1] > 0.75 and 0.98 > table_PV[1][1] > 0.75

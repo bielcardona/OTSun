@@ -104,8 +104,8 @@ for ph in np.arange(phi_ini, phi_end, phi_step):
 
 FreeCAD.closeDocument(FreeCAD.ActiveDocument.Name)
 
-print results
-print 0.9 > results[0][2] > 0.6 and 0.7 > results[1][2] > 0.4 and results[0][3] == 0.0 and results[1][3] == 0.0
+print (results)
+print (0.9 > results[0][2] > 0.6 and 0.7 > results[1][2] > 0.4 and results[0][3] == 0.0 and results[1][3] == 0.0)
 
 def test_1():
     assert 0.9 > results[0][2] > 0.6 and 0.7 > results[1][2] > 0.4 and results[0][3] == 0.0 and results[1][3] == 0.0

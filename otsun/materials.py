@@ -16,7 +16,7 @@ from .math import arccos, parallel_orthogonal_components, rad_to_deg, myrandom, 
 from numpy import sqrt
 import numpy as np
 from autologging import traced
-from logging_unit import logger
+from .logging_unit import logger
 
 
 class NumpyEncoder(json.JSONEncoder):
