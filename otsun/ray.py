@@ -5,6 +5,11 @@ from .optics import Phenomenon, OpticalState
 import numpy as np
 import Part
 
+try:
+    part_line = Part.LineSegment
+except AttributeError:
+    part_line = Part.Line 
+
 LOW_ENERGY = 1E-4 
 # Zero energy level 
 
@@ -132,7 +137,7 @@ class Ray(object):
         p0 = p0 + direction * self.scene.epsilon
         intersections = []
         p1 = p0 + direction * max_distance
-        segment = Part.Line(p0, p1)
+        segment = part_line(p0, p1)
         shape_segment = segment.toShape()
         bb1 = shape_segment.BoundBox
         for face in self.scene.faces:
