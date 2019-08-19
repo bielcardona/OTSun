@@ -8,18 +8,21 @@ import Part
 try:
     part_line = Part.LineSegment
 except AttributeError:
-    part_line = Part.Line 
+    part_line = Part.Line
 
-LOW_ENERGY = 1E-4 
-# Zero energy level 
+# Zero energy level
+LOW_ENERGY = 1E-4
 
-def _interval_intersects(x1,x2,y1,y2):
+
+def _interval_intersects(x1, x2, y1, y2):
     return x1 <= y2 and y1 <= x2
 
-def _bb_intersects(bb1,bb2):
+
+def _bb_intersects(bb1, bb2):
     return (_interval_intersects(bb1.XMin, bb1.XMax, bb2.XMin, bb2.XMax) and
             _interval_intersects(bb1.YMin, bb1.YMax, bb2.YMin, bb2.YMax) and
-            _interval_intersects(bb1.ZMin, bb1.ZMax, bb2.ZMin, bb2.ZMax) )
+            _interval_intersects(bb1.ZMin, bb1.ZMax, bb2.ZMin, bb2.ZMax))
+
 
 @traced(logger)
 class Ray(object):
@@ -85,6 +88,11 @@ class Ray(object):
         self.Th_absorbed = False
         self.PV_values = []
         self.PV_absorbed = []
+
+    def __str__(self):
+        return "Pos.: %s, OS: %s, Energy: %s" % (
+            self.points[-1], self.optical_states[-1], self.energy
+        )
 
     def current_medium(self):
         """
@@ -223,6 +231,7 @@ class Ray(object):
         """
         count = 0
         while (not self.finished) and (count < max_hops):
+            logger.info("Ray running. Hop %s, %s", count, self)
             count += 1
 
             # Find next intersection
@@ -265,6 +274,7 @@ class Ray(object):
             if state.phenomenon == Phenomenon.ENERGY_ABSORBED:
                 self.Th_absorbed = True
                 self.finished = True
+        logger.info("Ray stopped. Hop %s, %s", count, self)
 
     def add_to_document(self, doc):
         """
