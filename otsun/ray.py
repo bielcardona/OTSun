@@ -80,6 +80,7 @@ class Ray(object):
             vacuum_medium
         )
         self.optical_states = [state]
+        self.current_solid = None
         self.last_normal = None
         self.wavelength = wavelength
         self.energy = energy
@@ -161,7 +162,7 @@ class Ray(object):
                            key=lambda pair: p0.distanceToPoint(pair[0]))
         return tuple(closest_pair)
 
-    def next_state_and_normal(self, face):
+    def next_state_solid_and_normal(self, face):
         """
         Computes the next optical state after the ray hits the face, and the normal vector
 
@@ -171,8 +172,10 @@ class Ray(object):
 
         Returns
         -------
-        state : self.OpticalState
+        state : OpticalState
             Optical State that the ray will have after hitting the face
+        next_solid : Part.Solid
+            Solid where the ray will travel after hitting the face
         normal : Base.Vector
             Normal vector to the face where the ray hits
         """
@@ -181,8 +184,8 @@ class Ray(object):
         uv = face.Surface.parameter(current_point)
         normal = face.normalAt(uv[0], uv[1])
         normal.normalize()
-        next_solid = self.scene.next_solid_at_point_in_direction(current_point, normal, current_direction)
-        nearby_material = self.scene.materials.get(next_solid, vacuum_medium)
+        nearby_solid = self.scene.next_solid_at_point_in_direction(current_point, normal, current_direction)
+        nearby_material = self.scene.materials.get(nearby_solid, vacuum_medium)
         if face in self.scene.materials:
             # face is active
             material = self.scene.materials[face]
@@ -200,7 +203,15 @@ class Ray(object):
             else:
                 state = nearby_material.change_of_optical_state(self, normal)
             # TODO polarization_vector
-        return state, normal
+        logger.debug(state)
+        next_solid = None
+        if state.phenomenon in [Phenomenon.ENERGY_ABSORBED, Phenomenon.ABSORPTION]:
+            pass
+        elif state.phenomenon == Phenomenon.REFLEXION:
+            next_solid = self.current_solid
+        elif state.phenomenon in [Phenomenon.REFRACTION, Phenomenon.TRANSMITTANCE]:
+            next_solid = nearby_solid
+        return state, next_solid, normal
 
     def update_energy(self):
         material = self.current_medium()
@@ -231,7 +242,8 @@ class Ray(object):
         """
         count = 0
         while (not self.finished) and (count < max_hops):
-            logger.info("Ray running. Hop %s, %s", count, self)
+            logger.info("Ray running. Hop %s, %s, Solid %s", count, self,
+                        self.scene.name_of_solid.get(self.current_solid, "Void"))
             count += 1
 
             # Find next intersection
@@ -244,7 +256,7 @@ class Ray(object):
                 break
 
             # Update optical state
-            state, normal = self.next_state_and_normal(face)
+            state, next_solid, normal = self.next_state_solid_and_normal(face)
 
             # Update energy
             energy_before = self.energy
@@ -265,6 +277,7 @@ class Ray(object):
             # Update optical_states
             self.optical_states.append(state)
             self.last_normal = normal
+            self.current_solid = next_solid
 
             # Test for finish
             if self.energy < LOW_ENERGY:
@@ -274,7 +287,8 @@ class Ray(object):
             if state.phenomenon == Phenomenon.ENERGY_ABSORBED:
                 self.Th_absorbed = True
                 self.finished = True
-        logger.info("Ray stopped. Hop %s, %s", count, self)
+        logger.info("Ray stopped. Hop %s, %s, Solid %s", count, self,
+                    self.scene.name_of_solid.get(self.current_solid, "Void"))
 
     def add_to_document(self, doc):
         """

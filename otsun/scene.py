@@ -12,6 +12,7 @@ class Scene:
     def __init__(self, objects):
         self.faces = []  # All the faces in the Scene
         self.solids = []  # All the solids in the Scene
+        self.name_of_solid = {}
         self.materials = {}  # Assign the materials to objects
         self.boundaries = {}  # Assign boundary faces to solids
         # self.sum_energy = 0.0 # Energy of the Scene
@@ -28,6 +29,7 @@ class Scene:
             faces = obj.Shape.Faces
             if solids:  # Object is a solid
                 for solid in solids:
+                    self.name_of_solid[solid] = obj.Label
                     self.materials[solid] = material
                     self.boundaries[solid] = faces
             else:  # Object is made of faces
