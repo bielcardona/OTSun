@@ -31,7 +31,6 @@ class Scene:
                 for solid in solids:
                     self.name_of_solid[solid] = obj.Label
                     self.materials[solid] = material
-                    self.boundaries[solid] = faces
             else:  # Object is made of faces
                 for face in faces:
                     self.materials[face] = material
@@ -42,6 +41,12 @@ class Scene:
                 self.boundbox = obj.Shape.BoundBox
             else:
                 self.boundbox.add(obj.Shape.BoundBox)
+
+        for solid in self.solids:
+            self.boundaries[solid] = []
+            for face in self.faces:
+                if len(solid.common(face).Vertexes) > 0:
+                    self.boundaries[solid].append(face)
 
         self.diameter = self.boundbox.DiagonalLength
         self.remove_duplicate_faces()
