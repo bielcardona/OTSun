@@ -14,6 +14,7 @@ import FreeCAD
 from FreeCAD import Base
 import Part
 import numpy as np
+np.random.seed(1)
 import random
 random.seed(1)
 
