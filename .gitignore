@@ -24,3 +24,4 @@ docb
 doc/_build
 ubuntu-bionic-18.04-cloudimg-console.log
 exportToHTML
+bootstrap_stable.sh
