@@ -16,7 +16,7 @@ class Scene:
         self.materials = {}  # Assign the materials to objects
         self.boundaries = {}  # Assign boundary faces to solids
         # self.sum_energy = 0.0 # Energy of the Scene
-        self.epsilon = 5 * 10.0 ** (-6.0)  # Tolerance for solid containment # 5 nm.
+        self.epsilon = 2 * 10.0 ** (-6.0)  # Tolerance for solid containment # 2 nm.
         self.boundbox = None
 
         for obj in objects:

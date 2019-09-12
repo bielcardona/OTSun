@@ -8,7 +8,7 @@ import random
 import time
 from functools import wraps
 
-EPSILON = 1E-6 
+EPSILON = 1E-6
 # Tolerance for considering equal to zero
 INF = 1E20
 # Infinite
