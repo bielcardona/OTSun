@@ -12,6 +12,8 @@ from .math import pick_random_from_cdf, myrandom, tabulated_function
 from .optics import dispersion_from_main_direction, random_polarization, dispersion_polarization
 from .ray import Ray
 
+EPSILON = 1E-6
+# Tolerance for considering equal to zero
 
 class SunWindow(object):
     """
@@ -84,7 +86,7 @@ class SunWindow(object):
         min_area = None
         for (p, q) in itertools.combinations(points, 2):
             v1 = q - p
-            if v1.Length < 0.001:  # TODO: customize
+            if v1.Length < EPSILON:  # TODO: customize
                 continue
             v1.normalize()
             v2 = v1.cross(normal)
