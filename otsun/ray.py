@@ -125,6 +125,12 @@ class Ray(object):
         """
         return self.optical_states[-1].polarization
 
+    def weighted_distance(self, p0, pair):
+        if pair[1] in self.scene.materials:
+            return p0.distanceToPoint(pair[0])
+        else:
+            return p0.distanceToPoint(pair[0]) + self.scene.epsilon
+
     def next_intersection(self):
         """
         Finds next intersection of the ray with the scene
@@ -165,7 +171,7 @@ class Ray(object):
         if not intersections:
             return p1, None
         closest_pair = min(intersections,
-                           key=lambda pair: p0.distanceToPoint(pair[0]))
+                           key=lambda pair: self.weighted_distance(p0, pair))
         return tuple(closest_pair)
 
     def next_state_solid_and_normal(self, face):
