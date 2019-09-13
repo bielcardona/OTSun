@@ -2,6 +2,7 @@ from .materials import Material
 from .logging_unit import logger
 from .math import correct_normal
 
+EPSILON = 1E-6
 
 class Scene:
     """
@@ -17,6 +18,7 @@ class Scene:
         self.boundaries = {}  # Assign boundary faces to solids
         # self.sum_energy = 0.0 # Energy of the Scene
         self.epsilon = 2 * 10.0 ** (-6.0)  # Tolerance for solid containment # 2 nm.
+        self.epsilon = EPSILON # Tolerance for solid containment # 2 nm.
         self.boundbox = None
 
         for obj in objects:
@@ -42,14 +44,15 @@ class Scene:
             else:
                 self.boundbox.add(obj.Shape.BoundBox)
 
+        self.remove_duplicate_faces()
+
         for solid in self.solids:
             self.boundaries[solid] = []
             for face in self.faces:
-                if len(solid.common(face).Vertexes) > 0:
+                if len(solid.common(face).Faces) > 0:
                     self.boundaries[solid].append(face)
 
         self.diameter = self.boundbox.DiagonalLength
-        self.remove_duplicate_faces()
 
     def remove_duplicate_faces(self):
         faces_with_material = [face for face in self.faces if
