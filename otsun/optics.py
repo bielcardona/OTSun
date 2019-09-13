@@ -315,14 +315,14 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, lambertian_
             return lambertian_reflection(incident, normal)
     else:
         # ray refracted: computing the refracted direction
+        if c2.real > 1:
+            # avoiding invalid solutions for metallic materials
+            c2 = 1
         refracted_direction = incident * r.real + \
                               normal * (r.real * c1 - c2.real)
         refracted_direction.normalize()
         if not perpendicular_polarized:
             # refraction changes the parallel component of incident polarization
-            if c2sq.real > 1:
-                # avoiding invalid solutions for metallic materials
-                c2 = - normal.dot(refracted_direction)
             polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2,
                                                                  polarization_vector)
         return OpticalState(polarization_vector, refracted_direction,
@@ -362,15 +362,15 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector, lambe
             return lambertian_reflection(incident, normal)
     c2 = sqrt(c2sq)
     # cos (refracted_angle)
+    if c2.real > 1:
+        # avoiding invalid solutions for metallic materials
+        c2 = 1
     parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident,
                                                                                         normal)
     # parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
     # ray refracted: computing the refracted direction
     refracted_direction = incident * r.real + normal * (r.real * c1 - c2.real)
     refracted_direction.normalize()
-    if c2sq.real > 1:
-        # avoiding invalid solutions for metallic materials
-        c2 = - normal.dot(refracted_direction)
     polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2,
                                                          polarization_vector)
     return OpticalState(polarization_vector, refracted_direction,
