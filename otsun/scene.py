@@ -43,14 +43,15 @@ class Scene:
             else:
                 self.boundbox.add(obj.Shape.BoundBox)
 
+        self.remove_duplicate_faces()
+
         for solid in self.solids:
             self.boundaries[solid] = []
             for face in self.faces:
-                if len(solid.common(face).Vertexes) > 0:
+                if len(solid.common(face).Faces) > 0:
                     self.boundaries[solid].append(face)
 
         self.diameter = self.boundbox.DiagonalLength
-        self.remove_duplicate_faces()
 
     def remove_duplicate_faces(self):
         faces_with_material = [face for face in self.faces if
