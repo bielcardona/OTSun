@@ -22,6 +22,24 @@ np.random.seed(1)
 import random
 random.seed(1)
 
+import logging
+logger = otsun.logger
+logger.setLevel(logging.DEBUG)
+
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# add formatter to ch
+ch.setFormatter(formatter)
+
+# add ch to logger
+logger.addHandler(ch)
+
+
 MyProject = 'Perovskite_Stack_200nm.FCStd'
 FreeCAD.openDocument(MyProject)
 
