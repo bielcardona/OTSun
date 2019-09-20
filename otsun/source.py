@@ -12,9 +12,6 @@ from .math import pick_random_from_cdf, myrandom, tabulated_function
 from .optics import dispersion_from_main_direction, random_polarization, dispersion_polarization
 from .ray import Ray
 
-EPSILON = 1E-6
-# Tolerance for considering equal to zero
-
 class SunWindow(object):
     """
     Class that implements a Sun window (rectangle that emits rays)
@@ -84,9 +81,10 @@ class SunWindow(object):
             Length of other side of the rectangle
         """
         min_area = None
+        diameter = max([p.distanceToPoint(q) for (p, q) in itertools.combinations(points, 2)])
         for (p, q) in itertools.combinations(points, 2):
             v1 = q - p
-            if v1.Length < EPSILON:  # TODO: customize
+            if v1.Length < diameter * 1E-3:
                 continue
             v1.normalize()
             v2 = v1.cross(normal)
