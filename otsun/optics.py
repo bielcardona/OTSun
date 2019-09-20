@@ -13,13 +13,6 @@ from .logging_unit import logger
 
 # from .materials import Material, vacuum_medium
 
-EPSILON = 1E-6
-# Tolerance for considering equal to zero
-INF = 1E20
-
-
-# Infinite
-
 class Phenomenon(Enum):
     """
     Enum for optical phenomena.
