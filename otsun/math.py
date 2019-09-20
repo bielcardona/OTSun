@@ -8,7 +8,7 @@ import random
 import time
 from functools import wraps
 
-EPSILON = 1E-6
+MATH_EPSILON = 1E-6
 # Tolerance for considering equal to zero
 INF = 1E20
 # Infinite
@@ -211,7 +211,7 @@ def parallel_orthogonal_components(vector, incident, normal):
     polarization_vector = vector
     normal_parallel_plane = incident.cross(normal)
     # orthogonal vector to reflection plane (parallel_plane)
-    if normal_parallel_plane.Length < EPSILON:
+    if normal_parallel_plane.Length < MATH_EPSILON:
         normal_parallel_plane = one_orthogonal_vector(normal)
     normal_parallel_plane.normalize()
     normal_perpendicular_plane = incident.cross(normal_parallel_plane)
@@ -275,14 +275,14 @@ def correct_normal(normal, incident):
 
 
 def normalize(vector):
-    if vector.Length < EPSILON:
+    if vector.Length < MATH_EPSILON:
         vector = vector * INF
     return vector.normalize()
 
 
 def arccos(x):
-    assert abs(x) < 1 + EPSILON
-    if abs(x) < 1 - EPSILON:
+    assert abs(x) < 1 + MATH_EPSILON
+    if abs(x) < 1 - MATH_EPSILON:
         return np.arccos(x)
     if x > 0:
         return 0
