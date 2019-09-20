@@ -149,7 +149,6 @@ class Ray(object):
         max_distance = 5 * self.scene.diameter
         p0 = self.points[-1]
         direction = self.current_direction()
-        p0 = p0 + direction * self.scene.epsilon
         intersections = []
         p1 = p0 + direction * max_distance
         segment = part_line(p0, p1)
