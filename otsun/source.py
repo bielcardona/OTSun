@@ -12,7 +12,6 @@ from .math import pick_random_from_cdf, myrandom, tabulated_function
 from .optics import dispersion_from_main_direction, random_polarization, dispersion_polarization
 from .ray import Ray
 
-EPSILON = 1E-7
 EPSILON = 1E-6
 # Tolerance for considering equal to zero
 

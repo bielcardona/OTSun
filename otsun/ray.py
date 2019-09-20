@@ -11,7 +11,7 @@ except AttributeError:
     part_line = Part.Line
 
 # Zero energy level
-LOW_ENERGY = 1E-4
+LOW_ENERGY = 1E-6
 
 
 def _interval_intersects(x1, x2, y1, y2):
@@ -240,7 +240,7 @@ class Ray(object):
             d = point_1.distanceToPoint(point_2)
             self.energy = self.energy * np.exp(- alpha * d)
 
-    def run(self, max_hops=100):
+    def run(self, max_hops=200):
         """
         Makes the ray propagate
 
