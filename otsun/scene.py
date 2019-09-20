@@ -2,7 +2,7 @@ from .materials import Material
 from .logging_unit import logger
 from .math import correct_normal
 
-EPSILON = 1E-6
+SCENE_EPSILON = 1E-6
 
 class Scene:
     """
@@ -17,7 +17,7 @@ class Scene:
         self.materials = {}  # Assign the materials to objects
         self.boundaries = {}  # Assign boundary faces to solids
         # self.sum_energy = 0.0 # Energy of the Scene
-        self.epsilon = EPSILON # Tolerance for solid containment # 2 nm.
+        self.epsilon = SCENE_EPSILON # Tolerance for solid/face containment Default 1 nm.
         self.boundbox = None
 
         for obj in objects:
@@ -88,5 +88,5 @@ class Scene:
 
     def next_solid_at_point_in_direction(self, point, normal, direction):
         external_normal = correct_normal(normal, direction)
-        point_plus_epsilon = point + external_normal * (-2) * self.epsilon
+        point_plus_epsilon = point + external_normal * (-1) * self.epsilon
         return self.solid_at_point(point_plus_epsilon)
