@@ -88,5 +88,5 @@ class Scene:
 
     def next_solid_at_point_in_direction(self, point, normal, direction):
         external_normal = correct_normal(normal, direction)
-        point_plus_epsilon = point + external_normal * (-1) * self.epsilon
+        point_plus_epsilon = point + external_normal * (-2) * self.epsilon
         return self.solid_at_point(point_plus_epsilon)
