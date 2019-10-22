@@ -155,12 +155,7 @@ class Ray(object):
         segment = part_line(p0, p1)
         shape_segment = segment.toShape()
         bb1 = shape_segment.BoundBox
-        if False: # self.current_solid in self.scene.boundaries:
-            candidates = self.scene.boundaries[self.current_solid]
-            logger.debug("candidate in boundaries")
-        else:
-            candidates = self.scene.faces
-            logger.debug("all are candidates")
+        candidates = self.scene.faces
         for face in candidates:
             bb2 = face.BoundBox
             if not _bb_intersects(bb1, bb2):
