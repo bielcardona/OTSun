@@ -149,13 +149,13 @@ class Ray(object):
         max_distance = 5 * self.scene.diameter
         p0 = self.points[-1]
         direction = self.current_direction()
-        p0 = p0 + direction * self.scene.epsilon
+        # p0 = p0 + direction * self.scene.epsilon
         intersections = []
         p1 = p0 + direction * max_distance
         segment = part_line(p0, p1)
         shape_segment = segment.toShape()
         bb1 = shape_segment.BoundBox
-        if self.current_solid in self.scene.boundaries:
+        if False: # self.current_solid in self.scene.boundaries:
             candidates = self.scene.boundaries[self.current_solid]
             logger.debug("candidate in boundaries")
         else:
@@ -168,6 +168,8 @@ class Ray(object):
             punts = face.section(shape_segment).Vertexes
             for punt in punts:
                 intersections.append([punt.Point, face])
+        intersections = [punt_cara for punt_cara in intersections if
+                         p0.distanceToPoint(punt_cara[0]) > 0] # self.scene.epsilon]
         if not intersections:
             return p1, None
         closest_pair = min(intersections,
