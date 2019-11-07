@@ -15,7 +15,7 @@ class Scene:
         self.solids = []  # All the solids in the Scene
         self.name_of_solid = {}
         self.materials = {}  # Assign the materials to objects
-        self.boundaries = {}  # Assign boundary faces to solids
+        # self.boundaries = {}  # Assign boundary faces to solids
         # self.sum_energy = 0.0 # Energy of the Scene
         self.epsilon = EPSILON # Tolerance for solid containment # 2 nm.
         self.boundbox = None
@@ -44,12 +44,6 @@ class Scene:
                 self.boundbox.add(obj.Shape.BoundBox)
 
         self.remove_duplicate_faces()
-
-        for solid in self.solids:
-            self.boundaries[solid] = []
-            for face in self.faces:
-                if len(solid.common(face).Faces) > 0:
-                    self.boundaries[solid].append(face)
 
         self.diameter = self.boundbox.DiagonalLength
 
