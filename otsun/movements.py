@@ -1,27 +1,22 @@
 from FreeCAD import Base
-from .math import one_orthogonal_vector
+from .math import one_orthogonal_vector, projection_on_vector, projection_on_orthogonal_of_vector
+from numpy import pi
 
 
 def axial_rotation_from_axis_and_angle(axis_origin, axis_dir, angle):
+    """
+    Returns a rotation with given axis and angle
+    """
     z_axis = Base.Vector(0, 0, 1)
     local_cs = Base.Placement(axis_origin, Base.Rotation(z_axis, axis_dir))
-    return local_cs.multiply(Base.Placement(Base.Vector(), Base.Rotation(angle, 0, 0)).multiply(local_cs.inverse()))
+    return local_cs.multiply(
+        Base.Placement(Base.Vector(), Base.Rotation(angle * 180.0 / pi, 0, 0)).multiply(local_cs.inverse()))
 
 
 def axial_rotation_from_vector_and_image(origin, vector0, vector1):
     """
     Returns a rotation that transforms the ray with origin and vector equals to vector0 to the ray with same
     origin and vector vector1.
-
-    Parameters
-    ----------
-    origin : Base.Vector
-    vector0 : Base.Vector
-    vector1 : Base.Vector
-
-    Returns
-    -------
-
     """
     try:
         normal = vector0.cross(vector1)
@@ -34,18 +29,39 @@ def axial_rotation_from_vector_and_image(origin, vector0, vector1):
 
 
 class Joint:
+    """
+    Base class to represent joints
+    """
     pass
 
 
 class AxialJoint(Joint):
-    def __init__(self, axis_origin, axis_vector):
+    """
+    Class used to represent joints that rotate around an axis
+    """
+    def __init__(self, axis_origin, axis_vector, normal_vector):
         self.axis_origin = axis_origin
         self.axis_vector = axis_vector
+        self.normal_vector = normal_vector
+
+    def compute_rotation(self, target):
+        pointing_vector = projection_on_orthogonal_of_vector(target-self.axis_origin, self.axis_vector)
+        angle = self.normal_vector.getAngle(pointing_vector)
+        return axial_rotation_from_axis_and_angle(self.axis_origin, self.axis_vector, angle)
 
 
 class CentralJoint(Joint):
-    def __init__(self, center):
+    """
+     Class used to represent joints that rotate around a point
+     """
+
+    def __init__(self, center, normal_vector):
         self.center = center
+        self.normal_vector = normal_vector
+
+    def compute_rotation(self, target):
+        pointing_vector = target - self.center
+        return axial_rotation_from_vector_and_image(self.center, self.normal_vector, pointing_vector)
 
 
 class SolarTracking:
@@ -63,15 +79,18 @@ class SolarTracking:
         self.target = target
         self.source_direction = source_direction
         self.scene = scene
-        self.joints = element_joint_map
+        self.element_joint_map = element_joint_map
+        self.movements = None
+
+    def compute_movements(self):
         self.movements = []
+        for element, joint in self.element_joint_map.items():
+            movement = joint.compute_rotation(self.target)
+            self.movements.append((element, movement))
 
+    def make_movements(self):
+        if self.movements is None:
+            self.compute_movements()
+        for (element, movement) in self.movements:
+            element.Placement = movement.multiply(element.Placement)
 
-class CentralTracking(SolarTracking):
-    def __init__(self, *args):
-        super(CentralTracking, self).__init__(*args)
-
-
-class AxialTracking(SolarTracking):
-    def __init__(self, *args):
-        super(AxialTracking, self).__init__(*args)
