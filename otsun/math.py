@@ -287,3 +287,13 @@ def arccos(x):
     if x > 0:
         return 0
     return np.pi
+
+
+def projection_on_vector(u, v):
+    """Compute the projection of u on <v>"""
+    return (u.dot(v)/v.dot(v))*v
+
+
+def projection_on_orthogonal_of_vector(u, v):
+    """Compute the projection of u on the subspace orthogonal to <v>"""
+    return u - projection_on_vector(u, v)
