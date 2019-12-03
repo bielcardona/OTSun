@@ -110,7 +110,7 @@ class TargetTracking(SolarTracking):
                     element.Placement = movement.multiply(element.Placement)
             # self.scene.element_object_dict[element].Placement = movement.multiply(self.scene.element_object_dict[element])
             # modify self.element_normal_map[element]
-        # TODO: Recompute boundbox
+        self.scene.recompute_boundbox()
 
     def undo_movements(self):
         if self.movements is None:

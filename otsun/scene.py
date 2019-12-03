@@ -4,6 +4,7 @@ from .math import correct_normal
 
 EPSILON = 1E-6
 
+
 class Scene:
     """
     Class used to define the Scene. It encodes all the objects
@@ -11,6 +12,7 @@ class Scene:
     """
 
     def __init__(self, objects):
+        self.objects = objects
         self.faces = []  # All the faces in the Scene
         self.solids = []  # All the solids in the Scene
         self.name_of_solid = {}
@@ -49,6 +51,20 @@ class Scene:
         self.remove_duplicate_faces()
 
         self.diameter = self.boundbox.DiagonalLength
+
+    def recompute_boundbox(self):
+        boundbox = None
+        for elem in self.solids:
+            if boundbox is None:
+                boundbox = elem.BoundBox
+            else:
+                boundbox.add(elem.BoundBox)
+        for elem in self.faces:
+            if boundbox is None:
+                boundbox = elem.BoundBox
+            else:
+                boundbox.add(elem.BoundBox)
+        self.boundbox = boundbox
 
     def remove_duplicate_faces(self):
         faces_with_material = [face for face in self.faces if
