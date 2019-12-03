@@ -19,6 +19,7 @@ class Scene:
         # self.sum_energy = 0.0 # Energy of the Scene
         self.epsilon = EPSILON # Tolerance for solid containment # 2 nm.
         self.boundbox = None
+        self.element_object_dict = {}
 
         for obj in objects:
             # noinspection PyNoneFunctionAssignment
@@ -32,9 +33,11 @@ class Scene:
                 for solid in solids:
                     self.name_of_solid[solid] = obj.Label
                     self.materials[solid] = material
+                    self.element_object_dict[solid] = obj
             else:  # Object is made of faces
                 for face in faces:
                     self.materials[face] = material
+                    self.element_object_dict[face] = obj
             self.solids.extend(solids)
             self.faces.extend(faces)
             # self.materials[obj] = material ## Cal?
