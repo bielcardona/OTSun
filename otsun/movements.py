@@ -44,9 +44,15 @@ class AxialJoint(Joint):
         self.axis_vector = axis_vector
 
     def compute_rotation(self, target, normal, light_direction):
-        pointing_vector = projection_on_orthogonal_of_vector(target-self.axis_origin, self.axis_vector)
-        angle = normal.getAngle(pointing_vector)
-        return axial_rotation_from_axis_and_angle(self.axis_origin, self.axis_vector, angle/2)
+        pointing = projection_on_orthogonal_of_vector(target-self.axis_origin, self.axis_vector)
+        pointing.normalize()
+        light_unit = projection_on_orthogonal_of_vector(light_direction, self.axis_vector)
+        light_unit.normalize()
+        desired_normal = pointing - light_unit
+        angle = normal.getAngle(desired_normal)
+        # return axial_rotation_from_vector_and_image(self.axis_origin, normal, desired_normal)
+        # angle = normal.getAngle(pointing_vector)
+        return axial_rotation_from_axis_and_angle(self.axis_origin, self.axis_vector, angle)
 
 
 class CentralJoint(Joint):
@@ -86,13 +92,57 @@ class TargetTracking(SolarTracking):
     object_joint_map : dict with keys the mobile elements and values the corresponding joint
     object_normal_map : dict with keys the mobile elements and values the corresponding main direction
     """
-    def __init__(self, target, source_direction, scene, object_joint_map, object_normal_map):
+    def __init__(self, target, source_direction, scene, object_joint_map=None, object_normal_map=None):
         self.target = target
         self.source_direction = source_direction
         self.scene = scene
-        self.object_joint_map = object_joint_map
-        self.object_normal_map = object_normal_map
+        if object_joint_map is None:
+            self.object_joint_map = {}
+            self.get_joints_from_objects()
+        else:
+            self.object_joint_map = object_joint_map
+        if object_normal_map is None:
+            self.object_normal_map = {}
+            self.get_normals_from_objects()
+        else:
+            self.object_normal_map = object_normal_map
         self.movements = None
+
+    def get_joints_from_objects(self):
+        for obj in self.scene.objects:
+            try:
+                label = obj.Label
+                start = label.find("(")
+                end = label.find(")")
+                string = label[start + 1:end]
+                joint_label = string.split(',')[1]
+                joint_obj = [obj2 for obj2 in self.scene.objects if obj2.Label == joint_label][0]
+                if joint_obj.Shape.ShapeType == "Vertex":
+                    center = joint_obj.Shape.Vertexes[0].Point
+                    self.object_joint_map[obj] = CentralJoint(center)
+                elif joint_obj.Shape.ShapeType == "Wire":
+                    start = joint_obj.Shape.Vertexes[0].Point
+                    end = joint_obj.Shape.Vertexes[1].Point
+                    self.object_joint_map[obj] = AxialJoint(start, end-start)
+                pass
+            except:
+                pass
+
+    def get_normals_from_objects(self):
+        for obj in self.scene.objects:
+            try:
+                label = obj.Label
+                start = label.find("(")
+                end = label.find(")")
+                string = label[start + 1:end]
+                normal_label = string.split(',')[2]
+                normal_obj = [obj2 for obj2 in self.scene.objects if obj2.Label == normal_label][0]
+                if normal_obj.Shape.ShapeType == "Wire":
+                    start = normal_obj.Shape.Vertexes[0].Point
+                    end = normal_obj.Shape.Vertexes[1].Point
+                    self.object_normal_map[obj] = end-start
+            except:
+                pass
 
     def compute_movements(self):
         self.movements = []
