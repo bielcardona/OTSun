@@ -39,32 +39,42 @@ class AxialJoint(Joint):
     """
     Class used to represent joints that rotate around an axis
     """
-    def __init__(self, axis_origin, axis_vector, normal_vector):
+    def __init__(self, axis_origin, axis_vector):
         self.axis_origin = axis_origin
         self.axis_vector = axis_vector
-        self.normal_vector = normal_vector
 
-    def compute_rotation(self, target):
+    def compute_rotation(self, target, normal, light_direction):
         pointing_vector = projection_on_orthogonal_of_vector(target-self.axis_origin, self.axis_vector)
-        angle = self.normal_vector.getAngle(pointing_vector)
-        return axial_rotation_from_axis_and_angle(self.axis_origin, self.axis_vector, angle)
+        angle = normal.getAngle(pointing_vector)
+        return axial_rotation_from_axis_and_angle(self.axis_origin, self.axis_vector, angle/2)
 
 
 class CentralJoint(Joint):
     """
-     Class used to represent joints that rotate around a point
-     """
+    Class used to represent joints that rotate around a point
+    """
 
-    def __init__(self, center, normal_vector):
+    def __init__(self, center):
         self.center = center
-        self.normal_vector = normal_vector
 
-    def compute_rotation(self, target):
-        pointing_vector = target - self.center
-        return axial_rotation_from_vector_and_image(self.center, self.normal_vector, pointing_vector)
+    def compute_rotation(self, target, normal, light_direction):
+        pointing = target - self.center
+        pointing.normalize()
+        light_unit = light_direction * 1.0
+        light_unit.normalize()
+        desired_normal = pointing - light_unit
+        return axial_rotation_from_vector_and_image(self.center, normal, desired_normal)
 
 
 class SolarTracking:
+    pass
+
+
+class SourceTracking(SolarTracking):
+    pass
+
+
+class TargetTracking(SolarTracking):
     """
     Class used to model the tracking of the light source by mobile elements in a scene.
 
@@ -73,24 +83,41 @@ class SolarTracking:
     target : point/line where light rays should be directed
     source_direction : direction of the sun rays
     scene : scene with mobile elements
-    element_joint_map : dict with keys the mobile elements and values the corresponding joint
+    object_joint_map : dict with keys the mobile elements and values the corresponding joint
+    object_normal_map : dict with keys the mobile elements and values the corresponding main direction
     """
-    def __init__(self, target, source_direction, scene, element_joint_map):
+    def __init__(self, target, source_direction, scene, object_joint_map, object_normal_map):
         self.target = target
         self.source_direction = source_direction
         self.scene = scene
-        self.element_joint_map = element_joint_map
+        self.object_joint_map = object_joint_map
+        self.object_normal_map = object_normal_map
         self.movements = None
 
     def compute_movements(self):
         self.movements = []
-        for element, joint in self.element_joint_map.items():
-            movement = joint.compute_rotation(self.target)
-            self.movements.append((element, movement))
+        for fc_object, joint in self.object_joint_map.items():
+            movement = joint.compute_rotation(self.target, self.object_normal_map[fc_object], self.source_direction)
+            self.movements.append((fc_object, movement))
 
     def make_movements(self):
         if self.movements is None:
             self.compute_movements()
-        for (element, movement) in self.movements:
-            element.Placement = movement.multiply(element.Placement)
+        for (fc_object, movement) in self.movements:
+            fc_object.Placement = movement.multiply(fc_object.Placement)
+            for element, obj in self.scene.element_object_dict.items():
+                if obj == fc_object:
+                    element.Placement = movement.multiply(element.Placement)
+            # self.scene.element_object_dict[element].Placement = movement.multiply(self.scene.element_object_dict[element])
+            # modify self.element_normal_map[element]
+        # TODO: Recompute boundbox
 
+    def undo_movements(self):
+        if self.movements is None:
+            return
+        for (fc_object, movement) in self.movements:
+            inv_movement = movement.inverse()
+            fc_object.Placement = inv_movement.multiply(fc_object.Placement)
+            for obj, elem in self.scene.element_object_dict.items():
+                if elem == fc_object:
+                    obj.Placement = inv_movement.multiply(obj.Placement)
