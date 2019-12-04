@@ -592,6 +592,9 @@ class PolarizedThinFilm(VolumeMaterial):
             # no energy is abosrbed in the thinfilm
         c2 = sqrt(c2sq)
         # cos (refracted_angle)
+        if c2.real > 1:
+            # avoiding invalid solutions
+            c2 = 1        
         parallel_v, perpendicular_v, normal_parallel_plane = \
             parallel_orthogonal_components(polarization_vector, incident, normal)
         # parallel and perpendicular components of polarization vector
@@ -869,7 +872,7 @@ class TransparentSimpleLayer(SurfaceMaterial):
         plain_properties = {
             'probability_of_reflection': {
                 'type': 'constant',
-                'value': 1 - pot
+                'value': 1.0 - pot
             },
             'probability_of_absorption': {
                 'type': 'constant',
@@ -902,7 +905,7 @@ class AbsorberSimpleLayer(SurfaceMaterial):
         plain_properties = {
             'probability_of_reflection': {
                 'type': 'constant',
-                'value': 1 - poa
+                'value': 1.0 - poa
             },
             'probability_of_absorption': {
                 'type': 'constant',
@@ -935,7 +938,7 @@ class AbsorberLambertianLayer(SurfaceMaterial):
         plain_properties = {
             'probability_of_reflection': {
                 'type': 'constant',
-                'value': 1 - poa
+                'value': 1.0 - poa
             },
             'probability_of_absorption': {
                 'type': 'constant',
@@ -972,7 +975,7 @@ class ReflectorSpecularLayer(SurfaceMaterial):
             },
             'probability_of_absorption': {
                 'type': 'constant',
-                'value': 1 - por
+                'value': 1.0 - por
             },
             'probability_of_transmittance': {
                 'type': 'constant',
@@ -1017,7 +1020,7 @@ class ReflectorLambertianLayer(SurfaceMaterial):
             },
             'probability_of_absorption': {
                 'type': 'constant',
-                'value': 1 - por
+                'value': 1.0 - por
             },
             'probability_of_transmittance': {
                 'type': 'constant',
@@ -1046,7 +1049,7 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         plain_properties = {
             'probability_of_reflection': {
                 'type': 'constant',
-                'value': 1 - poa
+                'value': 1.0 - poa
             },
             'probability_of_absorption': {
                 'type': 'constant',
@@ -1422,7 +1425,9 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             state.material = ray.current_medium()  # TODO: Set solid
             return state
         c2 = sqrt(c2sq)
-
+        if c2.real > 1:
+            # avoiding invalid solutions
+            c2 = 1
         new_state = self.precompute_change_of_optical_state(ray, normal_vector)
         if isinstance(new_state, OpticalState):
             return new_state

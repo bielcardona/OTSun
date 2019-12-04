@@ -11,7 +11,7 @@ except AttributeError:
     part_line = Part.Line
 
 # Zero energy level
-LOW_ENERGY = 1E-4
+LOW_ENERGY = 1E-6
 
 
 def _interval_intersects(x1, x2, y1, y2):
@@ -237,7 +237,7 @@ class Ray(object):
             d = point_1.distanceToPoint(point_2)
             self.energy = self.energy * np.exp(- alpha * d)
 
-    def run(self, max_hops=100):
+    def run(self, max_hops=200):
         """
         Makes the ray propagate
 
@@ -264,17 +264,9 @@ class Ray(object):
                 self.Th_absorbed = False
                 break
 
-            # Update optical state
-            state, next_solid, normal = self.next_state_solid_and_normal(face)
-
             # Update energy
             energy_before = self.energy
             self.update_energy()
-            # TODO: The following line is not elegant.
-            #  Provisional solution for updating energy when passed a thin film
-            if 'factor_energy_absorbed' in state.extra_data:
-                factor = state.extra_data['factor_energy_absorbed']
-                self.energy = self.energy * (1 - factor)
 
             # Treat PV material
             current_material = self.current_medium()
@@ -282,6 +274,15 @@ class Ray(object):
                 PV_absorbed_energy, PV_value = current_material.get_PV_data(self, energy_before)
                 self.PV_values.append(PV_value)
                 self.PV_absorbed.append(PV_absorbed_energy)
+
+            # Update optical state
+            state, next_solid, normal = self.next_state_solid_and_normal(face)
+
+            # TODO: The following line is not elegant.
+            #  Provisional solution for updating energy when passed a thin film
+            if 'factor_energy_absorbed' in state.extra_data:
+                factor = state.extra_data['factor_energy_absorbed']
+                self.energy = self.energy * (1 - factor)
 
             # Update optical_states
             self.optical_states.append(state)
