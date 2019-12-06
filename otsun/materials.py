@@ -116,7 +116,7 @@ class Material(object):
         Returns the material given its label
 
         Given a `label` of an object (from a FreeCad document) of the form
-        XXX(MatYYY), returns the material whose name is MatYYY
+        XXX(MatYYY,OTHER_INFO), returns the material whose name is MatYYY
 
         Parameters
         ----------
@@ -130,7 +130,8 @@ class Material(object):
             return None
         start = label.find("(")
         end = label.find(")")
-        name = label[start + 1:end]
+        string = label[start + 1:end]
+        name = string.split(',')[0]
         return cls.by_name.get(name, None)
 
     @classmethod

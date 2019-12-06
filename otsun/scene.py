@@ -4,6 +4,7 @@ from .math import correct_normal
 
 EPSILON = 1E-6
 
+
 class Scene:
     """
     Class used to define the Scene. It encodes all the objects
@@ -11,6 +12,7 @@ class Scene:
     """
 
     def __init__(self, objects):
+        self.objects = objects
         self.faces = []  # All the faces in the Scene
         self.solids = []  # All the solids in the Scene
         self.name_of_solid = {}
@@ -19,6 +21,7 @@ class Scene:
         # self.sum_energy = 0.0 # Energy of the Scene
         self.epsilon = EPSILON # Tolerance for solid containment # 2 nm.
         self.boundbox = None
+        self.element_object_dict = {}
 
         for obj in objects:
             # noinspection PyNoneFunctionAssignment
@@ -32,9 +35,11 @@ class Scene:
                 for solid in solids:
                     self.name_of_solid[solid] = obj.Label
                     self.materials[solid] = material
+                    self.element_object_dict[solid] = obj
             else:  # Object is made of faces
                 for face in faces:
                     self.materials[face] = material
+                    self.element_object_dict[face] = obj
             self.solids.extend(solids)
             self.faces.extend(faces)
             # self.materials[obj] = material ## Cal?
@@ -46,6 +51,20 @@ class Scene:
         self.remove_duplicate_faces()
 
         self.diameter = self.boundbox.DiagonalLength
+
+    def recompute_boundbox(self):
+        boundbox = None
+        for elem in self.solids:
+            if boundbox is None:
+                boundbox = elem.BoundBox
+            else:
+                boundbox.add(elem.BoundBox)
+        for elem in self.faces:
+            if boundbox is None:
+                boundbox = elem.BoundBox
+            else:
+                boundbox.add(elem.BoundBox)
+        self.boundbox = boundbox
 
     def remove_duplicate_faces(self):
         faces_with_material = [face for face in self.faces if

@@ -36,6 +36,14 @@ otsun.math module
     :undoc-members:
     :show-inheritance:
 
+otsun.movements module
+-------------------
+
+.. automodule:: otsun.movements
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 otsun.optics module
 -------------------
 
