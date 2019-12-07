@@ -779,7 +779,7 @@ class SurfaceMaterial(Material):
             state.apply_dispersion(properties, normal_vector)
             return state
         if phenomenon == Phenomenon.ABSORPTION:
-            if self.properties.get('energy_collector', False):
+            if self.properties.get('thermal_material', False):
                 return (OpticalState(Base.Vector(0.0, 0.0, 0.0),
                                      Base.Vector(0.0, 0.0, 0.0),
                                      Phenomenon.ENERGY_ABSORBED,
@@ -854,7 +854,7 @@ class OpaqueSimpleLayer(SurfaceMaterial):
                 'type': 'constant',
                 'value': 0.0
             },
-            'energy_collector': {
+            'thermal_material': {
                 'type': 'scalar',
                 'value': False
             }
@@ -883,7 +883,7 @@ class TransparentSimpleLayer(SurfaceMaterial):
                 'type': 'constant',
                 'value': pot
             },
-            'energy_collector': {
+            'thermal_material': {
                 'type': 'scalar',
                 'value': False
             },
@@ -916,7 +916,7 @@ class AbsorberSimpleLayer(SurfaceMaterial):
                 'type': 'constant',
                 'value': 0.0
             },
-            'energy_collector': {
+            'thermal_material': {
                 'type': 'scalar',
                 'value': True
             },
@@ -949,7 +949,7 @@ class AbsorberLambertianLayer(SurfaceMaterial):
                 'type': 'constant',
                 'value': 0.0
             },
-            'energy_collector': {
+            'thermal_material': {
                 'type': 'scalar',
                 'value': True
             },
@@ -982,7 +982,7 @@ class ReflectorSpecularLayer(SurfaceMaterial):
                 'type': 'constant',
                 'value': 0.0
             },
-            'energy_collector': {
+            'thermal_material': {
                 'type': 'scalar',
                 'value': False
             },
@@ -1027,7 +1027,7 @@ class ReflectorLambertianLayer(SurfaceMaterial):
                 'type': 'constant',
                 'value': 0.0
             },
-            'energy_collector': {
+            'thermal_material': {
                 'type': 'scalar',
                 'value': False
             },
@@ -1060,7 +1060,7 @@ class AbsorberTWModelLayer(SurfaceMaterial):
                 'type': 'constant',
                 'value': 0.0
             },
-            'energy_collector': {
+            'thermal_material': {
                 'type': 'scalar',
                 'value': True
             },
