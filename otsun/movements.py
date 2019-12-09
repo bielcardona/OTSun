@@ -110,7 +110,7 @@ class SolarTracking:
                 if joint_obj.Shape.ShapeType == "Vertex":
                     center = joint_obj.Shape.Vertexes[0].Point
                     self.object_joint_map[obj] = CentralJoint(center)
-                elif joint_obj.Shape.ShapeType == "Wire":
+                elif joint_obj.Shape.ShapeType in ["Wire", "Edge"]:
                     start = joint_obj.Shape.Vertexes[0].Point
                     end = joint_obj.Shape.Vertexes[1].Point
                     self.object_joint_map[obj] = AxialJoint(start, end-start)
@@ -123,7 +123,7 @@ class SolarTracking:
             try:
                 normal_label = get_labels(obj)[2]
                 normal_obj = [obj2 for obj2 in self.scene.objects if obj2.Label == normal_label][0]
-                if normal_obj.Shape.ShapeType == "Wire":
+                if normal_obj.Shape.ShapeType in ["Wire", "Edge"]:
                     start = normal_obj.Shape.Vertexes[0].Point
                     end = normal_obj.Shape.Vertexes[1].Point
                     self.object_normal_map[obj] = end-start
