@@ -41,16 +41,21 @@ class SunWindow(object):
     """
 
     def __init__(self, scene, main_direction):
-        xs = [scene.boundbox.XMin, scene.boundbox.XMax]
-        ys = [scene.boundbox.YMin, scene.boundbox.YMax]
-        zs = [scene.boundbox.ZMin, scene.boundbox.ZMax]
-        coords = itertools.product(xs, ys, zs)
-        points = [Base.Vector(c) for c in coords]
+        bbs = []
+        for shape in itertools.chain(scene.solids, scene.faces):
+            bbs.append(shape.BoundBox)
+        projected_points = []
+        for bb in bbs:
+            xs = [bb.XMin, bb.XMax]
+            ys = [bb.YMin, bb.YMax]
+            zs = [bb.ZMin, bb.ZMax]
+            coords = itertools.product(xs, ys, zs)
+            points = [Base.Vector(c) for c in coords]
 
-        point_of_plane = (scene.boundbox.Center -
-                          main_direction * 0.5 * scene.boundbox.DiagonalLength)
-        projected_points = [p.projectToPlane(point_of_plane, main_direction)
-                            for p in points]
+            point_of_plane = (scene.boundbox.Center -
+                              main_direction * 0.5 * scene.boundbox.DiagonalLength)
+            projected_points.extend([p.projectToPlane(point_of_plane, main_direction)
+                                for p in points])
         (self.origin, self.v1, self.v2, self.length1, self.length2) = (
             SunWindow.find_min_rectangle(projected_points, main_direction))
         self.aperture = self.length1 * self.length2
