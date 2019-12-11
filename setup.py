@@ -12,7 +12,7 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     packages=['otsun',],
     url='https://github.com/bielcardona/OTSun',
-    install_requires=['numpy==1.12' , 'autologging'],
+    install_requires=['numpy' , 'autologging'],
     extras_require ={':python_version == "2.7"': [
             'enum34', 'backports.functools_lru_cache'
         ],
