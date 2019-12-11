@@ -227,15 +227,17 @@ class Ray(object):
         # TODO: @Ramon
         point_1 = self.points[-1]
         point_2 = self.points[-2]
-        if 'extinction_coefficient' in material.properties:
+        if material.properties.get('extinction_coefficient', None):
             alpha = material.properties['extinction_coefficient'](self.wavelength) * \
                     4 * np.pi / (self.wavelength / 1E6)  # mm-1
-            d = point_1.distanceToPoint(point_2)
-            self.energy = self.energy * np.exp(- alpha * d)
-        if 'attenuation_coefficient' in material.properties:
+            if alpha:
+                d = point_1.distanceToPoint(point_2)
+                self.energy = self.energy * np.exp(- alpha * d)
+        if material.properties.get('attenuation_coefficient', None):
             alpha = material.properties['attenuation_coefficient'](self.wavelength)  # mm-1
-            d = point_1.distanceToPoint(point_2)
-            self.energy = self.energy * np.exp(- alpha * d)
+            if alpha:
+                d = point_1.distanceToPoint(point_2)
+                self.energy = self.energy * np.exp(- alpha * d)
 
     def run(self, max_hops=200):
         """
