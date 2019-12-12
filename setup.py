@@ -12,11 +12,8 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     packages=['otsun',],
     url='https://github.com/bielcardona/OTSun',
+    python_requires = ">=3.6",
     install_requires=['numpy' , 'autologging'],
-    extras_require ={':python_version == "2.7"': [
-            'enum34', 'backports.functools_lru_cache'
-        ],
-    },
     license='MIT',
     author='Gabriel Cardona, Ramon Pujol',
     author_email='gabriel.cardona@uib.es, ramon.pujol@uib.es',
