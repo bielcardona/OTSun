@@ -292,12 +292,12 @@ class Ray(object):
             self.current_solid = next_solid
 
             # Test for finish
-            if self.energy < LOW_ENERGY:
-                self.finished = True
             if state.phenomenon == Phenomenon.ABSORPTION:
                 self.finished = True
             if state.phenomenon == Phenomenon.ENERGY_ABSORBED:
                 self.Th_absorbed = True
+                self.finished = True
+            if self.energy < LOW_ENERGY:
                 self.finished = True
         logger.info("Ray stopped. Hop %s, %s, Solid %s", count, self,
                     self.scene.name_of_solid.get(self.current_solid, "Void"))

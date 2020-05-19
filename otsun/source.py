@@ -188,6 +188,9 @@ class LightSource(object):
                 polarization_vector = dispersion_polarization(main_direction, self.polarization_vector, theta, phi)
         if self.polarization_vector is None:  # unpolarization is active
             polarization_vector = random_polarization(direction)  # random polarization from light direction
+        else:
+            polarization_vector = self.polarization_vector
+            polarization_vector.normalize()
         if np.isscalar(self.light_spectrum):
             wavelength = self.light_spectrum  # experiment with a single wavelength (nanometers)
         else:
