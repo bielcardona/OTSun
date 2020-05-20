@@ -12,7 +12,7 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     packages=['otsun',],
     url='https://github.com/bielcardona/OTSun',
-    python_requires = ">=3.6,<=3.6",
+    python_requires = ">=3.6,<3.7",
     install_requires=['numpy' , 'autologging'],
     license='MIT',
     author='Gabriel Cardona, Ramon Pujol',
