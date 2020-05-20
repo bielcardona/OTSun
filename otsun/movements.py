@@ -1,6 +1,24 @@
 from FreeCAD import Base
 from .math import one_orthogonal_vector, projection_on_vector, projection_on_orthogonal_of_vector
 from numpy import pi
+from .logging_unit import logger
+
+
+def orientation(u, v, w):
+    det = u.dot(v.cross(w))
+    if det >= 0:
+        return +1
+    else:
+        return -1
+
+
+def signed_angle(axis, v1, v2):
+    """
+    Computes the (signed) angle from v1 to v2, wrt the axis vector
+    """
+    angle = v1.getAngle(v2)
+    angle *= orientation(axis, v1, v2)
+    return angle
 
 
 def axial_rotation_from_axis_and_angle(axis_origin, axis_dir, angle):
@@ -59,16 +77,14 @@ class AxialJoint(Joint):
         light_unit = projection_on_orthogonal_of_vector(light_direction, self.axis_vector)
         light_unit.normalize()
         desired_normal = pointing - light_unit
-        angle = normal.getAngle(desired_normal)
-        # return axial_rotation_from_vector_and_image(self.axis_origin, normal, desired_normal)
-        # angle = normal.getAngle(pointing_vector)
+        angle = signed_angle(self.axis_vector, normal, desired_normal)  # normal.getAngle(desired_normal)
         return axial_rotation_from_axis_and_angle(self.axis_origin, self.axis_vector, angle)
 
     def compute_rotation_to_direction(self, normal, light_direction):
         light_unit = projection_on_orthogonal_of_vector(light_direction, self.axis_vector)
         light_unit.normalize()
         desired_normal = light_unit * (-1.0)
-        angle = normal.getAngle(desired_normal)
+        angle = signed_angle(self.axis_vector, normal, desired_normal) # normal.getAngle(desired_normal)
         return axial_rotation_from_axis_and_angle(self.axis_origin, self.axis_vector, angle)
 
 
