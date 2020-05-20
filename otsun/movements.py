@@ -95,6 +95,89 @@ class CentralJoint(Joint):
         return axial_rotation_from_vector_and_image(self.center, normal, desired_normal)
 
 
+class MultiTracking:
+    def __init__(self, source_direction, scene):
+        self.scene = scene
+        self.source_direction = source_direction
+        self.object_joint_map = {}
+        self.object_normal_map = {}
+        self.object_target_map = {}
+        self.object_movements_map = {}
+        self.get_data_from_objects()
+        self.compute_movements()
+
+    def get_joint_from_label(self, label):
+        joint_obj = [obj2 for obj2 in self.scene.objects if obj2.Label == label][0]
+        if joint_obj.Shape.ShapeType == "Vertex":
+            center = joint_obj.Shape.Vertexes[0].Point
+            return CentralJoint(center)
+        elif joint_obj.Shape.ShapeType in ["Wire", "Edge"]:
+            start = joint_obj.Shape.Vertexes[0].Point
+            end = joint_obj.Shape.Vertexes[1].Point
+            return AxialJoint(start, end - start)
+
+    def get_normal_from_label(self, label):
+        normal_obj = [obj2 for obj2 in self.scene.objects if obj2.Label == label][0]
+        if normal_obj.Shape.ShapeType in ["Wire", "Edge"]:
+            start = normal_obj.Shape.Vertexes[0].Point
+            end = normal_obj.Shape.Vertexes[1].Point
+            return end-start
+
+    def get_target_from_label(self, label):
+        target_obj = [obj2 for obj2 in self.scene.objects if obj2.Label == label][0]
+        if target_obj.Shape.ShapeType == "Vertex":
+            target = target_obj.Shape.Vertexes[0].Point
+            return target
+
+    def get_data_from_objects(self):
+        for obj in self.scene.objects:
+            labels = get_labels(obj)
+            if len(labels) < 2:
+                # no movement
+                continue
+            if len(labels) == 2:
+                # gives joint but not normal
+                raise Exception("Need to give joint and normal")
+            self.object_joint_map[obj] = self.get_joint_from_label(labels[1])
+            self.object_normal_map[obj] = self.get_normal_from_label(labels[2])
+            if len(labels) == 3:
+                # no target given
+                self.object_target_map[obj] = None
+            else:
+                self.object_target_map[obj] = self.get_target_from_label(labels[3])
+
+    def compute_movements(self):
+        for obj in self.object_joint_map:
+            joint = self.object_joint_map[obj]
+            normal = self.object_normal_map[obj]
+            target = self.object_target_map[obj]
+            if target is None:
+                # source tracking
+                movement = joint.compute_rotation_to_direction(normal, self.source_direction)
+            else:
+                movement = joint.compute_rotation_to_point(target, normal, self.source_direction)
+            self.object_movements_map[obj] = movement
+
+    def make_movements(self):
+        for obj in self.object_movements_map:
+            movement = self.object_movements_map[obj]
+            obj.Placement = movement.multiply(obj.Placement)
+            for element, el_obj in self.scene.element_object_dict.items():
+                if obj == el_obj:
+                    element.Placement = movement.multiply(element.Placement)
+        self.scene.recompute_boundbox()
+
+    def undo_movements(self):
+        for obj in self.object_movements_map:
+            movement = self.object_movements_map[obj]
+            movement = movement.inverse()
+            obj.Placement = movement.multiply(obj.Placement)
+            for element, el_obj in self.scene.element_object_dict.items():
+                if obj == el_obj:
+                    element.Placement = movement.multiply(element.Placement)
+        self.scene.recompute_boundbox()
+
+
 class SolarTracking:
     def __init__(self):
         self.scene = None
