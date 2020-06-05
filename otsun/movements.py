@@ -1,5 +1,5 @@
 from FreeCAD import Base
-from .math import one_orthogonal_vector, projection_on_vector, projection_on_orthogonal_of_vector
+from .math import one_orthogonal_vector, projection_on_vector, projection_on_orthogonal_of_vector, EPSILON
 from numpy import pi
 from .logging_unit import logger
 
@@ -75,9 +75,12 @@ class AxialJoint(Joint):
         pointing = projection_on_orthogonal_of_vector(target-self.axis_origin, self.axis_vector)
         pointing.normalize()
         light_unit = projection_on_orthogonal_of_vector(light_direction, self.axis_vector)
-        light_unit.normalize()
-        desired_normal = pointing - light_unit
-        angle = signed_angle(self.axis_vector, normal, desired_normal)  # normal.getAngle(desired_normal)
+        if light_unit.Length > EPSILON:
+            light_unit.normalize()
+            desired_normal = pointing - light_unit
+            angle = signed_angle(self.axis_vector, normal, desired_normal)  # normal.getAngle(desired_normal)
+        else:
+            angle = 0
         return axial_rotation_from_axis_and_angle(self.axis_origin, self.axis_vector, angle)
 
     def compute_rotation_to_direction(self, normal, light_direction):
