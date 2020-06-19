@@ -1,4 +1,5 @@
-"""
+"""Module otsun.optics
+
 Implementation of optical effects on rays
 """
 
@@ -18,7 +19,6 @@ EPSILON = 1E-6
 INF = 1E20
 
 
-# Infinite
 
 class Phenomenon(Enum):
     """
@@ -259,7 +259,8 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, lambertian_
         complex refractive index of nearby material
     polarization_vector: Base.Vector
         Polarization vector of the ray
-    lambertian_surface
+    lambertian_surface: Bool
+        Indicates if the surface has lambertian reflection
 
     Returns
     -------
@@ -335,16 +336,22 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector, lambe
 
     Parameters
     ----------
-    incident
-    normal_vector
-    n1
-    n2
-    polarization_vector
-    lambertian_surface
+    incident : Base.Vector
+        direction vector of the incident ray
+    normal_vector: Base.Vector
+        normal vector of the surface at the point of incidence
+    n1: complex
+        complex refractive index where ray is currently traveling
+    n2: complex
+        complex refractive index of nearby material
+    polarization_vector: Base.Vector
+        Polarization vector of the ray
+    lambertian_surface: Bool
+        Indicates if the surface has lambertian reflection
 
     Returns
     -------
-
+    OpticalState
     """
     # TODO: document
 
@@ -383,18 +390,8 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector, lambe
 @traced(logger)
 def dispersion_from_main_direction(main_direction, theta, phi):
     """
-
-    Parameters
-    ----------
-    main_direction
-    theta
-    phi
-
-    Returns
-    -------
-
+    Computes dispersion from the main direction in terms of angles theta and phi
     """
-    # TODO: document
     v = main_direction
     v_p = Base.Vector(v[1], -v[0], 0)
     if v_p == Base.Vector(0, 0, 0):
@@ -412,19 +409,8 @@ def dispersion_from_main_direction(main_direction, theta, phi):
 @traced(logger)
 def dispersion_polarization(main_direction, polarization_vector, theta, phi):
     """
-
-    Parameters
-    ----------
-    main_direction
-    polarization_vector
-    theta
-    phi
-
-    Returns
-    -------
-
+    Computes dispersion of polarization vector in terms of angles theta and phi
     """
-    # TODO: document
     v = main_direction
     v_p = Base.Vector(v[1], -v[0], 0)
     if v_p == Base.Vector(0, 0, 0):
@@ -442,16 +428,8 @@ def dispersion_polarization(main_direction, polarization_vector, theta, phi):
 @traced(logger)
 def random_polarization(direction):
     """
-
-    Parameters
-    ----------
-    direction
-
-    Returns
-    -------
-
+    Returns a random polarization orthogonal to the given direction
     """
-    # TODO: document
     orthogonal_vector = one_orthogonal_vector(direction)
     phi = 360.0 * myrandom()
     rotation = Base.Rotation(direction, phi)
@@ -474,6 +452,8 @@ def _round_or_floor_ceil(x):
 @traced(logger)
 def matrix_reflectance(data_material):
     """
+    Computes the matrix of reflectances of a material
+
     data_material: wavelenth in nm, angle in deg., reflectance s-polarized (perpendicular),
     reflectance p-polarized (parallel)
     the values should be in the corresponding order columns with constants steps
@@ -483,12 +463,7 @@ def matrix_reflectance(data_material):
     Parameters
     ----------
     data_material
-
-    Returns
-    -------
-
     """
-    # TODO: document
     steps = np.diff(data_material[:, 1])
     try:
         delta_a = min(steps[steps > 0.0])

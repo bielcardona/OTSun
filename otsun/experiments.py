@@ -1,7 +1,10 @@
-# from .math import random_congruential
-import time
-import numpy as np
+"""Module otsun.experiments for creating experiments.
 
+The module defines a class `Experiment` that deals with the setup and
+run of experiments.
+"""
+
+import numpy as np
 
 class Experiment:
     """
@@ -20,7 +23,7 @@ class Experiment:
     number_of_rays : int
         Number of rays to emit in the experiment
     show_in_doc : App.Document
-        FreeCAD document where to plot the rays, or None if plotting not desired
+        FreeCAD document where to plot the rays, or None if plotting is not desired
 
     Attributes
     ----------
@@ -32,14 +35,14 @@ class Experiment:
         Total energy of rays that fell in a PV
     Th_energy :
     Th_wavelength : List of float
-        List of wavelengths of rays that got absorbed (or not??? BUG?)
-    PV_energy : List of floats # TODO: Needed?
+        List of wavelengths of rays that got absorbed
+    PV_energy : List of floats
         List of energies of rays that fell in a PV
     PV_wavelength : List of float
-        List of wavelengths of rays that fell in a PV (or not??? BUG?)
-    PV_values : List of tuples of floats # TODO: Needed?
+        List of wavelengths of rays that fell in a PV
+    PV_values : List of tuples of floats
         List of PV_values of all emitted rays that fell in a PV
-    points_absorber_Th : List of tuple of floats # TODO: Needed?
+    points_absorber_Th : List of tuple of floats
         List with data (energy, location,...) for each ray that got absorbed
     """
 
@@ -58,7 +61,6 @@ class Experiment:
         self.PV_wavelength = []
         self.PV_values = []
         self.points_absorber_Th = []
-        # random_congruential(time.time()) # TODO: change location
 
     def run(self, show_in_doc=None):
         """Runs the experiment and plots the rays in the document specified (if any)"""

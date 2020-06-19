@@ -1,5 +1,5 @@
 """
-Mathematical functions that are used as helper functions
+Module otsun.math with mathematical helper functions
 """
 
 import numpy as np
@@ -42,6 +42,7 @@ def polar_to_cartesian(phi, theta):
 
 
 def rad_to_deg(angle):
+    """Converts radians to degrees"""
     return angle * 180.0 / np.pi
 
 
@@ -268,6 +269,17 @@ def one_orthogonal_vector(vector):
 
 
 def correct_normal(normal, incident):
+    """Corrects a vector so that is in a given half plane
+
+    Parameters
+    ----------
+    normal : Base.Vector
+    incident : Base.Vector
+
+    Returns
+    -------
+
+    """
     if normal.dot(incident) > 0:
         return normal * (-1)
     else:
@@ -275,12 +287,14 @@ def correct_normal(normal, incident):
 
 
 def normalize(vector):
+    """Normalizes a vector"""
     if vector.Length < EPSILON:
         vector = vector * INF
     return vector.normalize()
 
 
 def arccos(x):
+    """Safe modification of arccos"""
     assert abs(x) < 1 + EPSILON
     if abs(x) < 1 - EPSILON:
         return np.arccos(x)

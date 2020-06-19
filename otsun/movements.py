@@ -1,10 +1,17 @@
+"""Module otsun.movements for computing movements
+
+The module defines the classes `Joint` (with subclasses `AxialJoint` and `CentralJoint`) and `MultiTracking`
+"""
 from FreeCAD import Base
-from .math import one_orthogonal_vector, projection_on_vector, projection_on_orthogonal_of_vector, EPSILON
+from .math import one_orthogonal_vector, projection_on_orthogonal_of_vector, EPSILON
 from numpy import pi
+
+from autologging import traced
 from .logging_unit import logger
 
 
 def orientation(u, v, w):
+    """Computes the orientation (+/-1) of a basis"""
     det = u.dot(v.cross(w))
     if det >= 0:
         return +1
@@ -47,6 +54,7 @@ def axial_rotation_from_vector_and_image(origin, vector0, vector1):
 
 
 def get_labels(obj):
+    """Gets the different labels of a given FreeCAD object"""
     label = obj.Label
     start = label.find("(")
     end = label.find(")")
@@ -55,14 +63,14 @@ def get_labels(obj):
     string = label[start + 1:end]
     return string.split(',')
 
-
+@traced(logger)
 class Joint:
     """
     Base class to represent joints
     """
     pass
 
-
+@traced(logger)
 class AxialJoint(Joint):
     """
     Class used to represent joints that rotate around an axis
@@ -72,6 +80,9 @@ class AxialJoint(Joint):
         self.axis_vector = axis_vector
 
     def compute_rotation_to_point(self, target, normal, light_direction):
+        """
+        Computes a rotation so that ray in the direction of light_direction is reflected and hits the target.
+        """
         pointing = projection_on_orthogonal_of_vector(target-self.axis_origin, self.axis_vector)
         pointing.normalize()
         light_unit = projection_on_orthogonal_of_vector(light_direction, self.axis_vector)
@@ -84,13 +95,16 @@ class AxialJoint(Joint):
         return axial_rotation_from_axis_and_angle(self.axis_origin, self.axis_vector, angle)
 
     def compute_rotation_to_direction(self, normal, light_direction):
+        """
+        Computes a rotation so that ray in the direction of light_direction is returned to its origin.
+        """
         light_unit = projection_on_orthogonal_of_vector(light_direction, self.axis_vector)
         light_unit.normalize()
         desired_normal = light_unit * (-1.0)
         angle = signed_angle(self.axis_vector, normal, desired_normal) # normal.getAngle(desired_normal)
         return axial_rotation_from_axis_and_angle(self.axis_origin, self.axis_vector, angle)
 
-
+@traced(logger)
 class CentralJoint(Joint):
     """
     Class used to represent joints that rotate around a point
@@ -100,6 +114,9 @@ class CentralJoint(Joint):
         self.center = center
 
     def compute_rotation_to_point(self, target, normal, light_direction):
+        """
+        Computes a rotation so that ray in the direction of light_direction is reflected and hits the target.
+        """
         pointing = target - self.center
         pointing.normalize()
         light_unit = light_direction * 1.0
@@ -108,13 +125,19 @@ class CentralJoint(Joint):
         return axial_rotation_from_vector_and_image(self.center, normal, desired_normal)
 
     def compute_rotation_to_direction(self, normal, light_direction):
+        """
+        Computes a rotation so that ray in the direction of light_direction is returned to its origin.
+        """
         light_unit = light_direction * 1.0
         light_unit.normalize()
         desired_normal = light_unit * (-1.0)
         return axial_rotation_from_vector_and_image(self.center, normal, desired_normal)
 
-
+@traced(logger)
 class MultiTracking:
+    """
+    Class that represents how objects are linked to joints and implements their movement.
+    """
     def __init__(self, source_direction, scene):
         self.scene = scene
         self.source_direction = source_direction
@@ -126,6 +149,9 @@ class MultiTracking:
         self.compute_movements()
 
     def get_joint_from_label(self, label):
+        """
+        Builds a joint according to the label of the object
+        """
         joint_obj = [obj2 for obj2 in self.scene.objects if obj2.Label == label][0]
         if joint_obj.Shape.ShapeType == "Vertex":
             center = joint_obj.Shape.Vertexes[0].Point
@@ -136,6 +162,9 @@ class MultiTracking:
             return AxialJoint(start, end - start)
 
     def get_normal_from_label(self, label):
+        """
+        Finds the principal vector of an object according to its label
+        """
         normal_obj = [obj2 for obj2 in self.scene.objects if obj2.Label == label][0]
         if normal_obj.Shape.ShapeType in ["Wire", "Edge"]:
             start = normal_obj.Shape.Vertexes[0].Point
@@ -143,12 +172,18 @@ class MultiTracking:
             return end-start
 
     def get_target_from_label(self, label):
+        """
+        Finds the target of an object according to its label
+        """
         target_obj = [obj2 for obj2 in self.scene.objects if obj2.Label == label][0]
         if target_obj.Shape.ShapeType == "Vertex":
             target = target_obj.Shape.Vertexes[0].Point
             return target
 
     def get_data_from_objects(self):
+        """
+        Gets all data of joints from the objects in the scene
+        """
         for obj in self.scene.objects:
             labels = get_labels(obj)
             if len(labels) < 2:
@@ -166,6 +201,9 @@ class MultiTracking:
                 self.object_target_map[obj] = self.get_target_from_label(labels[3])
 
     def compute_movements(self):
+        """
+        Computes the movements so that the objects point in the right direction according to their target
+        """
         for obj in self.object_joint_map:
             joint = self.object_joint_map[obj]
             normal = self.object_normal_map[obj]
@@ -178,6 +216,9 @@ class MultiTracking:
             self.object_movements_map[obj] = movement
 
     def make_movements(self):
+        """
+        Makes the computed movements
+        """
         for obj in self.object_movements_map:
             movement = self.object_movements_map[obj]
             obj.Placement = movement.multiply(obj.Placement)
@@ -187,6 +228,9 @@ class MultiTracking:
         self.scene.recompute_boundbox()
 
     def undo_movements(self):
+        """
+        Undo the movements so that they are in their original position
+        """
         for obj in self.object_movements_map:
             movement = self.object_movements_map[obj]
             movement = movement.inverse()

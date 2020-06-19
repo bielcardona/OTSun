@@ -317,7 +317,7 @@ class Material(object):
 @traced(logger)
 class VolumeMaterial(Material):
     """
-    Subclass of Volume for materials with volume
+    Subclass of Material for materials with volume
 
     The `properties` parameter must be a dict with the physical properties
     describing the material. At least, the following must be provided:
@@ -337,7 +337,6 @@ class VolumeMaterial(Material):
         Computes the new optical state when `ray` hits the material
         at a point with given `normal_vector`
 
-        # TODO: Change name
         Parameters
         ----------
         ray : Ray
@@ -362,6 +361,9 @@ class VolumeMaterial(Material):
             return optical_state
 
     def to_json(self):
+        """
+        Dumps the material in json format.
+        """
         return json.dumps(
             {
                 'name': self.name,
@@ -374,7 +376,7 @@ class VolumeMaterial(Material):
 
 class SimpleVolumeMaterial(VolumeMaterial):
     """
-    # TODO: Document
+    Subclass of `VolumeMaterial` for those materials with constant properties.
     """
 
     def __init__(self, name, index_of_refraction, attenuation_coefficient=None):
@@ -394,7 +396,7 @@ class SimpleVolumeMaterial(VolumeMaterial):
 
 class WavelengthVolumeMaterial(VolumeMaterial):
     """
-    # TODO: Document
+    Subclass of `VolumeMaterial` for materials with tabulated index of refraction.
     """
 
     def __init__(self, name, file_index_of_refraction):
@@ -418,7 +420,7 @@ class WavelengthVolumeMaterial(VolumeMaterial):
 
 class PVMaterial(VolumeMaterial):
     """
-    # TODO: Document
+    Subclass of `VolumeMaterial` for photovoltaic materials.
     """
 
     def __init__(self, name, file_index_of_refraction):
@@ -449,6 +451,7 @@ class PVMaterial(VolumeMaterial):
 
     def get_PV_data(self, ray, energy_before):
         """
+        Computes the photovoltaic data stored in a ray.
 
         Parameters
         ----------
@@ -476,7 +479,7 @@ class PVMaterial(VolumeMaterial):
 
 class PolarizedThinFilm(VolumeMaterial):
     """
-    # TODO: Document
+    Subclass of `VolumeMaterial` for polarized thin film materials.
     """
 
     def __init__(self, name, file_thin_film, file_front, file_back):
@@ -559,23 +562,8 @@ class PolarizedThinFilm(VolumeMaterial):
     def calculate_state_thin_film(incident, normal_vector, n1, n2, polarization_vector,
                                   properties, wavelength):
         """
-        # TODO: Document
-
-        Parameters
-        ----------
-        incident
-        normal_vector
-        n1
-        n2
-        polarization_vector
-        properties
-        wavelength
-
-        Returns
-        -------
-
+        Helper function for the computation of the optical state once the ray has passed through the film
         """
-        # TODO: document
         # returns optical state of the ray in thin film material
         normal = correct_normal(normal_vector, incident)
         backside = False
@@ -652,17 +640,6 @@ class PolarizedThinFilm(VolumeMaterial):
                                  Phenomenon.REFRACTION))  # TODO: Set solid
 
     def change_of_optical_state(self, ray, normal_vector):
-        """
-        # TODO: Document
-        Parameters
-        ----------
-        ray
-        normal_vector
-
-        Returns
-        -------
-
-        """
         # the ray impacts on thin film material
         n1 = ray.current_medium().get_n(ray.wavelength)
         n_front = self.properties['index_of_refraction_front'](ray.wavelength)
@@ -690,25 +667,22 @@ class PolarizedThinFilm(VolumeMaterial):
 
 vacuum_medium = SimpleVolumeMaterial("Vacuum", 1.0, 0.0)
 
-
 @traced(logger)
 class SurfaceMaterial(Material):
     """
-    # TODO: Document
+    Subclass of Material for 2-dimensional materials (without volume)
+
+    The `properties` parameter must be a dict with the physical properties
+    describing the material. At least, the following must be provided:
+    'probability_of_reflection': probability that a photon gets reflected,
+    as a function of its wavelength.
+    'probability_of_absorption': probability that a photon gets absorbed,
+    as a function of its wavelength.
+    'probability_of_transmittance': probability that a photon passes through
+    the material, as a function of its wavelength.
     """
 
     def __init__(self, name, properties):
-        """
-        Initializes a Surface Material. The properties parameter must be a
-        dict with the physical properties
-        describing the material. At least, the following must be provided:
-        'probability_of_reflection': probability that a photon gets reflected,
-        as a function of its wavelength.
-        'probability_of_absorption': probability that a photon gets absorbed,
-        as a function of its wavelength.
-        'probability_of_transmittance': probability that a photon passes through
-        the material, as a function of its wavelength.
-        """
         super(SurfaceMaterial, self).__init__(name, properties)
         self.properties = properties
 
@@ -718,15 +692,7 @@ class SurfaceMaterial(Material):
 
     def compute_probabilities(self, ray):
         """
-        # TODO: Document
-
-        Parameters
-        ----------
-        ray
-
-        Returns
-        -------
-
+        Computes the tuple of probabilities that a ray hitting the surface gets reflected, absorbed or transmitted
         """
         properties = self.properties
         try:
@@ -746,15 +712,7 @@ class SurfaceMaterial(Material):
 
     def decide_phenomenon(self, ray):
         """
-        # TODO: Document
-
-        Parameters
-        ----------
-        ray
-
-        Returns
-        -------
-
+        Decides which phenomenon will take place when a ray hits the surface.
         """
         phenomena = [
             Phenomenon.REFLEXION,
@@ -808,7 +766,7 @@ class SurfaceMaterial(Material):
     @classmethod
     def from_plain_properties(cls, name, plain_properties):
         """
-        # TODO: Document
+        Loads a material from its properties stored in a simple dictionary
 
         Parameters
         ----------
@@ -837,7 +795,7 @@ class SurfaceMaterial(Material):
 @traced(logger)
 class OpaqueSimpleLayer(SurfaceMaterial):
     """
-    # TODO: Document
+    Subclass of `SurfaceMaterial` for completely opaque layers.
     """
 
     def __init__(self, name):
@@ -866,7 +824,7 @@ class OpaqueSimpleLayer(SurfaceMaterial):
 @traced(logger)
 class TransparentSimpleLayer(SurfaceMaterial):
     """
-    # TODO: Document
+    Subclass of `SurfaceMaterial` for transparent layers.
     """
 
     def __init__(self, name, pot):
@@ -899,7 +857,7 @@ class TransparentSimpleLayer(SurfaceMaterial):
 @traced(logger)
 class AbsorberSimpleLayer(SurfaceMaterial):
     """
-    # TODO: Document
+    Subclass of `SurfaceMaterial` for absorber layers with behaviour independent of the wavelength.
     """
 
     def __init__(self, name, poa):
@@ -932,7 +890,7 @@ class AbsorberSimpleLayer(SurfaceMaterial):
 @traced(logger)
 class AbsorberLambertianLayer(SurfaceMaterial):
     """
-    # TODO: Document
+    Subclass of `SurfaceMaterial` for absorber layers with lambertian behaviour when reflecting rays.
     """
 
     def __init__(self, name, poa):
@@ -965,7 +923,7 @@ class AbsorberLambertianLayer(SurfaceMaterial):
 @traced(logger)
 class ReflectorSpecularLayer(SurfaceMaterial):
     """
-    # TODO: Document
+    Subclass of `SurfaceMaterial` for reflector specular layers.
     """
 
     def __init__(self, name, por, sigma_1=None, sigma_2=None, k=None):
@@ -1010,7 +968,7 @@ class ReflectorSpecularLayer(SurfaceMaterial):
 @traced(logger)
 class ReflectorLambertianLayer(SurfaceMaterial):
     """
-    # TODO: Document
+    Subclass of `SurfaceMaterial` for reflector layers with lambertian behaviour.
     """
 
     def __init__(self, name, por):
@@ -1043,7 +1001,7 @@ class ReflectorLambertianLayer(SurfaceMaterial):
 @traced(logger)
 class AbsorberTWModelLayer(SurfaceMaterial):
     """
-    # TODO: Document
+    Subclass of `SurfaceMaterial` for materials using Tesfamichael-Wackelgard model.
     """
 
     def __init__(self, name, poa, b_constant, c_constant):
@@ -1139,14 +1097,14 @@ class AbsorberTWModelLayer(SurfaceMaterial):
 @traced(logger)
 class MetallicLayer(SurfaceMaterial):
     """
-    # TODO: Document
+    Subclass of `SurfaceMaterial` for metallic layers.
     """
 
 
 @traced(logger)
 class MetallicSpecularLayer(MetallicLayer):
     """
-    # TODO: Document
+    Subclass of `MetallicLayer` for metallic layers with specular properties.
     """
 
     def __init__(self, name, file_index_of_refraction,
@@ -1203,7 +1161,7 @@ class MetallicSpecularLayer(MetallicLayer):
 @traced(logger)
 class MetallicLambertianLayer(MetallicLayer):
     """
-    # TODO: Document
+    Subclass of `MetallicLayer` for metallic layers with lambertian behaviour.
     """
 
     def __init__(self, name, file_index_of_refraction):
@@ -1246,7 +1204,7 @@ class MetallicLambertianLayer(MetallicLayer):
 @traced(logger)
 class PolarizedCoatingLayer(SurfaceMaterial):
     """
-    # TODO: Document
+    Subclass of `SurfaceMaterial` for polarized coating layers
     """
 
     def __init__(self, *args):
@@ -1297,7 +1255,7 @@ class PolarizedCoatingLayer(SurfaceMaterial):
 @traced(logger)
 class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
     """
-    # TODO: Document
+    Subclass of `PolarizedCoatingLayer` for reflector layers.
     """
 
     def __init__(self, name, coating_file, sigma_1=None, sigma_2=None, k=None):
@@ -1342,7 +1300,7 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
 @traced(logger)
 class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
     """
-    # TODO: Document
+    Subclass of `PolarizedCoatingLayer` for absorber layers.
     """
 
     def __init__(self, name, coating_file):
@@ -1380,7 +1338,7 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
 @traced(logger)
 class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
     """
-    # TODO: Document
+    Subclass of `PolarizedCoatingLayer` for transparent layers.
     """
 
     def __init__(self, name, coating_file):
@@ -1461,7 +1419,7 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
 @traced(logger)
 class TwoLayerMaterial(Material):
     """
-    # TODO: Document
+    Subclass of `Material` for surface materials formed by two layers (back and front)
     """
 
     def __init__(self, name, name_front_layer, name_back_layer):

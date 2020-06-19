@@ -1,3 +1,8 @@
+"""Module otsun.outputs
+
+Helper functions to format data for output
+"""
+
 import numpy as np
 
 def spectrum_to_constant_step(file_in, wavelength_step, wavelength_min, wavelength_max):

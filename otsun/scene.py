@@ -1,3 +1,8 @@
+"""Module otsun.scene for the modelization optical systems
+
+The module defines the class `Scene` that models the elements in an optical system
+"""
+
 from .materials import Material
 from .logging_unit import logger
 from .math import correct_normal
@@ -53,6 +58,9 @@ class Scene:
         self.diameter = self.boundbox.DiagonalLength
 
     def recompute_boundbox(self):
+        """
+        Recomputes the boundbox, so that all objects are contained in it
+        """
         boundbox = None
         for elem in self.solids:
             if boundbox is None:
@@ -67,6 +75,9 @@ class Scene:
         self.boundbox = boundbox
 
     def remove_duplicate_faces(self):
+        """
+        Removes redundant faces, so that the computation of next_intersection does not find duplicated points.
+        """
         faces_with_material = [face for face in self.faces if
                                face in self.materials]
         faces_no_material = [face for face in self.faces if
@@ -100,6 +111,9 @@ class Scene:
         return None
 
     def next_solid_at_point_in_direction(self, point, normal, direction):
+        """
+        Returns the next solid found in the given direction from a given point
+        """
         external_normal = correct_normal(normal, direction)
         point_plus_epsilon = point + external_normal * (-2) * self.epsilon
         return self.solid_at_point(point_plus_epsilon)

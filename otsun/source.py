@@ -1,5 +1,5 @@
 """
-Module that implements rays and its sources
+Module otsun.source that implements rays and its sources
 """
 
 import itertools
@@ -177,6 +177,9 @@ class LightSource(object):
         self.wavelengths = []
 
     def emit_ray(self):
+        """
+        Simulates the emission of a ray
+        """
         point = self.emitting_region.random_point()
         main_direction = self.emitting_region.main_direction  # emitting main direction
         direction = main_direction

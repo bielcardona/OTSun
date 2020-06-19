@@ -1,3 +1,8 @@
+"""Module otsun.ray for the modelization of light rays
+
+The module defines the class `Ray`
+"""
+
 from autologging import traced
 from .logging_unit import logger
 from .materials import vacuum_medium, PVMaterial, SurfaceMaterial, TwoLayerMaterial, PolarizedThinFilm
