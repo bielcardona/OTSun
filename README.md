@@ -1,6 +1,6 @@
 [![PyPI version](https://badge.fury.io/py/OTSun.svg)](https://badge.fury.io/py/OTSun)
 
-![OTSun logo](logo_otsun.png)
+![OTSun logo](logo_OTSun.png)
 
 # OTSun
 
