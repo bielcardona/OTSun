@@ -1,5 +1,7 @@
 [![PyPI version](https://badge.fury.io/py/OTSun.svg)](https://badge.fury.io/py/OTSun)
 
+![OTSun logo](logo_otsun.png)
+
 # OTSun
 
 OTSun is a python package that uses the Monte Carlo Forward Ray Tracing for the optical analysis of Solar Thermal Collectors and Solar Cells. 
