@@ -258,7 +258,7 @@ class Ray(object):
         """
         count = 0
         while (not self.finished) and (count < max_hops):
-            logger.info("Ray running. Hop %s, %s, Solid %s", count, self,
+            logger.debug("Ray running. Hop %s, %s, Solid %s", count, self,
                         self.scene.name_of_solid.get(self.current_solid, "Void"))
             count += 1
 
@@ -304,7 +304,7 @@ class Ray(object):
                 self.finished = True
             if self.energy < LOW_ENERGY:
                 self.finished = True
-        logger.info("Ray stopped. Hop %s, %s, Solid %s", count, self,
+        logger.debug("Ray stopped. Hop %s, %s, Solid %s", count, self,
                     self.scene.name_of_solid.get(self.current_solid, "Void"))
 
     def add_to_document(self, doc):
