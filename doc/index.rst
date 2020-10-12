@@ -7,6 +7,7 @@ Welcome to otsun's documentation!
    :maxdepth: 4
    :caption: Contents:
 
+   intro
    modules
 
 Indices and tables
