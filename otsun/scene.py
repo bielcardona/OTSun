@@ -30,6 +30,7 @@ class Scene:
 
         for obj in objects:
             # noinspection PyNoneFunctionAssignment
+            logger.debug(f"loading object {obj.Label}")
             material = Material.get_from_label(obj.Label)
             if not material:
                 logger.info("Material not found for object %s", obj.Label)
@@ -38,11 +39,13 @@ class Scene:
             faces = obj.Shape.Faces
             if solids:  # Object is a solid
                 for solid in solids:
+                    logger.debug(f"Assigning material {material.name} to solid {solid} in {obj.Label}")
                     self.name_of_solid[solid] = obj.Label
                     self.materials[solid] = material
                     self.element_object_dict[solid] = obj
             else:  # Object is made of faces
                 for face in faces:
+                    logger.debug(f"Assigning material {material.name} to face {face} in {obj.Label}")
                     self.materials[face] = material
                     self.element_object_dict[face] = obj
             self.solids.extend(solids)
@@ -78,19 +81,24 @@ class Scene:
         """
         Removes redundant faces, so that the computation of next_intersection does not find duplicated points.
         """
+        logger.debug("Removing duplicate faces")
         faces_with_material = [face for face in self.faces if
                                face in self.materials]
         faces_no_material = [face for face in self.faces if
                              face not in self.materials]
         if not faces_no_material:
+            logger.debug("Done Removing duplicate faces (nothing to do)")
             return
         complex_no_material = faces_no_material[0]
-        for face in faces_no_material[1:]:
+        for (i,face) in enumerate(faces_no_material[1:]):
+            logger.debug(f"Fusing face {i} of {len(faces_no_material)-1}")
             complex_no_material = complex_no_material.fuse(face)
-        for face in faces_with_material:
+        for (i,face) in enumerate(faces_with_material):
+            logger.debug(f"Cutting face {i} of {len(faces_with_material) - 1}")
             complex_no_material = complex_no_material.cut(face)
         self.faces = faces_with_material
         self.faces.extend(complex_no_material.Faces)
+        logger.debug("Done Removing duplicate faces")
 
     def solid_at_point(self, point):
         """
