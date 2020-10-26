@@ -16,3 +16,9 @@ In order to use the package the libraries of FreeCAD (https://www.freecadweb.org
 ## Documentation
 
 The documentation of the module is available at http://otsun.readthedocs.io/
+
+## How to cite OTSun?
+
+If you need to cite OTSun, please use the following reference:
+
+* Cardona G, Pujol-Nadal R (2020) OTSun, a python package for the optical analysis of solar-thermal collectors and photovoltaic cells with arbitrary geometry. PLoS ONE 15(10): e0240735. https://doi.org/10.1371/journal.pone.0240735
