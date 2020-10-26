@@ -8,12 +8,69 @@ import Part
 import numpy as np
 from FreeCAD import Base
 
-from .math import pick_random_from_cdf, myrandom, tabulated_function
+from .math import pick_random_from_cdf, myrandom, tabulated_function, two_orthogonal_vectors, area_of_triangle, random_point_of_triangle
 from .optics import dispersion_from_main_direction, random_polarization, dispersion_polarization
 from .ray import Ray
+from random import choices
+
+from scipy.spatial import ConvexHull
 
 EPSILON = 1E-6
 # Tolerance for considering equal to zero
+
+class GeneralizedSunWindow(object):
+    def __init__(self, scene, main_direction):
+        bbs = []
+        for shape in itertools.chain(scene.solids, scene.faces):
+            bbs.append(shape.BoundBox)
+        origin = (scene.boundbox.Center -
+                          main_direction * 0.5 * scene.boundbox.DiagonalLength)
+        u, v = two_orthogonal_vectors(main_direction)
+        points = []
+        plane_points = []
+        for bb in bbs:
+            xs = [bb.XMin, bb.XMax]
+            ys = [bb.YMin, bb.YMax]
+            zs = [bb.ZMin, bb.ZMax]
+            coords = itertools.product(xs, ys, zs)
+            for c in coords:
+                point = Base.Vector(c)
+                points.append(point)
+                pu = u.dot(point - origin) * 1.02
+                pv = v.dot(point - origin) * 1.02
+                plane_points.append([pu,pv])
+        hull = ConvexHull(plane_points)
+        plane_vertices = [plane_points[i] for i in hull.vertices]
+        self.vertices = [origin + u*pu + v*pv for (pu,pv) in plane_vertices]
+        self.triangles = [[self.vertices[0], self.vertices[i], self.vertices[i+1]]
+                          for i in range(1,len(self.vertices)-1)]
+        self.triangle_areas = list(map(area_of_triangle, self.triangles))
+        self.aperture = hull.area
+        self.main_direction = main_direction
+
+    def add_to_document(self, doc):
+        sw = Part.makePolygon(self.vertices, True)
+        doc.addObject("Part::Feature", "SunWindow").Shape = sw
+
+    def random_point(self):
+        random_triangle = choices(self.triangles, self.triangle_areas)[0]
+        return random_point_of_triangle(random_triangle)
+
+    def random_direction(self):
+        """
+        Returns the main direction
+
+        Maybe in the future will return some random vector
+
+        Returns
+        -------
+        Base.Vector
+        """
+        return self.main_direction
+
+
+
+
 
 class SunWindow(object):
     """
