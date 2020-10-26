@@ -311,3 +311,24 @@ def projection_on_vector(u, v):
 def projection_on_orthogonal_of_vector(u, v):
     """Compute the projection of u on the subspace orthogonal to <v>"""
     return u - projection_on_vector(u, v)
+
+
+def area_of_triangle(vertices):
+    """Compute the area of the triangle with given vertices"""
+    p, q, r = vertices
+    pq = q-p
+    pr = r-p
+    v = pq.cross(pr)
+    return 0.5 * abs(v.Length)
+
+
+def random_point_of_triangle(vertices):
+    """Compute a random point of the triangle with given vertices"""
+    p, q, r = vertices
+    pq = q-p
+    pr = r-p
+    while True:
+        x = random.random()
+        y = random.random()
+        if x + y <= 1:
+            return p + pq*x + pr*y
