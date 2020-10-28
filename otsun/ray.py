@@ -29,6 +29,31 @@ def _bb_intersects(bb1, bb2):
             _interval_intersects(bb1.ZMin, bb1.ZMax, bb2.ZMin, bb2.ZMax))
 
 
+def _distance_point_to_line(point, line_point, line_vector):
+    v = point-line_point
+    cross = v.cross(line_vector)
+    return cross.Length
+
+
+def _distance_point_to_ray(point, ray_origin, ray_vector):
+    v = point - ray_origin
+    if v.dot(ray_vector) >= 0:
+        return _distance_point_to_line(point, ray_origin, ray_vector)
+    return v.Length
+
+
+def _line_may_intersect_bb(bb, line_point, line_vector):
+    center = bb.Center
+    d = _distance_point_to_line(center, line_point, line_vector)
+    return d <= bb.DiagonalLength/2
+
+
+def _ray_may_intersect_bb(bb, ray_origin, ray_vector):
+    center = bb.Center
+    d = _distance_point_to_ray(center, ray_origin, ray_vector)
+    return d <= bb.DiagonalLength/2
+
+
 @traced(logger)
 class Ray(object):
     """
@@ -161,16 +186,30 @@ class Ray(object):
         shape_segment = segment.toShape()
         bb1 = shape_segment.BoundBox
         candidates = self.scene.faces
+        feasible_faces = 0
+        filtered_faces_1 = 0
+        filtered_faces_2 = 0
+        feasible_but_empty = 0
         for face in candidates:
             bb2 = face.BoundBox
-            if not _bb_intersects(bb1, bb2):
+            if not _ray_may_intersect_bb(bb2, p0, direction):
+                filtered_faces_1 += 1
                 continue
+            if not _bb_intersects(bb1, bb2):
+                filtered_faces_2 += 1
+                continue
+            feasible_faces += 1
             punts = face.section(shape_segment).Vertexes
+            if not punts:
+                feasible_but_empty += 1
+                # logger.debug("feasible face but empty intersection")
             for punt in punts:
                 intersections.append([punt.Point, face])
+        logger.debug(f"Found {len(intersections)} points in {feasible_faces} faces. Filtered {filtered_faces_1}+{filtered_faces_2}. Feasible but empty {feasible_but_empty}")
         intersections = [punt_cara for punt_cara in intersections if
                          p0.distanceToPoint(punt_cara[0]) > 0] # self.scene.epsilon]
         if not intersections:
+            logger.debug("No true intersection found with scene")
             return p1, None
         closest_pair = min(intersections,
                            key=lambda pair: self.weighted_distance(p0, pair))
