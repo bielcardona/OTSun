@@ -3,7 +3,7 @@
 The module defines the class `Scene` that models the elements in an optical system
 """
 
-from .materials import Material
+from .materials import Material, VolumeMaterial, SurfaceMaterial, TwoLayerMaterial
 from .logging_unit import logger
 from .math import correct_normal
 
@@ -33,24 +33,50 @@ class Scene:
             logger.debug(f"loading object {obj.Label}")
             material = Material.get_from_label(obj.Label)
             if not material:
-                logger.info("Material not found for object %s", obj.Label)
+                logger.warning("Material not found for object %s", obj.Label)
                 continue
-            solids = obj.Shape.Solids
-            faces = obj.Shape.Faces
-            if solids:  # Object is a solid
+            shape = obj.Shape
+            faces = shape.Faces
+            solids = shape.Solids
+            if isinstance(material, VolumeMaterial):
+                if not solids:
+                    logger.warning(f"Volume material {material.name} associated to object {obj.Label} without solids")
                 for solid in solids:
                     logger.debug(f"Assigning material {material.name} to solid {solid} in {obj.Label}")
                     self.name_of_solid[solid] = obj.Label
                     self.materials[solid] = material
                     self.element_object_dict[solid] = obj
-            else:  # Object is made of faces
+                self.solids.extend(solids)
+                self.faces.extend(faces)
+            elif isinstance(material, SurfaceMaterial) or isinstance(material, TwoLayerMaterial):
+                if solids:
+                    logger.warning(f"Surface material {material.name} associated to object {obj.Label} with solids")
+                if not faces:
+                    logger.warning(f"Surface material {material.name} associated to object {obj.Label} without faces")
                 for face in faces:
                     logger.debug(f"Assigning material {material.name} to face {face} in {obj.Label}")
                     self.materials[face] = material
                     self.element_object_dict[face] = obj
-            self.solids.extend(solids)
-            self.faces.extend(faces)
-            # self.materials[obj] = material ## Cal?
+                self.faces.extend(faces)
+            else:
+                logger.warning(f"Material {material.name} associated to {obj.Label} is not Surface or Volume material")
+                continue
+            # solids = obj.Shape.Solids
+            # faces = obj.Shape.Faces
+            # if solids and isinstance(material, VolumeMaterial):  # Object is a solid
+            #     for solid in solids:
+            #         logger.debug(f"Assigning material {material.name} to solid {solid} in {obj.Label}")
+            #         self.name_of_solid[solid] = obj.Label
+            #         self.materials[solid] = material
+            #         self.element_object_dict[solid] = obj
+            # else:  # Object is made of faces
+            #     for face in faces:
+            #         logger.debug(f"Assigning material {material.name} to face {face} in {obj.Label}")
+            #         self.materials[face] = material
+            #         self.element_object_dict[face] = obj
+            # self.solids.extend(solids)
+            # self.faces.extend(faces)
+            # # self.materials[obj] = material ## Cal?
             if not self.boundbox:
                 self.boundbox = obj.Shape.BoundBox
             else:
