@@ -473,8 +473,7 @@ class PVMaterial(VolumeMaterial):
         point_2 = ray.points[-2]
         return (energy_before - ray.energy,
                 (point_2.x, point_2.y, point_2.z, point_1.x, point_1.y, point_1.z,
-                 energy_before, ray.energy, ray.wavelength, alpha, angle_incident,
-				 self.name)
+                 energy_before, ray.energy, ray.wavelength, alpha, angle_incident, self.name)
                 )
 
 

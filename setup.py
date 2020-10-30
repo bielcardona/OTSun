@@ -13,7 +13,7 @@ setup(
     packages=['otsun',],
     url='https://github.com/bielcardona/OTSun',
     python_requires = ">=3.6,<3.7",
-    install_requires=['numpy' , 'autologging'],
+    install_requires=['numpy', 'autologging', 'scipy'],
     license='MIT',
     author='Gabriel Cardona, Ramon Pujol',
     author_email='gabriel.cardona@uib.es, ramon.pujol@uib.es',
