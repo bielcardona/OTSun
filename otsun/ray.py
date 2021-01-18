@@ -9,6 +9,7 @@ from .materials import vacuum_medium, PVMaterial, SurfaceMaterial, TwoLayerMater
 from .optics import Phenomenon, OpticalState
 import numpy as np
 import Part
+from FreeCAD import Base
 
 try:
     part_line = Part.LineSegment
@@ -17,6 +18,10 @@ except AttributeError:
 
 # Zero energy level
 LOW_ENERGY = 1E-6
+
+
+def _center(bb):
+    return Base.Vector((bb.XMin+bb.XMax)/2, (bb.YMin+bb.YMax)/2, (bb.YMin+bb.YMax)/2)
 
 
 def _interval_intersects(x1, x2, y1, y2):
@@ -43,13 +48,13 @@ def _distance_point_to_ray(point, ray_origin, ray_vector):
 
 
 def _line_may_intersect_bb(bb, line_point, line_vector):
-    center = bb.Center
+    center = _center(bb)
     d = _distance_point_to_line(center, line_point, line_vector)
     return d <= bb.DiagonalLength/2
 
 
 def _ray_may_intersect_bb(bb, ray_origin, ray_vector):
-    center = bb.Center
+    center = _center(bb)
     d = _distance_point_to_ray(center, ray_origin, ray_vector)
     return d <= bb.DiagonalLength/2
 
