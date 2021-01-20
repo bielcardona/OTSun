@@ -788,7 +788,7 @@ class SurfaceMaterial(Material):
                 'classname': self.__class__.__name__,
                 'plain_properties': self.properties.get(
                     'plain_properties', None),
-            }, cls=NumpyEncoder
+            }, cls=NumpyEncoder, indent=4
         )
 
 
@@ -1436,7 +1436,7 @@ class TwoLayerMaterial(Material):
                 'classname': 'TwoLayerMaterial',
                 'name_front_layer': self.name_front_layer,
                 'name_back_layer': self.name_back_layer
-            }, cls=NumpyEncoder
+            }, cls=NumpyEncoder, indent=4
         )
 
     def change_of_optical_state(self, ray, normal_vector, nearby_material):
