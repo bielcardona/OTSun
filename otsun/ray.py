@@ -21,7 +21,7 @@ LOW_ENERGY = 1E-6
 
 
 def _center(bb):
-    return Base.Vector((bb.XMin+bb.XMax)/2, (bb.YMin+bb.YMax)/2, (bb.YMin+bb.YMax)/2)
+    return Base.Vector((bb.XMin+bb.XMax)/2, (bb.YMin+bb.YMax)/2, (bb.ZMin+bb.ZMax)/2)
 
 
 def _interval_intersects(x1, x2, y1, y2):
