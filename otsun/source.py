@@ -45,7 +45,7 @@ class GeneralizedSunWindow(object):
         self.triangles = [[self.vertices[0], self.vertices[i], self.vertices[i+1]]
                           for i in range(1,len(self.vertices)-1)]
         self.triangle_areas = list(map(area_of_triangle, self.triangles))
-        self.aperture = hull.area
+        self.aperture = sum(self.triangle_areas)
         self.main_direction = main_direction
 
     def add_to_document(self, doc):
