@@ -37,7 +37,7 @@ def load_from_txt_or_csv(file):
         header=None,
         comment='#',
         engine='python'
-    ).interpolate()
+    ).interpolate(method='index')
     df.insert(0,0,df.index)
     return df.values
 
@@ -512,7 +512,7 @@ class PolarizedThinFilm(VolumeMaterial):
         data = load_from_txt_or_csv(file_thin_film)
         data_reflectance = data[:, [0, 1, 2, 3]]
         data_transmittance = data[:, [0, 1, 4, 5]]
-        if file_front is not 'Vacuum':
+        if file_front != 'Vacuum':
             data_refraction_front = load_from_txt_or_csv(file_front)
             # data_refraction_front = np.loadtxt(file_front, usecols=(0, 1, 2))
             wavelength_values_front = data_refraction_front[:, 0]
@@ -535,7 +535,7 @@ class PolarizedThinFilm(VolumeMaterial):
                 'type': 'constant',
                 'value': 0.0
             }
-        if file_back is not 'Vacuum':
+        if file_back != 'Vacuum':
             data_refraction_back = load_from_txt_or_csv(file_back)
             # data_refraction_back = np.loadtxt(file_back, usecols=(0, 1, 2))
             wavelength_values_back = data_refraction_back[:, 0]
