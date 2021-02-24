@@ -17,6 +17,7 @@ from numpy import sqrt
 import numpy as np
 from autologging import traced
 from .logging_unit import logger
+import pandas as pd
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -26,6 +27,19 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
+
+
+def load_from_txt_or_csv(file):
+    df = pd.read_table(
+        file,
+        sep=None,
+        index_col=0,
+        header=None,
+        comment='#',
+        engine='python'
+    ).interpolate()
+    df.insert(0,0,df.index)
+    return df.values
 
 
 @traced(logger)
@@ -400,7 +414,8 @@ class WavelengthVolumeMaterial(VolumeMaterial):
     """
 
     def __init__(self, name, file_index_of_refraction):
-        data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
+        data_refraction = load_from_txt_or_csv(file_index_of_refraction)
+        # data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
         wavelength_values = data_refraction[:, 0]
         n_values = data_refraction[:, 1]
         k_values = data_refraction[:, 2]
@@ -428,7 +443,8 @@ class PVMaterial(VolumeMaterial):
         # wavelenth in nm,
         # real(index of refraction),
         # imaginary(index of refraction)
-        data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
+        data_refraction = load_from_txt_or_csv(file_index_of_refraction)
+        # data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
         wavelength_values = data_refraction[:, 0]
         n_values = data_refraction[:, 1]
         k_values = data_refraction[:, 2]
@@ -484,17 +500,21 @@ class PolarizedThinFilm(VolumeMaterial):
 
     def __init__(self, name, file_thin_film, file_front, file_back):
         # thin film material calculated by TMM method, six columns:
-        # wavelenth in nm, angle in deg.,
+        # wavelenth in nm,
+        # angle in deg.,
         # reflectance s-polarized (perpendicular),
-        # reflectance p-polarized (parallel),  transmittance s-polarized,
+        # reflectance p-polarized (parallel),
+        # transmittance s-polarized,
         # transmittance p-polarized
         # the values in coating_material should be in the corresponding
         # order columns
-        data = np.loadtxt(file_thin_film)
+        ### data = np.loadtxt(file_thin_film)
+        data = load_from_txt_or_csv(file_thin_film)
         data_reflectance = data[:, [0, 1, 2, 3]]
         data_transmittance = data[:, [0, 1, 4, 5]]
         if file_front is not 'Vacuum':
-            data_refraction_front = np.loadtxt(file_front, usecols=(0, 1, 2))
+            data_refraction_front = load_from_txt_or_csv(file_front)
+            # data_refraction_front = np.loadtxt(file_front, usecols=(0, 1, 2))
             wavelength_values_front = data_refraction_front[:, 0]
             n_values_front = data_refraction_front[:, 1]
             k_values_front = data_refraction_front[:, 2]
@@ -516,7 +536,8 @@ class PolarizedThinFilm(VolumeMaterial):
                 'value': 0.0
             }
         if file_back is not 'Vacuum':
-            data_refraction_back = np.loadtxt(file_back, usecols=(0, 1, 2))
+            data_refraction_back = load_from_txt_or_csv(file_back)
+            # data_refraction_back = np.loadtxt(file_back, usecols=(0, 1, 2))
             wavelength_values_back = data_refraction_back[:, 0]
             n_values_back = data_refraction_back[:, 1]
             k_values_back = data_refraction_back[:, 2]
@@ -1111,7 +1132,8 @@ class MetallicSpecularLayer(MetallicLayer):
                  sigma_1=None, sigma_2=None, k=None):
         # file_index_of_refraction with three columns: wavelenth in nm,
         # real(index of refraction), imaginary(index of refraction)
-        data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
+        data_refraction = load_from_txt_or_csv(file_index_of_refraction)
+        # data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
         wavelength_values = data_refraction[:, 0]
         n_values = data_refraction[:, 1]
         k_values = data_refraction[:, 2]
@@ -1168,7 +1190,8 @@ class MetallicLambertianLayer(MetallicLayer):
         # file_index_of_refraction with three columns:
         # wavelenth in nm, real(index of refraction),
         # imaginary(index of refraction)
-        data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
+        data_refraction = load_from_txt_or_csv(file_index_of_refraction)
+        # data_refraction = np.loadtxt(file_index_of_refraction, usecols=(0, 1, 2))
         wavelength_values = data_refraction[:, 0]
         n_values = data_refraction[:, 1]
         k_values = data_refraction[:, 2]
@@ -1259,12 +1282,15 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
     """
 
     def __init__(self, name, coating_file, sigma_1=None, sigma_2=None, k=None):
-        # coating_material with four columns: wavelenth in nm,
-        # angle in deg., reflectance s-polarized (perpendicular),
+        # coating_material with four columns:
+        # wavelenth in nm,
+        # angle in deg.,
+        # reflectance s-polarized (perpendicular),
         # reflectance p-polarized (parallel)
         # the values in coating_material should be in the corresponding
         # order columns
-        data_material = np.loadtxt(coating_file, usecols=(0, 1, 2, 3))
+        data_material = load_from_txt_or_csv(coating_file)
+        # data_material = np.loadtxt(coating_file, usecols=(0, 1, 2, 3))
         plain_properties = {
             'Matrix_reflectance_coating': {
                 'type': 'matrix',
@@ -1304,12 +1330,15 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
     """
 
     def __init__(self, name, coating_file):
-        # coating_material with four columns: wavelenth in nm, angle in deg.,
+        # coating_material with four columns:
+        # wavelenth in nm,
+        # angle in deg.,
         # reflectance s-polarized (perpendicular),
         # reflectance p-polarized (parallel)
         # the values in coating_material should be in the corresponding order
         # columns
-        data_material = np.loadtxt(coating_file, usecols=(0, 1, 2, 3))
+        data_material = load_from_txt_or_csv(coating_file)
+        # data_material = np.loadtxt(coating_file, usecols=(0, 1, 2, 3))
         plain_properties = {
             'Matrix_reflectance_coating': {
                 'type': 'matrix',
@@ -1343,13 +1372,16 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
 
     def __init__(self, name, coating_file):
         # coatingmaterial calculated by TMM method, six columns:
-        # wavelength in nm, angle in deg.,
+        # wavelength in nm,
+        # angle in deg.,
         # reflectance s-polarized (perpendicular),
-        # reflectance p-polarized (parallel),  transmittance s-polarized,
+        # reflectance p-polarized (parallel),
+        # transmittance s-polarized,
         # transmittance p-polarized
         # the values in coating_material should be in the corresponding
         # order columns
-        data = np.loadtxt(coating_file)
+        ### data = np.loadtxt(coating_file)
+        data = load_from_txt_or_csv(coating_file)
         data_reflectance = data[:, [0, 1, 2, 3]]
         data_transmittance = data[:, [0, 1, 4, 5]]
         plain_properties = {
