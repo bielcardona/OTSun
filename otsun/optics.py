@@ -87,7 +87,7 @@ class OpticalState(object):
         theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
         v = self.direction
         axis_1 = normal.cross(self.direction)
-        rotation_1 = Base.Rotation(axis_1, theta)
+        rotation_1 = Base.Rotation(axis_1, 2 * theta)
         new_v1 = rotation_1.multVec(v)
         u = myrandom()
         phi = 360. * u

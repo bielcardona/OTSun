@@ -34,20 +34,20 @@ FreeCAD.openDocument(MyProject)
 doc = FreeCAD.ActiveDocument
 
 
-# Materials Solar Cell Stack
-# otsun.create_transparent_simple_layer("Trans", 1.0)
-# otsun.create_absorber_simple_layer("Abs", 1.0)
-# otsun.create_two_layers_material("Trans_Abs", "Trans", "Abs")
-# file_thin_film = 'Fitxer_OTSun_Exp1a_theta0_90.txt'
-# file_Perovskite = 'Perovskite_Leguy.txt'
-# otsun.create_polarized_thin_film("ThinFilm", file_thin_film, "Vacuum", file_Perovskite)
-# otsun.create_PV_material("PV", file_Perovskite)
-# file_Spiro = 'Spiro_.txt'
-# otsun.create_wavelength_volume_material("Spiro", file_Spiro)
-# file_Ag = 'Ag_Yang.txt'
-# otsun.create_metallic_lambertian_layer("Ag", file_Ag)
-# otsun.Material.load_from_json_file('materials-test_4.json')
-otsun.Material.load_from_json_file('mats.json')
+# ---
+# Materials
+# ---
+otsun.TransparentSimpleLayer("Trans", 1.0)
+otsun.AbsorberSimpleLayer("Abs", 1.0)
+otsun.TwoLayerMaterial("Trans_Abs", "Trans", "Abs")
+file_thin_film = 'Fitxer_OTSun_Exp1a_theta0_90.txt'
+file_Perovskite = 'Perovskite_Leguy.txt'
+otsun.PolarizedThinFilm("ThinFilm", file_thin_film, "Vacuum", file_Perovskite)
+otsun.PVMaterial("PV", file_Perovskite)
+file_Spiro = 'Spiro_.txt'
+otsun.WavelengthVolumeMaterial("Spiro", file_Spiro)
+file_Ag = 'Ag_Yang.txt'
+otsun.MetallicLambertianLayer("Ag", file_Ag)
 
 # ---
 # Constant inputs for Spectral Analysis
