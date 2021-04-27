@@ -10,8 +10,8 @@ TwoLayerMaterial
 """
 
 import sys
-otsun_path = "D:\\Ramon_2015\\RECERCA\\RETOS-2015\\Tareas\\OTSun_local\\"
-sys.path.append(otsun_path)
+#otsun_path = "D:\\Ramon_2015\\RECERCA\\RETOS-2015\\Tareas\\OTSun_local\\"
+#sys.path.append(otsun_path)
 import otsun
 import os
 import FreeCAD
