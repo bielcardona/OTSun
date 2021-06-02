@@ -32,10 +32,11 @@ class NumpyEncoder(json.JSONEncoder):
 def load_from_txt_or_csv(file):
     df = pd.read_table(
         file,
-        delimiter=None,
+        sep=None,
         index_col=0,
         header=None,
         comment='#',
+        engine='python'
     ).interpolate(method='index')
     df.insert(0,0,df.index)
     return df.values
