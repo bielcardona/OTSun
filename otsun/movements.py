@@ -66,13 +66,11 @@ def axial_rotation_from_axis_vector_and_image(axis_origin, axis_dir, vector0, ve
     return axial_rotation_from_axis_and_angle(axis_origin, axis_dir, angle)
 
 
-def biaxial_rotation_from_vector_and_image(
-        origin, vector_horizontal, vector_vertical,
-        current_normal, desired_normal):
-    # First rotate around vector_vertical, so that the image of vector_horizontal is orthogonal
+def biaxial_rotation_from_vector_and_image(origin, vector_v, vector_h, current_normal, desired_normal):
+    # First rotate around vector_h, so that the image of vector_v is orthogonal
     # to desired_normal
-    image_vector_horizontal = desired_normal.cross(vector_vertical)
-    g1 = axial_rotation_from_vector_and_image(origin, vector_horizontal, image_vector_horizontal)
+    image_vector_horizontal = desired_normal.cross(vector_h)
+    g1 = axial_rotation_from_vector_and_image(origin, vector_v, image_vector_horizontal)
     new_normal = apply_movement_to_vector(g1, current_normal)
     g2 = axial_rotation_from_vector_and_image(origin, new_normal, desired_normal)
     return g2.multiply(g1)
@@ -139,13 +137,10 @@ class TwoOrthogonalAxialJoint(Joint):
     Class used to represent joints with two orthogonal axis
     """
 
-    def __init__(self, axis_origin, axis_vector_horizontal, axis_vector_vertical=None):
+    def __init__(self, axis_origin, axis_vector_vertical, axis_vector_horizontal):
         self.axis_origin = axis_origin
+        self.axis_vector_vertical = axis_vector_vertical
         self.axis_vector_horizontal = axis_vector_horizontal
-        if axis_vector_vertical is None:
-            self.axis_vector_vertical = Base.Vector(0, 0, 1)
-        else:
-            self.axis_vector_vertical = axis_vector_vertical
 
     def compute_rotation_to_point(self, target, normal, light_direction):
         """
@@ -156,9 +151,8 @@ class TwoOrthogonalAxialJoint(Joint):
         light_unit = light_direction * 1.0
         light_unit.normalize()
         desired_normal = pointing - light_unit
-        return biaxial_rotation_from_vector_and_image(
-            self.axis_origin, self.axis_vector_horizontal, self.axis_vector_vertical,
-            normal, desired_normal)
+        return biaxial_rotation_from_vector_and_image(self.axis_origin, self.axis_vector_vertical,
+                                                      self.axis_vector_horizontal, normal, desired_normal)
 
     def compute_rotation_to_direction(self, normal, light_direction):
         """
@@ -167,9 +161,8 @@ class TwoOrthogonalAxialJoint(Joint):
         light_unit = light_direction * 1.0
         light_unit.normalize()
         desired_normal = light_unit * (-1.0)
-        return biaxial_rotation_from_vector_and_image(
-            self.axis_origin, self.axis_vector_horizontal, self.axis_vector_vertical,
-            normal, desired_normal)
+        return biaxial_rotation_from_vector_and_image(self.axis_origin, self.axis_vector_vertical,
+                                                      self.axis_vector_horizontal, normal, desired_normal)
 
 
 @traced(logger)
