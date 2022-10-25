@@ -82,7 +82,7 @@ class Scene:
             else:
                 self.boundbox.add(obj.Shape.BoundBox)
 
-        self.remove_duplicate_faces()
+        # self.remove_duplicate_faces()
 
         self.diameter = self.boundbox.DiagonalLength
 

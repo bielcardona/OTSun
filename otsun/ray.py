@@ -117,6 +117,7 @@ class Ray(object):
         self.optical_states = [state]
         self.current_solid = None
         self.last_normal = None
+        self.last_touched_face = None
         self.wavelength = wavelength
         self.energy = energy
         self.polarization_vectors = [polarization_vector]
@@ -196,6 +197,8 @@ class Ray(object):
         filtered_faces_2 = 0
         feasible_but_empty = 0
         for face in candidates:
+            if face == self.last_touched_face:
+                continue
             bb2 = face.BoundBox
             if not _ray_may_intersect_bb(bb2, p0, direction):
                 filtered_faces_1 += 1
@@ -208,11 +211,18 @@ class Ray(object):
             if not punts:
                 feasible_but_empty += 1
                 # logger.debug("feasible face but empty intersection")
-            for punt in punts:
-                intersections.append([punt.Point, face])
+            # material = self.scene.materials[face]
+            if face in self.scene.materials:
+                for punt in punts:
+                    intersections.append([punt.Point, face])
+            else:
+                for punt in punts:
+                    if p0.distanceToPoint(punt.Point) > self.scene.epsilon:
+                        intersections.append([punt.Point, face])
+
         logger.debug(f"Found {len(intersections)} points in {feasible_faces} faces. Filtered {filtered_faces_1}+{filtered_faces_2}. Feasible but empty {feasible_but_empty}")
-        intersections = [punt_cara for punt_cara in intersections if
-                         p0.distanceToPoint(punt_cara[0]) > 0] # self.scene.epsilon]
+#        intersections = [punt_cara for punt_cara in intersections if
+#                         p0.distanceToPoint(punt_cara[0]) > self.scene.epsilon]
         if not intersections:
             logger.debug("No true intersection found with scene")
             return p1, None
@@ -309,6 +319,7 @@ class Ray(object):
             # Find next intersection
             # Update points
             point, face = self.next_intersection()
+            self.last_touched_face = face
             self.points.append(point)
             if not face:
                 self.finished = True
