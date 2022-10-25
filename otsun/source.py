@@ -342,18 +342,22 @@ def buie_distribution(CircumSolarRatio):
     # Solar Disk in mrad
     SS = 43.6
     # Solar Size in mrad
-    a1 = _calculate_a1(CSR, SD)
-    #     normalization constant for the disk region
-    a2 = _calculate_a2(CSR, SD, SS)
-    #    normalization constant for the circumsolar region
-    CDF_Disk_Region = _calculate_CDF_disk_region(a1, SD)
+    a2 = None # _calculate_a2(CSR, SD, SS)
+    CDF_Disk_Region = None # _calculate_CDF_disk_region(a1, SD)
     #    Buie distribution for the disk region
     u_values = np.arange(0.0, 1.001, 0.001)
     dist_values = []
     for u in u_values:
-        if u < 1.0 - CSR:
+        if u <= 1.0 - CSR:
+            if CDF_Disk_Region is None:
+                a1 = _calculate_a1(CSR, SD)
+                #     normalization constant for the disk region
+                CDF_Disk_Region = _calculate_CDF_disk_region(a1, SD)
             dist_values.append(_th_solar_disk_region(u, CDF_Disk_Region) / 1000.0 * 180.0 / np.pi)
         else:
+            if a2 is None:
+                a2 = _calculate_a2(CSR, SD, SS)
+                #    normalization constant for the circumsolar region
             dist_values.append(_th_circumsolar_region(u, CSR, SD, a2) / 1000.0 * 180.0 / np.pi)
     f = tabulated_function(u_values, dist_values)
     return f
