@@ -19,7 +19,6 @@ EPSILON = 1E-6
 INF = 1E20
 
 
-
 class Phenomenon(Enum):
     """
     Enum for optical phenomena.
@@ -48,8 +47,6 @@ class OpticalState(object):
         direction vector of the ray
     phenomenon : Phenomenon
         last phenomenon that the ray experimented
-    solid : Shape
-        solid where the ray is located
     material : Material
         Material where the ray is located
     extra_data : dict
@@ -81,24 +78,14 @@ class OpticalState(object):
         sigma_1 : float
             dispersion coefficient
          """
-        # TODO: @Ramon: Review
         rad = np.pi / 180.0
         u = myrandom()
         theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
-        v = self.direction
-        axis_1 = normal.cross(self.direction)
-        rotation_1 = Base.Rotation(axis_1, 2 * theta)
-        new_v1 = rotation_1.multVec(v)
-        u = myrandom()
-        phi = 360. * u
-        axis_2 = v
-        rotation_2 = Base.Rotation(axis_2, phi)
-        new_v2 = rotation_2.multVec(new_v1)
-        polarization_vector = self.polarization
-        new_pol_1 = rotation_1.multVec(polarization_vector)
-        new_polarization_vector = rotation_2.multVec(new_pol_1)
+        phi = 360. * myrandom()
+        new_direction = dispersion_from_main_direction(self.direction, theta, phi)
+        new_polarization_vector = dispersion_polarization(self.direction, self.polarization, theta, phi)
         self.polarization = new_polarization_vector
-        self.direction = new_v2
+        self.direction = new_direction
 
     def apply_double_gaussian_dispersion(self, normal, sigma_1, sigma_2, k):
         """
@@ -123,20 +110,11 @@ class OpticalState(object):
             theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
         else:
             theta = (-2. * sigma_2 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
-        v = self.direction
-        axis_1 = normal.cross(self.direction)
-        rotation_1 = Base.Rotation(axis_1, 2 * theta)
-        new_v1 = rotation_1.multVec(v)
-        u = myrandom()
-        phi = 360. * u
-        axis_2 = v
-        rotation_2 = Base.Rotation(axis_2, phi)
-        new_v2 = rotation_2.multVec(new_v1)
-        polarization_vector = self.polarization
-        new_pol_1 = rotation_1.multVec(polarization_vector)
-        new_polarization_vector = rotation_2.multVec(new_pol_1)
-        self.direction = new_v2
+        phi = 360. * myrandom()
+        new_direction = dispersion_from_main_direction(self.direction, theta, phi)
+        new_polarization_vector = dispersion_polarization(self.direction, self.polarization, theta, phi)
         self.polarization = new_polarization_vector
+        self.direction = new_direction
 
     def apply_dispersion(self, properties, normal_vector):
         if properties.get('sigma_1', None):
@@ -210,12 +188,13 @@ def reflection(incident, normal_vector, polarization_vector):
 
 
 @traced(logger)
-def lambertian_reflection(incident, normal_vector):
+def total_lambertian_reflection(incident, normal_vector, polarization_vector):
     """
-    Implementation of lambertian reflection for diffusely reflecting surface
+    Implementation of lambertian reflection for total diffusely reflecting surface
 
     Parameters
     ----------
+    polarization_vector
     incident : Base.Vector
         vector incident
     normal_vector : Base.Vector
@@ -240,7 +219,48 @@ def lambertian_reflection(incident, normal_vector):
 
 
 @traced(logger)
-def refraction(incident, normal_vector, n1, n2, polarization_vector, lambertian_surface=False):
+def cosine_lambertian_reflection(incident, normal_vector, polarization_vector):
+    """
+    Implementation of cosine reflector for diffusely reflecting surface
+
+    Parameters
+    ----------
+    incident : Base.Vector
+        vector incident
+    normal_vector : Base.Vector
+        vector normal to the surface
+
+    Returns
+    -------
+    OpticalState
+        optical state of the reflected ray
+    """
+    normal = correct_normal(normal_vector, incident)
+    theta = np.arcsin(myrandom()) * 180 / np.pi
+    phi = 360. * myrandom()
+    new_direction = dispersion_from_main_direction(normal, theta, phi)
+    new_polarization_vector = dispersion_polarization(normal, polarization_vector, theta, phi)
+    return OpticalState(new_polarization_vector,
+                        new_direction, Phenomenon.REFLEXION)  # TODO: Set solid
+
+
+@traced(logger)
+def reflection_hub(incident, normal_vector, polarization_vector,
+                   lambertian_weight=0, lambertian_kind=None):
+    if myrandom() < lambertian_weight:
+        # no lambertian phenomenon
+        return reflection(incident, normal_vector, polarization_vector)
+    elif lambertian_kind == "Total":
+        return total_lambertian_reflection(incident, normal_vector, polarization_vector)
+    elif lambertian_kind == "Cosine":
+        return cosine_lambertian_reflection(incident, normal_vector, polarization_vector)
+    else:
+        raise f"Lambertian kind {lambertian_kind} not implemented"
+
+
+@traced(logger)
+def refraction(incident, normal_vector, n1, n2, polarization_vector,
+               lambertian_weight=0, lambertian_kind=None):
     """Implementation of Fresnel equations of refraction
 
     Parameters
@@ -255,8 +275,8 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, lambertian_
         complex refractive index of nearby material
     polarization_vector: Base.Vector
         Polarization vector of the ray
-    lambertian_surface: Bool
-        Indicates if the surface has lambertian reflection
+    lambertian_weight: Float
+        Probability that the surface acts as Lambertian (0=never; 1=always)
 
     Returns
     -------
@@ -273,10 +293,8 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, lambertian_
     # cos (refracted_angle) ** 2
     if c2sq.real < 0:
         # total internal reflection
-        if not lambertian_surface:
-            return reflection(incident, normal, polarization_vector)
-        else:
-            return lambertian_reflection(incident, normal)
+        return reflection_hub(incident, normal, polarization_vector,
+                              lambertian_weight, lambertian_kind)
     c2 = sqrt(c2sq)
     # cos (refracted_angle)
     parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident,
@@ -299,24 +317,26 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, lambertian_
         polarization_vector = normalize(parallel_v)
     # The ray can be reflected or refracted 
     if myrandom() < reflectance.real:
-        # ray reflected
-        if not lambertian_surface:
-            reflected_direction = simple_reflection(incident, normal)
-            if not perpendicular_polarized:
-                # reflection changes the parallel component of incident polarization
-                polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane,
-                                                                     polarization_vector)
-            return OpticalState(polarization_vector, reflected_direction,
-                                Phenomenon.REFLEXION)  # TODO: Set solid
-        else:
-            return lambertian_reflection(incident, normal)
+        return reflection_hub(incident, normal, polarization_vector,
+                              lambertian_weight, lambertian_kind)
+        # TODO: Revisar el que hi havia!!!
+        # # ray reflected
+        # if not lambertian_surface:
+        #     reflected_direction = simple_reflection(incident, normal)
+        #     if not perpendicular_polarized:
+        #         # reflection changes the parallel component of incident polarization
+        #         polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane,
+        #                                                              polarization_vector)
+        #     return OpticalState(polarization_vector, reflected_direction,
+        #                         Phenomenon.REFLEXION)  # TODO: Set solid
+        # else:
+        #     return lambertian_reflection(incident, normal)
     else:
         # ray refracted: computing the refracted direction
         if c2.real > 1:
             # avoiding invalid solutions for metallic materials
             c2 = 1
-        refracted_direction = incident * r.real + \
-                              normal * (r.real * c1 - c2.real)
+        refracted_direction = incident * r.real + normal * (r.real * c1 - c2.real)
         refracted_direction.normalize()
         if not perpendicular_polarized:
             # refraction changes the parallel component of incident polarization
@@ -327,7 +347,8 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector, lambertian_
 
 
 @traced(logger)
-def shure_refraction(incident, normal_vector, n1, n2, polarization_vector, lambertian_surface=False):
+def shure_refraction(incident, normal_vector, n1, n2, polarization_vector,
+                     lambertian_weight=0, lambertian_kind=None):
     """Implementation of Snell's law of refraction
 
     Parameters
@@ -342,8 +363,8 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector, lambe
         complex refractive index of nearby material
     polarization_vector: Base.Vector
         Polarization vector of the ray
-    lambertian_surface: Bool
-        Indicates if the surface has lambertian reflection
+    lambertian_weight: Float
+        Probability that the surface acts as lambertian
 
     Returns
     -------
@@ -359,10 +380,8 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector, lambe
     # cos (refracted_angle) ** 2
     if c2sq.real < 0:
         # total internal reflection
-        if not lambertian_surface:
-            return reflection(incident, normal, polarization_vector)
-        else:
-            return lambertian_reflection(incident, normal)
+        return reflection_hub(incident, normal, polarization_vector,
+                              lambertian_weight, lambertian_kind)
     c2 = sqrt(c2sq)
     # cos (refracted_angle)
     if c2.real > 1:

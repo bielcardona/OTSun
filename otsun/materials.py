@@ -8,9 +8,9 @@ for specific materials.
 import json
 import zipfile
 from FreeCAD import Base
-from .optics import Phenomenon, OpticalState, reflection, refraction, matrix_reflectance, \
+from .optics import Phenomenon, OpticalState, refraction, matrix_reflectance, \
     calculate_reflectance, simple_polarization_reflection, simple_polarization_refraction, \
-    simple_reflection, shure_refraction, lambertian_reflection
+    simple_reflection, shure_refraction, reflection_hub, reflection
 from .math import arccos, parallel_orthogonal_components, rad_to_deg, myrandom, normalize, \
     constant_function, correct_normal, tabulated_function
 from numpy import sqrt
@@ -750,10 +750,10 @@ class SurfaceMaterial(Material):
         if phenomenon == Phenomenon.REFLEXION:
             polarization_vector = ray.current_polarization()
             incident = ray.current_direction()
-            if self.properties.get('lambertian_material', False):
-                state = lambertian_reflection(ray.current_direction(), normal_vector)
-            else:
-                state = reflection(incident, normal_vector, polarization_vector)
+            lambertian_weight = self.properties.get('lambertian_weight', 0)
+            lambertian_kind = self.properties.get('lambertian_kind', None)
+            state = reflection_hub(incident, normal_vector, polarization_vector,
+                                   lambertian_weight, lambertian_kind)
             state.material = ray.current_medium()  # TODO: Set solid
             state.apply_dispersion(properties, normal_vector)
             return state
@@ -778,9 +778,11 @@ class SurfaceMaterial(Material):
                                      Phenomenon.REFRACTION,
                                      nearby_material)  # TODO: Set solid
             else:
+                lambertian_weight = self.properties.get('lambertian_weight',0)
+                lambertian_kind = self.properties.get('lambertian_kind', None)
                 state = shure_refraction(ray.current_direction(), normal_vector,
                                          n1, n2, ray.current_polarization(),
-                                         self.properties.get('lambertian_material', False))
+                                         lambertian_weight, lambertian_kind)
                 state.material = nearby_material  # TODO: Set solid
             return state
 
@@ -1213,7 +1215,10 @@ class MetallicLambertianLayer(MetallicLayer):
         n1 = ray.current_medium().get_n(ray.wavelength)
         n2 = self.get_n(ray.wavelength)
         incident = ray.current_direction()
-        state = refraction(incident, normal_vector, n1, n2, polarization_vector, True)
+        lambertian_weight = 1
+        lambertian_kind = "Total" # TODO: Modify!
+        state = refraction(incident, normal_vector, n1, n2, polarization_vector,
+                           lambertian_weight, lambertian_kind)
         if state.phenomenon == Phenomenon.REFLEXION:
             state.material = ray.current_medium()  # TODO: Set solid
             return state
