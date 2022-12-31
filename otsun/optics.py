@@ -180,8 +180,7 @@ def simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, 
 
 
 @traced(logger)
-def reflection(incident, normal_vector, polarization_vector,
-               polarization_vector_calculated_before=False):
+def reflection(incident, normal_vector, polarization_vector):
     """
     Implementation of law of reflection for incident and polarization vector.
 
@@ -193,8 +192,6 @@ def reflection(incident, normal_vector, polarization_vector,
         vector normal to the surface
     polarization_vector: Base.Vector
         Polarization vector of the ray
-    polarization_vector_calculated_before : bool
-        True if the polarization vector was computed before
 
     Returns
     -------
@@ -204,12 +201,11 @@ def reflection(incident, normal_vector, polarization_vector,
     normal = correct_normal(normal_vector, incident)
     reflected = simple_reflection(incident, normal)
     # reflection changes the polarization vector
-    if not polarization_vector_calculated_before:
-        # we calculate the new polarization vector
-        parallel_v, perpendicular_v, normal_parallel_plane = \
-            parallel_orthogonal_components(polarization_vector, incident, normal)
-        polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane,
-                                                             polarization_vector)
+    # we calculate the new polarization vector
+    parallel_v, perpendicular_v, normal_parallel_plane = \
+        parallel_orthogonal_components(polarization_vector, incident, normal)
+    polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane,
+                                                         polarization_vector)
     return OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION)  # TODO: Set solid
 
 

@@ -753,7 +753,7 @@ class SurfaceMaterial(Material):
             if self.properties.get('lambertian_material', False):
                 state = lambertian_reflection(ray.current_direction(), normal_vector)
             else:
-                state = reflection(incident, normal_vector, polarization_vector, False)
+                state = reflection(incident, normal_vector, polarization_vector)
             state.material = ray.current_medium()  # TODO: Set solid
             state.apply_dispersion(properties, normal_vector)
             return state
@@ -1105,7 +1105,7 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         reflectance = 1.0 - absorption
         if myrandom() < reflectance:
             polarization_vector = ray.current_polarization()
-            state = reflection(ray.current_direction(), normal_vector, polarization_vector, False)
+            state = reflection(ray.current_direction(), normal_vector, polarization_vector)
             state.material = ray.current_medium()  # TODO: Set solid
             return state
         else:
