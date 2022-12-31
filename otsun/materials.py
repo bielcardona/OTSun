@@ -38,7 +38,7 @@ def load_from_txt_or_csv(file):
         comment='#',
         engine='python'
     ).interpolate(method='index')
-    df.insert(0,0,df.index)
+    df.insert(0, 0, df.index)
     return df.values
 
 
@@ -327,6 +327,19 @@ class Material(object):
             f.write(',\n'.join(Material.all_to_json()))
             f.write('\n]')
 
+    def get_lambertian_weight_and_kind(self):
+        if 'lambertian_material' in self.properties:
+            # For backwards compatibility. In a previous version only "pure" lambertian
+            # with total dispersion was considered
+            if self.properties['lambertian_material']:
+                weight, kind = 1, "Total"
+            else:
+                weight, kind = 0, None
+        else:
+            weight = self.properties.get('lambertian_weight', 0)
+            kind = self.properties.get('lambertian_kind', None)
+        return weight, kind
+
 
 @traced(logger)
 class VolumeMaterial(Material):
@@ -604,7 +617,7 @@ class PolarizedThinFilm(VolumeMaterial):
         # cos (refracted_angle)
         if c2.real > 1:
             # avoiding invalid solutions
-            c2 = 1        
+            c2 = 1
         parallel_v, perpendicular_v, normal_parallel_plane = \
             parallel_orthogonal_components(polarization_vector, incident, normal)
         # parallel and perpendicular components of polarization vector
@@ -688,6 +701,7 @@ class PolarizedThinFilm(VolumeMaterial):
 
 vacuum_medium = SimpleVolumeMaterial("Vacuum", 1.0, 0.0)
 
+
 @traced(logger)
 class SurfaceMaterial(Material):
     """
@@ -750,8 +764,7 @@ class SurfaceMaterial(Material):
         if phenomenon == Phenomenon.REFLEXION:
             polarization_vector = ray.current_polarization()
             incident = ray.current_direction()
-            lambertian_weight = self.properties.get('lambertian_weight', 0)
-            lambertian_kind = self.properties.get('lambertian_kind', None)
+            lambertian_weight, lambertian_kind = self.get_lambertian_weight_and_kind()
             state = reflection_hub(incident, normal_vector, polarization_vector,
                                    lambertian_weight, lambertian_kind)
             state.material = ray.current_medium()  # TODO: Set solid
@@ -778,8 +791,7 @@ class SurfaceMaterial(Material):
                                      Phenomenon.REFRACTION,
                                      nearby_material)  # TODO: Set solid
             else:
-                lambertian_weight = self.properties.get('lambertian_weight',0)
-                lambertian_kind = self.properties.get('lambertian_kind', None)
+                lambertian_weight, lambertian_kind = self.get_lambertian_weight_and_kind()
                 state = shure_refraction(ray.current_direction(), normal_vector,
                                          n1, n2, ray.current_polarization(),
                                          lambertian_weight, lambertian_kind)
@@ -916,7 +928,7 @@ class AbsorberLambertianLayer(SurfaceMaterial):
     Subclass of `SurfaceMaterial` for absorber layers with lambertian behaviour when reflecting rays.
     """
 
-    def __init__(self, name, poa):
+    def __init__(self, name, poa, weight=1, kind="Total"):
         plain_properties = {
             'probability_of_reflection': {
                 'type': 'constant',
@@ -934,10 +946,14 @@ class AbsorberLambertianLayer(SurfaceMaterial):
                 'type': 'scalar',
                 'value': True
             },
-            'lambertian_material': {
+            'lambertian_weight': {
                 'type': 'scalar',
-                'value': True
-            }
+                'value': weight
+            },
+            'lambertian_kind': {
+                'type': 'scalar',
+                'value': kind
+            },
         }
         properties = Material.plain_properties_to_properties(plain_properties)
         super(AbsorberLambertianLayer, self).__init__(name, properties)
@@ -994,7 +1010,7 @@ class ReflectorLambertianLayer(SurfaceMaterial):
     Subclass of `SurfaceMaterial` for reflector layers with lambertian behaviour.
     """
 
-    def __init__(self, name, por):
+    def __init__(self, name, por, weight=1, kind="Total"):
         plain_properties = {
             'probability_of_reflection': {
                 'type': 'constant',
@@ -1012,9 +1028,13 @@ class ReflectorLambertianLayer(SurfaceMaterial):
                 'type': 'scalar',
                 'value': False
             },
-            'lambertian_material': {
+            'lambertian_weight': {
                 'type': 'scalar',
-                'value': True
+                'value': weight
+            },
+            'lambertian_kind': {
+                'type': 'scalar',
+                'value': kind
             },
         }
         properties = Material.plain_properties_to_properties(plain_properties)
@@ -1188,7 +1208,7 @@ class MetallicLambertianLayer(MetallicLayer):
     Subclass of `MetallicLayer` for metallic layers with lambertian behaviour.
     """
 
-    def __init__(self, name, file_index_of_refraction):
+    def __init__(self, name, file_index_of_refraction, weight=1, kind="Total"):
         # file_index_of_refraction with three columns:
         # wavelenth in nm, real(index of refraction),
         # imaginary(index of refraction)
@@ -1206,6 +1226,14 @@ class MetallicLambertianLayer(MetallicLayer):
                 'type': 'tabulated',
                 'value': [wavelength_values, k_values]
             },
+            'lambertian_weight': {
+                'type': 'scalar',
+                'value': weight
+            },
+            'lambertian_kind': {
+                'type': 'scalar',
+                'value': kind
+            },
         }
         properties = Material.plain_properties_to_properties(plain_properties)
         super(MetallicLambertianLayer, self).__init__(name, properties)
@@ -1215,8 +1243,7 @@ class MetallicLambertianLayer(MetallicLayer):
         n1 = ray.current_medium().get_n(ray.wavelength)
         n2 = self.get_n(ray.wavelength)
         incident = ray.current_direction()
-        lambertian_weight = 1
-        lambertian_kind = "Total" # TODO: Modify!
+        lambertian_weight, lambertian_kind = self.get_lambertian_weight_and_kind()
         state = refraction(incident, normal_vector, n1, n2, polarization_vector,
                            lambertian_weight, lambertian_kind)
         if state.phenomenon == Phenomenon.REFLEXION:
