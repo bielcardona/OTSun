@@ -7,6 +7,7 @@ from FreeCAD import Base
 import numpy as np
 from .math import arccos, myrandom, one_orthogonal_vector, correct_normal, \
     parallel_orthogonal_components, rad_to_deg, normalize
+from .movements import axial_rotation_from_vector_and_image
 from enum import Enum
 from numpy.lib.scimath import sqrt
 from autologging import traced
@@ -135,6 +136,17 @@ class OpticalState(object):
 
 @traced(logger)
 def simple_reflection(incident, normal):
+    """
+    Returns the reflection of the vector `incident` on a surface orthogonal to `normal`
+    Parameters
+    ----------
+    incident : Base.Vector
+    normal : Base.Vector
+
+    Returns
+    -------
+    Base.Vector
+    """
     normal = correct_normal(normal, incident)
     c1 = - normal.dot(incident)
     reflected = incident + normal * 2.0 * c1
@@ -143,6 +155,23 @@ def simple_reflection(incident, normal):
 
 @traced(logger)
 def simple_polarization_reflection(incident, normal, normal_parallel_plane, polarization):
+    """
+    Returns the polarization vector of a ray that hits a surface (orthogonal to `normal`) with vector `incident`
+    and polarization `polarization`.
+    The component of `polarization` in the direction of `normal_parallel_plane` does not change, while the other
+    component is reflected (or rotated, equivalently). The overall result is a rotation.
+    NOTE: The parameter `normal_parallel_plane` is redundant, since it is incident.cross(normal)
+    Parameters
+    ----------
+    incident : Base.Vector
+    normal : Base.Vector
+    normal_parallel_plane : Base.Vector
+    polarization : Base.Vector
+
+    Returns
+    -------
+    Base.Vector
+    """
     c1 = - normal.dot(incident)
     angle = rad_to_deg(np.pi - 2.0 * arccos(c1))
     rotation = Base.Rotation(normal_parallel_plane, angle)
@@ -151,16 +180,49 @@ def simple_polarization_reflection(incident, normal, normal_parallel_plane, pola
 
 @traced(logger)
 def simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, polarization_vector):
+    """
+    Returns the polarization vector of a ray that hits a surface (orthogonal to `normal`) with vector `incident`
+    and polarization `polarization` and gets refracted.
+    The parameter `c2` is the cosine of the angle of the refracted ray.
+
+    The component of `polarization` in the direction of `normal_parallel_plane` does not change, while the other
+    component is rotated. The overall result is a rotation.
+    NOTE: The parameter `normal_parallel_plane` is redundant, since it is incident.cross(normal)
+    Parameters
+    ----------
+    incident : Base.Vector
+    normal : Base.Vector
+    normal_parallel_plane : Base.Vector
+    c2 : float
+    polarization_vector : Base.Vector
+
+    Returns
+    -------
+    Base.Vector
+    """
     c1 = - normal.dot(incident)
     angle = rad_to_deg(arccos(c2.real) - arccos(c1))
     rotation = Base.Rotation(normal_parallel_plane, angle)
     return rotation.multVec(polarization_vector)
 
+@traced(logger)
+def outgoing_polarization(incident_vector, incident_polarization, outgoing_vector):
+    angle = incident_vector.getAngle(outgoing_vector)
+    try:
+        normal = incident_vector.cross(outgoing_vector)
+        normal.normalize()
+    except Base.FreeCADError:
+        # we assume now that the two vectors are collinear
+        normal = one_orthogonal_vector(incident_vector)
+    rotation = Base.Rotation(normal, angle)
+    return rotation.multVec(incident_polarization)
+
 
 @traced(logger)
 def reflection(incident, normal_vector, polarization_vector):
     """
-    Implementation of law of reflection for incident and polarization vector.
+    Returns the OpticalState of a ray with direction `incident` and polarized in `polarization_vector` after
+    being reflected on a surface orthogonal to `normal_vector`
 
     Parameters
     ----------
@@ -180,17 +242,20 @@ def reflection(incident, normal_vector, polarization_vector):
     reflected = simple_reflection(incident, normal)
     # reflection changes the polarization vector
     # we calculate the new polarization vector
-    parallel_v, perpendicular_v, normal_parallel_plane = \
-        parallel_orthogonal_components(polarization_vector, incident, normal)
-    polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane,
-                                                         polarization_vector)
-    return OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION)  # TODO: Set solid
+    ###parallel_v, perpendicular_v, normal_parallel_plane = \
+    ###    parallel_orthogonal_components(polarization_vector, incident, normal)
+    ### TODO: La linea anterior no cal... només s'empra el normal i es pot calcular després
+    polarization_vector_out = outgoing_polarization(incident, polarization_vector, reflected)
+    ###polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane,
+    ###                                                     polarization_vector)
+    return OpticalState(polarization_vector_out, reflected, Phenomenon.REFLEXION)  # TODO: Set solid
 
 
 @traced(logger)
 def total_lambertian_reflection(incident, normal_vector, polarization_vector):
     """
-    Implementation of lambertian reflection for total diffusely reflecting surface
+    Returns the OpticalState of a ray with direction `incident` and polarized in `polarization_vector` after
+    being reflected on a surface orthogonal to `normal_vector` with isotropic lambertian properties.
 
     Parameters
     ----------
@@ -221,7 +286,8 @@ def total_lambertian_reflection(incident, normal_vector, polarization_vector):
 @traced(logger)
 def cosine_lambertian_reflection(incident, normal_vector, polarization_vector):
     """
-    Implementation of cosine reflector for diffusely reflecting surface
+    Returns the OpticalState of a ray with direction `incident` and polarized in `polarization_vector` after
+    being reflected on a surface orthogonal to `normal_vector` with cosine-law lambertian properties.
 
     Parameters
     ----------
@@ -247,7 +313,7 @@ def cosine_lambertian_reflection(incident, normal_vector, polarization_vector):
 @traced(logger)
 def reflection_hub(incident, normal_vector, polarization_vector,
                    lambertian_weight=0, lambertian_kind=None):
-    if myrandom() < lambertian_weight:
+    if myrandom() >= lambertian_weight:
         # no lambertian phenomenon
         return reflection(incident, normal_vector, polarization_vector)
     elif lambertian_kind == "Total":
@@ -255,13 +321,18 @@ def reflection_hub(incident, normal_vector, polarization_vector,
     elif lambertian_kind == "Cosine":
         return cosine_lambertian_reflection(incident, normal_vector, polarization_vector)
     else:
-        raise f"Lambertian kind {lambertian_kind} not implemented"
+        raise Exception(f"Lambertian kind {lambertian_kind} not implemented")
 
 
 @traced(logger)
 def refraction(incident, normal_vector, n1, n2, polarization_vector,
                lambertian_weight=0, lambertian_kind=None):
-    """Implementation of Fresnel equations of refraction
+    """
+    Returns the OpticalState of a ray that hits the surface (orthogonal to `normal_vector`) that is the interface
+    between mediums of refractive indices `n1` and `n2`, with direction `incident` and polarized in
+    `polarization_vector`. In case of reflection, the surface acts as a lambertian layer with probability
+    `lambertian_weight` and of kind `lambertian_kind` (either "Total" or "Cosine").
+
 
     Parameters
     ----------
@@ -277,7 +348,7 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector,
         Polarization vector of the ray
     lambertian_weight: Float
         Probability that the surface acts as Lambertian (0=never; 1=always)
-
+    lambertian_kind: str
     Returns
     -------
     OpticalState
@@ -338,11 +409,12 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector,
             c2 = 1
         refracted_direction = incident * r.real + normal * (r.real * c1 - c2.real)
         refracted_direction.normalize()
-        if not perpendicular_polarized:
+        polarization_vector_out = outgoing_polarization(incident, polarization_vector, refracted_direction)
+        ###if not perpendicular_polarized:
             # refraction changes the parallel component of incident polarization
-            polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2,
-                                                                 polarization_vector)
-        return OpticalState(polarization_vector, refracted_direction,
+            ### polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2,
+            ###                                                     polarization_vector)
+        return OpticalState(polarization_vector_out, refracted_direction,
                             Phenomenon.REFRACTION)  # TODO: Set solid
 
 
@@ -393,9 +465,10 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector,
     # ray refracted: computing the refracted direction
     refracted_direction = incident * r.real + normal * (r.real * c1 - c2.real)
     refracted_direction.normalize()
-    polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2,
-                                                         polarization_vector)
-    return OpticalState(polarization_vector, refracted_direction,
+    polarization_vector_out = outgoing_polarization(incident, polarization_vector, refracted_direction)
+    # polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2,
+    #                                                      polarization_vector)
+    return OpticalState(polarization_vector_out, refracted_direction,
                         Phenomenon.REFRACTION)  # TODO: Set solid
 
 
@@ -443,7 +516,7 @@ def dispersion_polarization(main_direction, polarization_vector, theta, phi):
 @traced(logger)
 def random_polarization(direction):
     """
-    Returns a random polarization orthogonal to the given direction
+    Returns a random polarization vector, orthogonal to `direction`
     """
     orthogonal_vector = one_orthogonal_vector(direction)
     phi = 360.0 * myrandom()

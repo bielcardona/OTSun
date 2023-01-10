@@ -9,8 +9,7 @@ import json
 import zipfile
 from FreeCAD import Base
 from .optics import Phenomenon, OpticalState, refraction, matrix_reflectance, \
-    calculate_reflectance, simple_polarization_reflection, simple_polarization_refraction, \
-    simple_reflection, shure_refraction, reflection_hub, reflection
+    calculate_reflectance, shure_refraction, reflection_hub, reflection, outgoing_polarization
 from .math import arccos, parallel_orthogonal_components, rad_to_deg, myrandom, normalize, \
     constant_function, correct_normal, tabulated_function
 from numpy import sqrt
@@ -645,13 +644,14 @@ class PolarizedThinFilm(VolumeMaterial):
             polarization_vector = normalize(parallel_v)
         if myrandom() < reflectance:
             # ray reflected
-            reflected_direction = simple_reflection(incident, normal).normalize()
-            if not perpendicular_polarized:
-                # reflection changes the parallel component of incident polarization
-                polarization_vector = simple_polarization_reflection(
-                    incident, normal, normal_parallel_plane, polarization_vector)
-            return 0.0, OpticalState(polarization_vector, reflected_direction,
-                                     Phenomenon.REFLEXION)  # TODO: Set solid
+            return 0.0, reflection(incident, normal, polarization_vector)
+            # reflected_direction = simple_reflection(incident, normal).normalize()
+            # if not perpendicular_polarized:
+            #     # reflection changes the parallel component of incident polarization
+            #     polarization_vector = simple_polarization_reflection(
+            #         incident, normal, normal_parallel_plane, polarization_vector)
+            # return 0.0, OpticalState(polarization_vector, reflected_direction,
+            #                          Phenomenon.REFLEXION)  # TODO: Set solid
         else:
             # ray refracted: computing the refracted direction and energy absorbed in the thinfilm
             transmittance_matrix = properties['Matrix_transmittance_thin_film']
@@ -664,13 +664,14 @@ class PolarizedThinFilm(VolumeMaterial):
             factor_energy_absorbed = (1 - reflectance - transmittance) / (1 - reflectance)
             refracted_direction = incident * r.real + normal * (r.real * c1 - c2.real)
             refracted_direction.normalize()
-            if not perpendicular_polarized:
-                # refraction changes the parallel component of incident polarization
-                polarization_vector = \
-                    simple_polarization_refraction(
-                        incident, normal, normal_parallel_plane, c2, polarization_vector)
+            polarization_vector_out = outgoing_polarization(incident, polarization_vector, refracted_direction)
+            # if not perpendicular_polarized:
+            #     # refraction changes the parallel component of incident polarization
+            #     polarization_vector = \
+            #         simple_polarization_refraction(
+            #             incident, normal, normal_parallel_plane, c2, polarization_vector)
             return (factor_energy_absorbed,
-                    OpticalState(polarization_vector, refracted_direction,
+                    OpticalState(polarization_vector_out, refracted_direction,
                                  Phenomenon.REFRACTION))  # TODO: Set solid
 
     def change_of_optical_state(self, ray, normal_vector):
@@ -1293,12 +1294,13 @@ class PolarizedCoatingLayer(SurfaceMaterial):
             polarization_vector = normalize(parallel_v)
         if myrandom() < reflectance:
             # ray reflected
-            reflected = simple_reflection(incident, normal).normalize()
-            if not perpendicular_polarized:
-                # reflection changes the parallel component of incident polarization
-                polarization_vector = simple_polarization_reflection(
-                    incident, normal, normal_parallel_plane, polarization_vector)
-            state = OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION, self)
+            state = reflection(incident, normal, polarization_vector)
+            # reflected = simple_reflection(incident, normal).normalize()
+            # if not perpendicular_polarized:
+            #     # reflection changes the parallel component of incident polarization
+            #     polarization_vector = simple_polarization_reflection(
+            #         incident, normal, normal_parallel_plane, polarization_vector)
+            # state = OpticalState(polarization_vector, reflected, Phenomenon.REFLEXION, self)
             state.material = ray.current_medium()  # TODO: Set solid
             state.apply_dispersion(properties, normal_vector)
             return state
@@ -1468,12 +1470,13 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             factor_energy_absorbed = (1 - reflectance - transmittance) / (1 - reflectance)
             refracted_direction = incident * r.real + normal * (r.real * c1 - c2.real)
             refracted_direction.normalize()
-            if not perpendicular_polarized:
-                # refraction changes the parallel component of incident polarization
-                polarization_vector = \
-                    simple_polarization_refraction(
-                        incident, normal, normal_parallel_plane, c2, polarization_vector)
-            optical_state = OpticalState(polarization_vector, refracted_direction,
+            polarization_vector_out = outgoing_polarization(incident, polarization_vector, refracted_direction)
+            # if not perpendicular_polarized:
+            #     # refraction changes the parallel component of incident polarization
+            #     polarization_vector = \
+            #         simple_polarization_refraction(
+            #             incident, normal, normal_parallel_plane, c2, polarization_vector)
+            optical_state = OpticalState(polarization_vector_out, refracted_direction,
                                          Phenomenon.REFRACTION, nearby_material)  # TODO: Set solid
             optical_state.extra_data['factor_energy_absorbed'] = \
                 factor_energy_absorbed
