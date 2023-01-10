@@ -5,9 +5,8 @@ Implementation of optical effects on rays
 
 from FreeCAD import Base
 import numpy as np
-from .math import arccos, myrandom, one_orthogonal_vector, correct_normal, \
-    parallel_orthogonal_components, rad_to_deg, normalize
-from .movements import axial_rotation_from_vector_and_image
+from .math import myrandom, one_orthogonal_vector, correct_normal, \
+    parallel_orthogonal_components, normalize
 from enum import Enum
 from numpy.lib.scimath import sqrt
 from autologging import traced
@@ -188,14 +187,7 @@ def reflection(incident, normal_vector, polarization_vector):
     """
     normal = correct_normal(normal_vector, incident)
     reflected = simple_reflection(incident, normal)
-    # reflection changes the polarization vector
-    # we calculate the new polarization vector
-    ###parallel_v, perpendicular_v, normal_parallel_plane = \
-    ###    parallel_orthogonal_components(polarization_vector, incident, normal)
-    ### TODO: La linea anterior no cal... només s'empra el normal i es pot calcular després
     polarization_vector_out = outgoing_polarization(incident, polarization_vector, reflected)
-    ###polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane,
-    ###                                                     polarization_vector)
     return OpticalState(polarization_vector_out, reflected, Phenomenon.REFLEXION)  # TODO: Set solid
 
 
@@ -338,18 +330,6 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector,
     if myrandom() < reflectance.real:
         return reflection_hub(incident, normal, polarization_vector,
                               lambertian_weight, lambertian_kind)
-        # TODO: Revisar el que hi havia!!!
-        # # ray reflected
-        # if not lambertian_surface:
-        #     reflected_direction = simple_reflection(incident, normal)
-        #     if not perpendicular_polarized:
-        #         # reflection changes the parallel component of incident polarization
-        #         polarization_vector = simple_polarization_reflection(incident, normal, normal_parallel_plane,
-        #                                                              polarization_vector)
-        #     return OpticalState(polarization_vector, reflected_direction,
-        #                         Phenomenon.REFLEXION)  # TODO: Set solid
-        # else:
-        #     return lambertian_reflection(incident, normal)
     else:
         # ray refracted: computing the refracted direction
         if c2.real > 1:
@@ -358,10 +338,6 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector,
         refracted_direction = incident * r.real + normal * (r.real * c1 - c2.real)
         refracted_direction.normalize()
         polarization_vector_out = outgoing_polarization(incident, polarization_vector, refracted_direction)
-        ###if not perpendicular_polarized:
-            # refraction changes the parallel component of incident polarization
-            ### polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2,
-            ###                                                     polarization_vector)
         return OpticalState(polarization_vector_out, refracted_direction,
                             Phenomenon.REFRACTION)  # TODO: Set solid
 
@@ -414,8 +390,6 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector,
     refracted_direction = incident * r.real + normal * (r.real * c1 - c2.real)
     refracted_direction.normalize()
     polarization_vector_out = outgoing_polarization(incident, polarization_vector, refracted_direction)
-    # polarization_vector = simple_polarization_refraction(incident, normal, normal_parallel_plane, c2,
-    #                                                      polarization_vector)
     return OpticalState(polarization_vector_out, refracted_direction,
                         Phenomenon.REFRACTION)  # TODO: Set solid
 
