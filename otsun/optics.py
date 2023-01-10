@@ -154,58 +154,6 @@ def simple_reflection(incident, normal):
 
 
 @traced(logger)
-def simple_polarization_reflection(incident, normal, normal_parallel_plane, polarization):
-    """
-    Returns the polarization vector of a ray that hits a surface (orthogonal to `normal`) with vector `incident`
-    and polarization `polarization`.
-    The component of `polarization` in the direction of `normal_parallel_plane` does not change, while the other
-    component is reflected (or rotated, equivalently). The overall result is a rotation.
-    NOTE: The parameter `normal_parallel_plane` is redundant, since it is incident.cross(normal)
-    Parameters
-    ----------
-    incident : Base.Vector
-    normal : Base.Vector
-    normal_parallel_plane : Base.Vector
-    polarization : Base.Vector
-
-    Returns
-    -------
-    Base.Vector
-    """
-    c1 = - normal.dot(incident)
-    angle = rad_to_deg(np.pi - 2.0 * arccos(c1))
-    rotation = Base.Rotation(normal_parallel_plane, angle)
-    return rotation.multVec(polarization)
-
-
-@traced(logger)
-def simple_polarization_refraction(incident, normal, normal_parallel_plane, c2, polarization_vector):
-    """
-    Returns the polarization vector of a ray that hits a surface (orthogonal to `normal`) with vector `incident`
-    and polarization `polarization` and gets refracted.
-    The parameter `c2` is the cosine of the angle of the refracted ray.
-
-    The component of `polarization` in the direction of `normal_parallel_plane` does not change, while the other
-    component is rotated. The overall result is a rotation.
-    NOTE: The parameter `normal_parallel_plane` is redundant, since it is incident.cross(normal)
-    Parameters
-    ----------
-    incident : Base.Vector
-    normal : Base.Vector
-    normal_parallel_plane : Base.Vector
-    c2 : float
-    polarization_vector : Base.Vector
-
-    Returns
-    -------
-    Base.Vector
-    """
-    c1 = - normal.dot(incident)
-    angle = rad_to_deg(arccos(c2.real) - arccos(c1))
-    rotation = Base.Rotation(normal_parallel_plane, angle)
-    return rotation.multVec(polarization_vector)
-
-@traced(logger)
 def outgoing_polarization(incident_vector, incident_polarization, outgoing_vector):
     angle = incident_vector.getAngle(outgoing_vector)
     try:
