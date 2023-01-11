@@ -664,7 +664,8 @@ class PolarizedThinFilm(VolumeMaterial):
             factor_energy_absorbed = (1 - reflectance - transmittance) / (1 - reflectance)
             refracted_direction = incident * r.real + normal * (r.real * c1 - c2.real)
             refracted_direction.normalize()
-            polarization_vector_out = outgoing_polarization(incident, polarization_vector, refracted_direction)
+            polarization_vector_out = outgoing_polarization(incident, polarization_vector,
+                                                            refracted_direction, perpendicular_polarized)
             # if not perpendicular_polarized:
             #     # refraction changes the parallel component of incident polarization
             #     polarization_vector = \
@@ -1470,7 +1471,8 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
             factor_energy_absorbed = (1 - reflectance - transmittance) / (1 - reflectance)
             refracted_direction = incident * r.real + normal * (r.real * c1 - c2.real)
             refracted_direction.normalize()
-            polarization_vector_out = outgoing_polarization(incident, polarization_vector, refracted_direction)
+            polarization_vector_out = outgoing_polarization(incident, polarization_vector,
+                                                            refracted_direction, perpendicular_polarized)
             # if not perpendicular_polarized:
             #     # refraction changes the parallel component of incident polarization
             #     polarization_vector = \

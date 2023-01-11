@@ -153,7 +153,10 @@ def simple_reflection(incident, normal):
 
 
 @traced(logger)
-def outgoing_polarization(incident_vector, incident_polarization, outgoing_vector):
+def outgoing_polarization(incident_vector, incident_polarization, outgoing_vector,
+                          perpendicularly_polarized=False):
+    if perpendicularly_polarized:
+        return incident_polarization
     angle = incident_vector.getAngle(outgoing_vector)
     try:
         normal = incident_vector.cross(outgoing_vector)
@@ -337,7 +340,8 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector,
             c2 = 1
         refracted_direction = incident * r.real + normal * (r.real * c1 - c2.real)
         refracted_direction.normalize()
-        polarization_vector_out = outgoing_polarization(incident, polarization_vector, refracted_direction)
+        polarization_vector_out = outgoing_polarization(incident, polarization_vector,
+                                                        refracted_direction, perpendicular_polarized)
         return OpticalState(polarization_vector_out, refracted_direction,
                             Phenomenon.REFRACTION)  # TODO: Set solid
 
@@ -383,8 +387,8 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector,
     if c2.real > 1:
         # avoiding invalid solutions for metallic materials
         c2 = 1
-    parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident,
-                                                                                        normal)
+    #parallel_v, perpendicular_v, normal_parallel_plane = parallel_orthogonal_components(polarization_vector, incident,
+    #                                                                                    normal)
     # parallel and perpendicular components of polarization vector and orthogonal vector of the parallel plane
     # ray refracted: computing the refracted direction
     refracted_direction = incident * r.real + normal * (r.real * c1 - c2.real)
