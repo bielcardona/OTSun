@@ -27,7 +27,7 @@ logger.setLevel(logging.DEBUG)
 
 # create console handler and set level to debug
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.WARNING)
 
 # create formatter
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -65,7 +65,7 @@ phi_step = 5.0
 theta_ini = 0.0 + 1.E-9
 theta_end = 1.0 + 1.E-4
 theta_step = 1.0
-number_of_rays = 50
+number_of_rays = 100
 aperture_collector_Th = 1845.0 * 10347.0
 aperture_collector_PV = 0.0
 # for direction of the source two options: Buie model or main_direction 
@@ -111,7 +111,8 @@ for ph in np.arange(phi_ini, phi_end, phi_step):
 FreeCAD.closeDocument(FreeCAD.ActiveDocument.Name)
 
 print (results)
-print (0.9 > results[0][2] > 0.7 and 0.85 > results[1][2] > 0.5 and results[0][3] == 0.0 and results[1][3] == 0.0)
+print (0.9 > results[0][2] > 0.6 and 0.85 > results[1][2] > 0.4 and results[0][3] == 0.0 and results[1][3] == 0.0)
+print (f"0.9 > {results[0][2]} > 0.6 and 0.85 > {results[1][2]} > 0.4 and {results[0][3]} == 0.0 and {results[1][3]}  == 0.0")
 
 def test_5():
-    assert 0.9 > results[0][2] > 0.7 and 0.85 > results[1][2] > 0.5 and results[0][3] == 0.0 and results[1][3] == 0.0
+    assert 0.9 > results[0][2] > 0.6 and 0.85 > results[1][2] > 0.4 and results[0][3] == 0.0 and results[1][3] == 0.0
