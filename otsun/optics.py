@@ -82,8 +82,8 @@ class OpticalState(object):
         u = myrandom()
         theta = (-2. * sigma_1 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
         phi = 360. * myrandom()
-        new_direction = dispersion_from_main_direction(self.direction, theta, phi)
-        new_polarization_vector = dispersion_polarization(self.direction, self.polarization, theta, phi)
+        new_direction = dispersion_from_main_direction(self.direction, 2 * theta, phi)
+        new_polarization_vector = dispersion_polarization(self.direction, self.polarization, 2 * theta, phi)
         self.polarization = new_polarization_vector
         self.direction = new_direction
 
@@ -111,8 +111,8 @@ class OpticalState(object):
         else:
             theta = (-2. * sigma_2 ** 2. * np.log(u)) ** 0.5 / 1000.0 / rad
         phi = 360. * myrandom()
-        new_direction = dispersion_from_main_direction(self.direction, theta, phi)
-        new_polarization_vector = dispersion_polarization(self.direction, self.polarization, theta, phi)
+        new_direction = dispersion_from_main_direction(self.direction, 2 * theta, phi)
+        new_polarization_vector = dispersion_polarization(self.direction, self.polarization, 2 * theta, phi)
         self.polarization = new_polarization_vector
         self.direction = new_direction
 
