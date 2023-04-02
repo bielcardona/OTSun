@@ -197,8 +197,6 @@ class Ray(object):
         filtered_faces_2 = 0
         feasible_but_empty = 0
         for face in candidates:
-            if face == self.last_touched_face:
-                continue
             bb2 = face.BoundBox
             if not _ray_may_intersect_bb(bb2, p0, direction):
                 filtered_faces_1 += 1
@@ -208,11 +206,14 @@ class Ray(object):
                 continue
             feasible_faces += 1
             punts = face.section(shape_segment).Vertexes
+            # if face == self.last_touched_face:
+            #     punts = [punt for punt in punts if p0.distanceToPoint(punt.Point) > self.scene.epsilon]
             if not punts:
                 feasible_but_empty += 1
+                continue
                 # logger.debug("feasible face but empty intersection")
             # material = self.scene.materials[face]
-            if face in self.scene.materials:
+            if (face in self.scene.materials) & (face != self.last_touched_face):
                 for punt in punts:
                     intersections.append([punt.Point, face])
             else:
