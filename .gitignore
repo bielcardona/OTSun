@@ -28,3 +28,4 @@ exportToHTML
 bootstrap_stable.sh
 .env
 .vscode
+venv
