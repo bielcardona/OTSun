@@ -16,7 +16,7 @@ class Scene:
     that interfere with light rays.
     """
 
-    def __init__(self, objects):
+    def __init__(self, objects, vacuum_material=None):
         self.objects = objects
         self.faces = []  # All the faces in the Scene
         self.solids = []  # All the solids in the Scene
@@ -27,6 +27,7 @@ class Scene:
         self.epsilon = EPSILON # Tolerance for solid containment # 2 nm.
         self.boundbox = None
         self.element_object_dict = {}
+        self.vacuum_material = vacuum_material
 
         for obj in objects:
             # noinspection PyNoneFunctionAssignment
