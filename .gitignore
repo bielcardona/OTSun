@@ -29,3 +29,4 @@ bootstrap_stable.sh
 .env
 .vscode
 venv
+.venv

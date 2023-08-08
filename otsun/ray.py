@@ -285,11 +285,11 @@ class Ray(object):
     def update_energy(self):
         material = self.current_medium()
         if (material.name == "Vacuum" and
-                self.scene.vacuum_material is not None and
+                'vacuum_material' in self.scene.extra_data and
                 len(self.points) > 2
         ):
             # implementation of dispersive vacuum after first interaction with scene
-            material = self.scene.vacuum_material
+            material = self.scene.extra_data['vacuum_material']
         # TODO: @Ramon
         point_1 = self.points[-1]
         point_2 = self.points[-2]

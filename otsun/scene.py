@@ -6,28 +6,52 @@ The module defines the class `Scene` that models the elements in an optical syst
 from .materials import Material, VolumeMaterial, SurfaceMaterial, TwoLayerMaterial
 from .logging_unit import logger
 from .math import correct_normal
+from autologging import traced
+from .logging_unit import logger
 
 EPSILON = 1E-6
 
-
+@traced(logger)
 class Scene:
     """
     Class used to define the Scene. It encodes all the objects
     that interfere with light rays.
     """
 
-    def __init__(self, objects, vacuum_material=None):
+    def __init__(self, objects, extra_data=None):
         self.objects = objects
         self.faces = []  # All the faces in the Scene
         self.solids = []  # All the solids in the Scene
         self.name_of_solid = {}
+        self.bb_of_solid = {}  # Bounding box of solid
         self.materials = {}  # Assign the materials to objects
         # self.boundaries = {}  # Assign boundary faces to solids
         # self.sum_energy = 0.0 # Energy of the Scene
         self.epsilon = EPSILON # Tolerance for solid containment # 2 nm.
         self.boundbox = None
         self.element_object_dict = {}
-        self.vacuum_material = vacuum_material
+
+        if extra_data is None:
+            self.extra_data = {}
+        else:
+            self.extra_data = extra_data
+        # Format for extra_data:
+        # extra_data['vacuum_material']: VolumeMaterial to be considered after 1st intersection
+        if 'vacuum_material' in self.extra_data:
+            vacuum_material_name = self.extra_data['vacuum_material'][0]
+            material = Material.by_name.get(vacuum_material_name, None)
+            if not material:
+                logger.warning("Material %s not found for vacuum", vacuum_material_name)
+            else:
+                self.extra_data['vacuum_material'] = material
+        if 'axis_deviation' in self.extra_data:
+            pairs_list = self.extra_data['axis_deviation'][:]
+            self.extra_data['axis_deviation'] = {}
+            iterator = iter(pairs_list)
+            pairs_iterator = zip(iterator, iterator)
+            for axis, sigma in pairs_iterator:
+                self.extra_data['axis_deviation'][axis] = sigma
+        # extra_data['axis_deviation']: Dictionary where each key is the axis in the scene and the value its std dev
 
         for obj in objects:
             # noinspection PyNoneFunctionAssignment
@@ -47,6 +71,7 @@ class Scene:
                     self.name_of_solid[solid] = obj.Label
                     self.materials[solid] = material
                     self.element_object_dict[solid] = obj
+                    self.bb_of_solid[solid] = solid.BoundBox
                 self.solids.extend(solids)
                 self.faces.extend(faces)
             elif isinstance(material, SurfaceMaterial) or isinstance(material, TwoLayerMaterial):
@@ -132,8 +157,10 @@ class Scene:
         Returns the solid that a point is inside.
         """
         for solid in self.solids:
-            if solid.isInside(point, self.epsilon, False):
-                return solid
+            bb = self.bb_of_solid[solid]
+            if bb.isInside(point):
+                if solid.isInside(point, self.epsilon, False):
+                    return solid
         return None
 
     def face_at_point(self, point):

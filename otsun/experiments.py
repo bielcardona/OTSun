@@ -5,6 +5,7 @@ run of experiments.
 """
 
 import numpy as np
+from .logging_unit import logger
 
 class Experiment:
     """
@@ -64,7 +65,8 @@ class Experiment:
 
     def run(self, show_in_doc=None):
         """Runs the experiment and plots the rays in the document specified (if any)"""
-        for _ in np.arange(0, self.number_of_rays, 1):
+        for n in np.arange(0, self.number_of_rays, 1):
+            logger.info(f"Emitting ray {n}")
             ray = self.light_source.emit_ray()
             ray.run()
             self.wavelengths.append(ray.wavelength)
