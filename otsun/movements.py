@@ -47,7 +47,7 @@ def axial_rotation_from_axis_and_angle(axis_origin, axis_dir, angle):
         Base.Placement(Base.Vector(), Base.Rotation(angle * 180.0 / pi, 0, 0)).multiply(local_cs.inverse()))
 
 
-def axial_rotation_from_vector_and_image(origin, vector0, vector1, sigma=None):
+def axial_rotation_from_vector_and_image(origin, vector0, vector1, error=0):
     """
     Returns a rotation that transforms the ray with origin and vector equals to vector0 to the ray with same
     origin and vector vector1.
@@ -59,26 +59,17 @@ def axial_rotation_from_vector_and_image(origin, vector0, vector1, sigma=None):
         # we assume now that the two vectors are collinear
         normal = one_orthogonal_vector(vector0)
     angle = vector0.getAngle(vector1)
-    if sigma is not None:
-        angle += random_normal(scale=sigma)
+    angle += error
     return axial_rotation_from_axis_and_angle(origin, normal, angle)
 
-
-# def axial_rotation_from_axis_vector_and_image(axis_origin, axis_dir, vector0, vector1, sigma=None):
-#     angle = vector0.getAngle(vector1)
-#     if sigma is not None:
-#         angle += random_normal(scale=sigma)
-#     return axial_rotation_from_axis_and_angle(axis_origin, axis_dir, angle)
-
-
 def biaxial_rotation_from_vector_and_image(origin, vector_v, vector_h, current_normal, desired_normal,
-                                           sigma_v=None, sigma_h=None):
+                                           error_v=0, error_h=0):
     # First rotate around vector_h, so that the image of vector_v is orthogonal
     # to desired_normal
     image_vector_horizontal = desired_normal.cross(vector_h)
-    g1 = axial_rotation_from_vector_and_image(origin, vector_v, image_vector_horizontal, sigma_v)
+    g1 = axial_rotation_from_vector_and_image(origin, vector_v, image_vector_horizontal, error_v)
     new_normal = apply_movement_to_vector(g1, current_normal)
-    g2 = axial_rotation_from_vector_and_image(origin, new_normal, desired_normal, sigma_h)
+    g2 = axial_rotation_from_vector_and_image(origin, new_normal, desired_normal, error_h)
     return g2.multiply(g1)
 
 
@@ -111,6 +102,10 @@ class AxialJoint(Joint):
         self.axis_origin = axis_origin
         self.axis_vector = axis_vector
         self.sigma = sigma
+        if self.sigma is not None:
+            self.error = random_normal(scale=self.sigma/1000)
+        else:
+            self.error = 0
 
     def compute_rotation_to_point(self, target, normal, light_direction):
         """
@@ -125,8 +120,7 @@ class AxialJoint(Joint):
             angle = signed_angle(self.axis_vector, normal, desired_normal)  # normal.getAngle(desired_normal)
         else:
             angle = 0
-        if self.sigma is not None:
-            angle += random_normal(scale=self.sigma)
+        angle += self.error
         return axial_rotation_from_axis_and_angle(self.axis_origin, self.axis_vector, angle)
 
     def compute_rotation_to_direction(self, normal, light_direction):
@@ -137,8 +131,7 @@ class AxialJoint(Joint):
         light_unit.normalize()
         desired_normal = light_unit * (-1.0)
         angle = signed_angle(self.axis_vector, normal, desired_normal)  # normal.getAngle(desired_normal)
-        if self.sigma is not None:
-            angle += random_normal(scale=self.sigma)
+        angle += self.error
         return axial_rotation_from_axis_and_angle(self.axis_origin, self.axis_vector, angle)
 
 
@@ -154,6 +147,15 @@ class TwoOrthogonalAxialJoint(Joint):
         self.axis_vector_horizontal = axis_vector_horizontal
         self.sigma_v = sigma_v
         self.sigma_h = sigma_h
+        if self.sigma_v is not None:
+            self.error_v = random_normal(scale=self.sigma_v/1000)
+        else:
+            self.error_v = 0
+        if self.sigma_h is not None:
+            self.error_h = random_normal(scale=self.sigma_h/1000)
+        else:
+            self.error_h = 0
+
 
     def compute_rotation_to_point(self, target, normal, light_direction):
         """
@@ -166,7 +168,7 @@ class TwoOrthogonalAxialJoint(Joint):
         desired_normal = pointing - light_unit
         return biaxial_rotation_from_vector_and_image(self.axis_origin, self.axis_vector_vertical,
                                                       self.axis_vector_horizontal, normal, desired_normal,
-                                                      self.sigma_v, self.sigma_h)
+                                                      self.error_v, self.error_h)
 
     def compute_rotation_to_direction(self, normal, light_direction):
         """
@@ -177,7 +179,7 @@ class TwoOrthogonalAxialJoint(Joint):
         desired_normal = light_unit * (-1.0)
         return biaxial_rotation_from_vector_and_image(self.axis_origin, self.axis_vector_vertical,
                                                       self.axis_vector_horizontal, normal, desired_normal,
-                                                      self.sigma_v, self.sigma_h)
+                                                      self.error_v, self.error_h)
 
 
 @traced(logger)
@@ -226,7 +228,6 @@ class MultiTracking:
         if analyze_labels:
             self.get_data_from_objects()
             self.compute_movements()
-        # TODO: Add info of sigmas to the Joints
 
     def get_object_from_label(self, label):
         return [obj2 for obj2 in self.scene.objects if obj2.Label == label][0]
@@ -277,6 +278,7 @@ class MultiTracking:
         """
         Gets all data of joints from the objects in the scene
         """
+        cached_joints = dict()
         for obj in self.scene.objects:
             labels = get_labels(obj)
             if len(labels) < 2:
@@ -291,15 +293,19 @@ class MultiTracking:
                 _, normal = self.get_point_and_vector_from_edge(objects[2])
                 sigma1 = self.get_deviation(objects[0].Label)
                 sigma2 = self.get_deviation(objects[1].Label)
-                self.object_joint_map[obj] = TwoOrthogonalAxialJoint(
-                    center, axis2_vector, axis1_vector, sigma2, sigma1)
+                if (labels[1], labels[2]) not in cached_joints:
+                    cached_joints[(labels[1], labels[2])] = TwoOrthogonalAxialJoint(
+                        center, axis2_vector, axis1_vector, sigma2, sigma1)
+                self.object_joint_map[obj] = cached_joints[(labels[1], labels[2])]
                 self.object_normal_map[obj] = normal
                 pass
             elif dimensions in [[1, 1, 0], [1, 1]]:  # Axial joint
                 axis_point, axis_vector = self.get_point_and_vector_from_edge(objects[0])
                 _, normal = self.get_point_and_vector_from_edge(objects[1])
                 sigma = self.get_deviation(objects[0].Label)
-                self.object_joint_map[obj] = AxialJoint(axis_point, axis_vector, sigma)
+                if labels[1] not in cached_joints:
+                    cached_joints[labels[1]] = AxialJoint(axis_point, axis_vector, sigma)
+                self.object_joint_map[obj] = cached_joints[labels[1]]
                 self.object_normal_map[obj] = normal
                 pass
             elif dimensions in [[0, 1, 0], [0, 1]]:  # Central joint
