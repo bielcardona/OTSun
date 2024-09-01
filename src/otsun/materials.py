@@ -15,7 +15,8 @@ from .math import arccos, parallel_orthogonal_components, rad_to_deg, myrandom, 
 from numpy import sqrt
 import numpy as np
 from autologging import traced
-from .logging_unit import logger
+import logging
+logger = logging.getLogger(__name__)
 import pandas as pd
 
 
@@ -40,6 +41,8 @@ def load_from_txt_or_csv(file):
     df.insert(0, 0, df.index)
     return df.values
 
+class MaterialNotFoundError(Exception):
+    pass
 
 @traced(logger)
 class Material(object):
@@ -145,7 +148,10 @@ class Material(object):
         end = label.find(")")
         string = label[start + 1:end]
         name = string.split(',')[0]
-        return cls.by_name.get(name, None)
+        if name in cls.by_name:
+            return cls.by_name[name]
+        else:
+            raise MaterialNotFoundError(f"Material {name} not found")
 
     @classmethod
     def create(cls, name, properties):

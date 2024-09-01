@@ -5,7 +5,8 @@ run of experiments.
 """
 
 import numpy as np
-from .logging_unit import logger
+import logging
+logger = logging.getLogger(__name__)
 
 class Experiment:
     """

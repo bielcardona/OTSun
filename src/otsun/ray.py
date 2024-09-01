@@ -4,7 +4,8 @@ The module defines the class `Ray`
 """
 
 from autologging import traced
-from .logging_unit import logger
+import logging
+logger = logging.getLogger(__name__)
 from .materials import vacuum_medium, PVMaterial, SurfaceMaterial, TwoLayerMaterial, PolarizedThinFilm
 from .optics import Phenomenon, OpticalState
 import numpy as np

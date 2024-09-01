@@ -3,11 +3,11 @@
 The module defines the class `Scene` that models the elements in an optical system
 """
 
-from .materials import Material, VolumeMaterial, SurfaceMaterial, TwoLayerMaterial
-from .logging_unit import logger
+from .materials import Material, VolumeMaterial, SurfaceMaterial, TwoLayerMaterial, MaterialNotFoundError
 from .math import correct_normal
 from autologging import traced
-from .logging_unit import logger
+import logging
+logger = logging.getLogger(__name__)
 
 EPSILON = 1E-6
 
@@ -56,9 +56,13 @@ class Scene:
         for obj in objects:
             # noinspection PyNoneFunctionAssignment
             logger.debug(f"loading object {obj.Label}")
-            material = Material.get_from_label(obj.Label)
+            try:
+                material = Material.get_from_label(obj.Label)
+            except MaterialNotFoundError as e:
+                logger.warning(f"{e}")
+                continue
             if not material:
-                logger.warning("Material not found for object %s", obj.Label)
+                logger.debug(f"Object {obj.Label} does not have a material")
                 continue
             shape = obj.Shape
             faces = shape.Faces
