@@ -1,76 +1,19 @@
-[build-system]
-requires = ["hatchling", "hatch-regex-commit"]
-build-backend = "hatchling.build"
-
-[project]
+[tool.poetry]
 name = "otsun"
-dynamic = ["version"]
-description = ''
+version = "2.12.4"
+description = ""
+authors = ["Biel Cardona <bielcardona@gmail.com>"]
 readme = "README.md"
-requires-python = ">=3.8"
-license = "MIT"
-keywords = []
-authors = [
-  { name = "Biel Cardona", email = "bielcardona@gmail.com" },
-]
-classifiers = [
-  "Development Status :: 4 - Beta",
-  "Programming Language :: Python",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: Implementation :: CPython",
-  "Programming Language :: Python :: Implementation :: PyPy",
-]
-dependencies = [
-  "numpy",
-  "autologging",
-  "scipy",
-  "pandas"
-]
+packages = [{include = "otsun", from = "src"}]
 
-[project.urls]
-Documentation = "https://github.com/unknown/otsun#readme"
-Issues = "https://github.com/unknown/otsun/issues"
-Source = "https://github.com/unknown/otsun"
+[tool.poetry.dependencies]
+python = ">=3.10"
+numpy = "^1.23"
+scipy = "^1.9.3"
+autologging = "^1.3.2"
+pandas = "^1.5.2"
+toml = "^0.10.2"
 
-[tool.hatch.version]
-source = "regex_commit"
-path = "src/otsun/__about__.py"
-commit_message = "🚀 Version {new_version}"
-tag_sign = false
-
-[tool.hatch.build]
-include = [
-    "src/**",
-    "README.md",
-    "LICENSE.txt",
-]
-exclude = [
-    "tests/**",
-    "docs/**",
-    "dist/**",
-    "build/**",
-    ".*",
-    "*.egg-info/**",
-    "*.egg/**",
-    "*.eggs/**",
-    "*.log",
-    "*.tmp",
-    "*.tmp.*",
-    "*.swp",
-    ".gitignore",
-]
-
-[tool.hatch.envs.default]
-dependencies = [
-  "pytest",
-]
-[tool.hatch.envs.default.scripts]
-test = "pytest {args:tests}"
-
-[[tool.hatch.envs.all.matrix]]
-python = ["3.8", "3.9", "3.10", "3.11", "3.12"]
-
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
