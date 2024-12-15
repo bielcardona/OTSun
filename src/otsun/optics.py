@@ -10,7 +10,8 @@ from .math import myrandom, one_orthogonal_vector, correct_normal, \
 from enum import Enum
 from numpy.lib.scimath import sqrt
 from autologging import traced
-from .logging_unit import logger
+import logging
+logger = logging.getLogger(__name__)
 
 # from .materials import Material, vacuum_medium
 

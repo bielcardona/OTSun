@@ -8,7 +8,8 @@ from numpy import pi
 from numpy.random import normal as random_normal
 
 from autologging import traced
-from .logging_unit import logger
+import logging
+logger = logging.getLogger(__name__)
 
 
 def orientation(u, v, w):
