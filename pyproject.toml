@@ -42,6 +42,28 @@ path = "src/otsun/__about__.py"
 commit_message = "🚀 Version {new_version}"
 tag_sign = false
 
+[tool.hatch.build]
+include = [
+    "src/**",
+    "README.md",
+    "LICENSE.txt",
+]
+exclude = [
+    "tests/**",
+    "docs/**",
+    "dist/**",
+    "build/**",
+    ".*",
+    "*.egg-info/**",
+    "*.egg/**",
+    "*.eggs/**",
+    "*.log",
+    "*.tmp",
+    "*.tmp.*",
+    "*.swp",
+    ".gitignore",
+]
+
 [tool.hatch.envs.default]
 dependencies = [
   "pytest",
