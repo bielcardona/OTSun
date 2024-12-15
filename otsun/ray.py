@@ -162,7 +162,7 @@ class Ray(object):
         return self.optical_states[-1].polarization
 
     def weighted_distance(self, p0, pair):
-        if pair[1] in self.scene.materials:
+        if id(pair[1]) in self.scene.materials:
             return p0.distanceToPoint(pair[0])
         else:
             return p0.distanceToPoint(pair[0]) + self.scene.epsilon
@@ -213,7 +213,7 @@ class Ray(object):
                 continue
                 # logger.debug("feasible face but empty intersection")
             # material = self.scene.materials[face]
-            if (face in self.scene.materials) & (face != self.last_touched_face):
+            if (id(face) in self.scene.materials) & (face != self.last_touched_face):
                 for punt in punts:
                     intersections.append([punt.Point, face])
             else:
@@ -254,10 +254,10 @@ class Ray(object):
         normal = face.normalAt(uv[0], uv[1])
         normal.normalize()
         nearby_solid = self.scene.next_solid_at_point_in_direction(current_point, normal, current_direction)
-        nearby_material = self.scene.materials.get(nearby_solid, vacuum_medium)
-        if face in self.scene.materials:
+        nearby_material = self.scene.materials.get(id(nearby_solid), vacuum_medium)
+        if id(face) in self.scene.materials:
             # face is active
-            material = self.scene.materials[face]
+            material = self.scene.materials[id(face)]
             # point_plus_delta = current_point + current_direction * 2 * self.scene.epsilon
             state = material.change_of_optical_state(self, normal, nearby_material)
             # TODO polarization_vector

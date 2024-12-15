@@ -69,7 +69,7 @@ class Scene:
                 for solid in solids:
                     logger.debug(f"Assigning material {material.name} to solid {solid} in {obj.Label}")
                     self.name_of_solid[solid] = obj.Label
-                    self.materials[solid] = material
+                    self.materials[id(solid)] = material
                     self.element_object_dict[solid] = obj
                     self.bb_of_solid[solid] = solid.BoundBox
                 self.solids.extend(solids)
@@ -81,7 +81,7 @@ class Scene:
                     logger.warning(f"Surface material {material.name} associated to object {obj.Label} without faces")
                 for face in faces:
                     logger.debug(f"Assigning material {material.name} to face {face} in {obj.Label}")
-                    self.materials[face] = material
+                    self.materials[id(face)] = material
                     self.element_object_dict[face] = obj
                 self.faces.extend(faces)
             else:
@@ -135,9 +135,9 @@ class Scene:
         """
         logger.debug("Removing duplicate faces")
         faces_with_material = [face for face in self.faces if
-                               face in self.materials]
+                               id(face) in self.materials]
         faces_no_material = [face for face in self.faces if
-                             face not in self.materials]
+                             id(face) not in self.materials]
         if not faces_no_material:
             logger.debug("Done Removing duplicate faces (nothing to do)")
             return
