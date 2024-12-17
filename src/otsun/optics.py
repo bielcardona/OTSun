@@ -3,10 +3,20 @@
 Implementation of optical effects on rays
 """
 
+from __future__ import annotations
+import typing
+
+if typing.TYPE_CHECKING:
+    from .materials import Material
+
+from collections.abc import Callable
+from typing import Any
+
 from FreeCAD import Base
 import numpy as np
 from .math import myrandom, one_orthogonal_vector, correct_normal, \
     parallel_orthogonal_components, normalize
+# from .materials import Material
 from enum import Enum
 from numpy.lib.scimath import sqrt
 from autologging import traced
@@ -54,21 +64,32 @@ class OpticalState(object):
         Dictionary where materials can put extra data
     """
 
-    def __init__(self, polarization, direction, phenomenon, material=None, extra_data=None):
+    def __init__(
+            self,
+            polarization : Base.Vector,
+            direction : Base.Vector,
+            phenomenon : Phenomenon,
+            material : Material | None = None,
+            extra_data: dict[str,Any] | None =None
+    ):
         self.polarization = polarization
         self.direction = direction
         self.phenomenon = phenomenon
         self.material = material  # TODO: Set solid
         if extra_data is None:
             extra_data = {}
-        self.extra_data = extra_data
+        self.extra_data: dict[str,Any] = extra_data
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "Dir.: %s, Pol.: %s, Phen.: %s" % (
             self.direction, self.polarization, self.phenomenon
         )
 
-    def apply_single_gaussian_dispersion(self, normal, sigma_1):
+    def apply_single_gaussian_dispersion(
+            self,
+            normal: Base.Vector,
+            sigma_1: float
+    ) -> None:
         """
         Apply a single gaussian dispersion to the optical state
 
@@ -88,7 +109,13 @@ class OpticalState(object):
         self.polarization = new_polarization_vector
         self.direction = new_direction
 
-    def apply_double_gaussian_dispersion(self, normal, sigma_1, sigma_2, k):
+    def apply_double_gaussian_dispersion(
+            self,
+            normal: Base.Vector,
+            sigma_1: float,
+            sigma_2: float,
+            k: float
+    ):
         """
         Apply a double gaussian dispersion to the state
 
@@ -117,7 +144,11 @@ class OpticalState(object):
         self.polarization = new_polarization_vector
         self.direction = new_direction
 
-    def apply_dispersion(self, properties, normal_vector):
+    def apply_dispersion(
+            self,
+            properties: dict[str,Any],
+            normal_vector: Base.Vector
+    ) -> None:
         if properties.get('sigma_1', None):
             sigma_1 = properties['sigma_1']
             if properties.get('sigma_2', None):
@@ -135,7 +166,7 @@ class OpticalState(object):
 
 
 @traced(logger)
-def simple_reflection(incident, normal):
+def simple_reflection(incident: Base.Vector, normal: Base.Vector) -> Base.Vector:
     """
     Returns the reflection of the vector `incident` on a surface orthogonal to `normal`
     Parameters
@@ -154,8 +185,9 @@ def simple_reflection(incident, normal):
 
 
 @traced(logger)
-def outgoing_polarization(incident_vector, incident_polarization, outgoing_vector,
-                          perpendicularly_polarized=False):
+def outgoing_polarization(incident_vector: Base.Vector, incident_polarization: Base.Vector,
+                          outgoing_vector: Base.Vector, perpendicularly_polarized: bool =False
+                          ) -> Base.Vector:
     if perpendicularly_polarized:
         return incident_polarization
     angle = incident_vector.getAngle(outgoing_vector)
@@ -170,7 +202,8 @@ def outgoing_polarization(incident_vector, incident_polarization, outgoing_vecto
 
 
 @traced(logger)
-def reflection(incident, normal_vector, polarization_vector):
+def reflection(incident: Base.Vector, normal_vector: Base.Vector, polarization_vector: Base.Vector
+               ) -> OpticalState:
     """
     Returns the OpticalState of a ray with direction `incident` and polarized in `polarization_vector` after
     being reflected on a surface orthogonal to `normal_vector`
@@ -196,7 +229,8 @@ def reflection(incident, normal_vector, polarization_vector):
 
 
 @traced(logger)
-def total_lambertian_reflection(incident, normal_vector, polarization_vector):
+def total_lambertian_reflection(incident: Base.Vector, normal_vector: Base.Vector,
+                                polarization_vector: Base.Vector) -> OpticalState:
     """
     Returns the OpticalState of a ray with direction `incident` and polarized in `polarization_vector` after
     being reflected on a surface orthogonal to `normal_vector` with isotropic lambertian properties.
@@ -228,7 +262,8 @@ def total_lambertian_reflection(incident, normal_vector, polarization_vector):
 
 
 @traced(logger)
-def cosine_lambertian_reflection(incident, normal_vector, polarization_vector):
+def cosine_lambertian_reflection(incident: Base.Vector, normal_vector: Base.Vector,
+                                 polarization_vector: Base.Vector) -> OpticalState:
     """
     Returns the OpticalState of a ray with direction `incident` and polarized in `polarization_vector` after
     being reflected on a surface orthogonal to `normal_vector` with cosine-law lambertian properties.
@@ -255,8 +290,11 @@ def cosine_lambertian_reflection(incident, normal_vector, polarization_vector):
 
 
 @traced(logger)
-def reflection_hub(incident, normal_vector, polarization_vector,
-                   lambertian_weight=0, lambertian_kind=None):
+def reflection_hub(incident: Base.Vector,
+                   normal_vector: Base.Vector,
+                   polarization_vector: Base.Vector,
+                   lambertian_weight: float =0,
+                   lambertian_kind: str | None =None):
     if myrandom() >= lambertian_weight:
         # no lambertian phenomenon
         return reflection(incident, normal_vector, polarization_vector)
@@ -269,8 +307,13 @@ def reflection_hub(incident, normal_vector, polarization_vector,
 
 
 @traced(logger)
-def refraction(incident, normal_vector, n1, n2, polarization_vector,
-               lambertian_weight=0, lambertian_kind=None):
+def refraction(incident: Base.Vector,
+               normal_vector: Base.Vector,
+               n1: complex,
+               n2: complex,
+               polarization_vector: Base.Vector,
+               lambertian_weight: float=0,
+               lambertian_kind: str | None =None):
     """
     Returns the OpticalState of a ray that hits the surface (orthogonal to `normal_vector`) that is the interface
     between mediums of refractive indices `n1` and `n2`, with direction `incident` and polarized in
@@ -348,8 +391,14 @@ def refraction(incident, normal_vector, n1, n2, polarization_vector,
 
 
 @traced(logger)
-def shure_refraction(incident, normal_vector, n1, n2, polarization_vector,
-                     lambertian_weight=0, lambertian_kind=None):
+def shure_refraction(incident: Base.Vector,
+               normal_vector: Base.Vector,
+               n1: complex,
+               n2: complex,
+               polarization_vector: Base.Vector,
+               lambertian_weight: float=0,
+               lambertian_kind: str | None =None
+                ) -> OpticalState:
     """Implementation of Snell's law of refraction
 
     Parameters
@@ -403,7 +452,7 @@ def shure_refraction(incident, normal_vector, n1, n2, polarization_vector,
 # Helper function for dispersions and polarization vector
 # ---
 @traced(logger)
-def dispersion_from_main_direction(main_direction, theta, phi):
+def dispersion_from_main_direction(main_direction: Base.Vector, theta: float, phi: float) -> Base.Vector:
     """
     Computes dispersion from the main direction in terms of angles theta and phi
     """
@@ -422,7 +471,8 @@ def dispersion_from_main_direction(main_direction, theta, phi):
 
 
 @traced(logger)
-def dispersion_polarization(main_direction, polarization_vector, theta, phi):
+def dispersion_polarization(main_direction: Base.Vector, polarization_vector: Base.Vector,
+                            theta: float, phi: float) -> Base.Vector:
     """
     Computes dispersion of polarization vector in terms of angles theta and phi
     """
@@ -441,7 +491,7 @@ def dispersion_polarization(main_direction, polarization_vector, theta, phi):
 
 
 @traced(logger)
-def random_polarization(direction):
+def random_polarization(direction: Base.Vector) -> Base.Vector:
     """
     Returns a random polarization vector, orthogonal to `direction`
     """
@@ -456,7 +506,7 @@ def random_polarization(direction):
 # Helper function for reflectance depending on the wavelength for coatings layers.
 # ---
 
-def _round_or_floor_ceil(x):
+def _round_or_floor_ceil(x: float) -> list[int]:
     xround = int(round(x))
     if abs(x - xround) < 1E-4:
         return [xround]
@@ -465,7 +515,7 @@ def _round_or_floor_ceil(x):
 
 
 @traced(logger)
-def matrix_reflectance(data_material):
+def matrix_reflectance(data_material: np.ndarray) -> Callable[[float, float], list[list[float]]]:
     """
     Computes the matrix of reflectances of a material
 
@@ -516,7 +566,11 @@ def matrix_reflectance(data_material):
 
 
 @traced(logger)
-def calculate_reflectance(m_reflectance, angle, wavelength):
+def calculate_reflectance(
+        m_reflectance: np.ndarray,
+        angle: float,
+        wavelength: float
+) -> tuple[float, float]:
     """Compute perpendicular and parallel components of reflectance
 
     Interpolates the value of the perperdicular and parallel reflectance from

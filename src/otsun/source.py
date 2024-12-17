@@ -3,14 +3,16 @@ Module otsun.source that implements rays and its sources
 """
 
 import itertools
+from typing import Callable
 
 import Part
 import numpy as np
-from FreeCAD import Base
+from FreeCAD import Base, Document
 
 from .math import pick_random_from_cdf, myrandom, tabulated_function, two_orthogonal_vectors, area_of_triangle, random_point_of_triangle
 from .optics import dispersion_from_main_direction, random_polarization, dispersion_polarization
 from .ray import Ray
+from .scene import Scene
 from random import choices
 
 from scipy.spatial import ConvexHull
@@ -19,7 +21,10 @@ EPSILON = 1E-6
 # Tolerance for considering equal to zero
 
 class GeneralizedSunWindow(object):
-    def __init__(self, scene, main_direction):
+    def __init__(
+            self, 
+            scene: Scene, 
+            main_direction: Base.Vector):
         bbs = []
         for shape in itertools.chain(scene.solids, scene.faces):
             bbs.append(shape.BoundBox)
@@ -41,22 +46,23 @@ class GeneralizedSunWindow(object):
                 plane_points.append([pu,pv])
         hull = ConvexHull(plane_points)
         plane_vertices = [plane_points[i] for i in hull.vertices]
-        self.vertices = [origin + u*pu + v*pv for (pu,pv) in plane_vertices]
-        self.triangles = [[self.vertices[0], self.vertices[i], self.vertices[i+1]]
-                          for i in range(1,len(self.vertices)-1)]
-        self.triangle_areas = list(map(area_of_triangle, self.triangles))
-        self.aperture = sum(self.triangle_areas)
-        self.main_direction = main_direction
+        self.vertices: list[Base.Vector] = [origin + u*pu + v*pv for (pu,pv) in plane_vertices]
+        self.triangles: list[list[Base.Vector]] = [
+            [self.vertices[0], self.vertices[i], self.vertices[i+1]]
+            for i in range(1,len(self.vertices)-1)]
+        self.triangle_areas: list[float] = list(map(area_of_triangle, self.triangles))
+        self.aperture: float = sum(self.triangle_areas)
+        self.main_direction: Base.Vector = main_direction
 
-    def add_to_document(self, doc):
+    def add_to_document(self, doc: Document) -> None:
         sw = Part.makePolygon(self.vertices, True)
         doc.addObject("Part::Feature", "SunWindow").Shape = sw
 
-    def random_point(self):
+    def random_point(self) -> Base.Vector:
         random_triangle = choices(self.triangles, self.triangle_areas)[0]
         return random_point_of_triangle(random_triangle)
 
-    def random_direction(self):
+    def random_direction(self) -> Base.Vector:
         """
         Returns the main direction
 
@@ -97,7 +103,7 @@ class SunWindow(object):
         Area of the rectangle
     """
 
-    def __init__(self, scene, main_direction):
+    def __init__(self, scene: Scene, main_direction: Base.Vector):
         bbs = []
         for shape in itertools.chain(scene.solids, scene.faces):
             bbs.append(shape.BoundBox)
@@ -119,7 +125,8 @@ class SunWindow(object):
         self.main_direction = main_direction
 
     @staticmethod
-    def find_min_rectangle(points, normal):
+    def find_min_rectangle(points: list[Base.Vector], normal: Base.Vector
+        ) -> tuple[Base.Vector, Base.Vector, Base.Vector, float, float]:
         """
         Computes the minimum rectangle covering points in a direction
 
@@ -174,7 +181,7 @@ class SunWindow(object):
         origin = best_origin - best_v1 * length1 * 0.02 - best_v2 * length2 * 0.02
         return origin, best_v1, best_v2, length1, length2
 
-    def random_point(self):
+    def random_point(self) -> Base.Vector :
         """
         Returns a random point on the rectangle
 
@@ -185,7 +192,7 @@ class SunWindow(object):
         return (self.origin + self.v1 * self.length1 * myrandom() +
                 self.v2 * self.length2 * myrandom())
 
-    def random_direction(self):
+    def random_direction(self) -> Base.Vector :
         """
         Returns the main direction
 
@@ -197,7 +204,7 @@ class SunWindow(object):
         """
         return self.main_direction
 
-    def add_to_document(self, doc):
+    def add_to_document(self, doc: Document) -> None:
         """
         Adds the rectangle to the FreeCAD document
 
@@ -223,8 +230,15 @@ class LightSource(object):
     The polarization_vector is a Base.Vector for polarized light. If is not given unpolarized light is generated.
     """
 
-    def __init__(self, scene, emitting_region, light_spectrum, initial_energy, direction_distribution=None,
-                 polarization_vector=None):
+    def __init__(
+            self,
+            scene: Scene,
+            emitting_region: SunWindow | GeneralizedSunWindow,
+            light_spectrum: float | tuple[list[float], list[float]],
+            initial_energy: float,
+            direction_distribution: Callable[[float],float]|None = None,
+            polarization_vector: Base.Vector|None = None
+    ):
         self.scene = scene
         self.emitting_region = emitting_region
         self.light_spectrum = light_spectrum
@@ -233,7 +247,7 @@ class LightSource(object):
         self.polarization_vector = polarization_vector
         self.wavelengths = []
 
-    def emit_ray(self):
+    def emit_ray(self) -> Ray:
         """
         Simulates the emission of a ray
         """
@@ -261,7 +275,7 @@ class LightSource(object):
 
 # Auxiliary functions for buie_distribution
 
-def _calculate_a1(CSR, SD):
+def _calculate_a1(CSR: float, SD: float) -> float:
     """ Parameter a1 needed for the normalization of the probability distribution in the disk region
     """
 
@@ -272,13 +286,13 @@ def _calculate_a1(CSR, SD):
     return a1
 
 
-def _circumsolar__density_distribution(angle, CSR):
+def _circumsolar__density_distribution(angle: float, CSR: float) -> float:
     gamma = 2.2 * np.log(0.52 * CSR) * CSR ** 0.43 - 0.1
     kappa = 0.9 * np.log(13.5 * CSR) * CSR ** (-0.3)
     return 2.0 * np.pi * np.exp(kappa) * angle ** (gamma + 1.0)
 
 
-def _calculate_a2(CSR, SD, SS):
+def _calculate_a2(CSR: float, SD: float, SS: float) -> float:
     """ Parameter a2 needed for the normalization of the probability distribution in the circumsolar region"""
     f = _circumsolar__density_distribution
     th = np.arange(SD, SS, 0.001)
@@ -287,7 +301,7 @@ def _calculate_a2(CSR, SD, SS):
     return a2
 
 
-def _calculate_CDF_disk_region(a1, SD):
+def _calculate_CDF_disk_region(a1: float, SD: float) -> tuple[np.ndarray, np.ndarray]:
     """
     Cumulative Distribution Function in the solar disk region
     """
@@ -299,7 +313,7 @@ def _calculate_CDF_disk_region(a1, SD):
     return CDF
 
 
-def _th_solar_disk_region(u, CDF):
+def _th_solar_disk_region(u: float, CDF: tuple[list[float], float]) -> float:
     """ Random angle based on the probability distribution in the circumsolar region"""
     # TODO: It is recomputed every time? @Ramon
     # CDF = CDF_Disk_Region # calculate_CDF_disk_region(a1, SD)
@@ -307,7 +321,7 @@ def _th_solar_disk_region(u, CDF):
     return CDF[0][idx]
 
 
-def _th_circumsolar_region(u, CSR, SD, a2):
+def _th_circumsolar_region(u: float, CSR: float, SD: float, a2: float) -> float:
     """ Random angle based on the CDF in the circumsolar region"""
     gamma = 2.2 * np.log(0.52 * CSR) * CSR ** (0.43) - 0.1
     kappa = 0.9 * np.log(13.5 * CSR) * CSR ** (-0.3)
@@ -319,7 +333,7 @@ def _th_circumsolar_region(u, CSR, SD, a2):
     return th_u
 
 
-def buie_distribution(CircumSolarRatio):
+def buie_distribution(CircumSolarRatio: float) -> Callable[[float], float]:
     """
     Implementation of the Buie Distribution for Sun emission
 

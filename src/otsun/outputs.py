@@ -2,10 +2,16 @@
 
 Helper functions to format data for output
 """
+import os
 
 import numpy as np
 
-def spectrum_to_constant_step(file_in, wavelength_step, wavelength_min, wavelength_max):
+def spectrum_to_constant_step(
+        file_in: str | bytes | os.PathLike,
+        wavelength_step: float,
+        wavelength_min: float,
+        wavelength_max: float
+) -> np.ndarray:
     data_array = np.loadtxt(file_in, usecols=(0, 1))
     wl_spectrum = data_array[:, 0]
     I_spectrum = data_array[:, 1]
@@ -14,8 +20,13 @@ def spectrum_to_constant_step(file_in, wavelength_step, wavelength_min, waveleng
     return np.array(array_inter)
 
 
-def make_histogram_from_experiment_results(results_wavelength, results_energy, step_wavelength, aperture_collector,
-                                           aperture_source):
+def make_histogram_from_experiment_results(
+        results_wavelength : list[np.ndarray],
+        results_energy: list[np.ndarray],
+        step_wavelength: float,
+        aperture_collector: float,
+        aperture_source: float
+) -> np.ndarray:
     y_energy = np.array(np.concatenate(results_energy))
     y_energy = (y_energy / aperture_collector) / (1.0 / aperture_source)
     x_wavelength = np.array(np.concatenate(results_wavelength))
@@ -30,7 +41,12 @@ def make_histogram_from_experiment_results(results_wavelength, results_energy, s
     return table_
 
 
-def twoD_array_to_constant_step(twoD_array, step, wavelength_min, wavelength_max):
+def twoD_array_to_constant_step(
+        twoD_array: np.ndarray,
+        step: float,
+        wavelength_min: float,
+        wavelength_max: float
+) -> np.ndarray:
     wl_spectrum = twoD_array[:, 0]
     I_spectrum = twoD_array[:, 1]
     array_inter = [[x, np.interp(x, wl_spectrum, I_spectrum)] for x in
@@ -38,7 +54,10 @@ def twoD_array_to_constant_step(twoD_array, step, wavelength_min, wavelength_max
     return np.array(array_inter)
 
 
-def spectral_response(optical_absorption_wavelength, iqe):
+def spectral_response(
+        optical_absorption_wavelength: np.ndarray,
+        iqe: float | str | bytes | os.PathLike
+) -> np.ndarray:
     q_e = 1.60217662E-19
     h = 6.62607E-34
     c = 299792458.0
@@ -54,7 +73,10 @@ def spectral_response(optical_absorption_wavelength, iqe):
     return np.array(SR)
 
 
-def photo_current(spectral_response, source_spectrum):
+def photo_current(
+        spectral_response: np.ndarray,
+        source_spectrum: np.ndarray
+) -> float:
     wavelengths = source_spectrum[:, 0]
     SR_by_spectrum = spectral_response[:, 1] * source_spectrum[:, 1]
     photo_current = np.trapz(SR_by_spectrum, x=wavelengths)

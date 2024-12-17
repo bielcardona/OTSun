@@ -4,6 +4,10 @@ The module defines a class `Experiment` that deals with the setup and
 run of experiments.
 """
 
+from .source import LightSource
+from .scene import Scene
+from FreeCAD import Document
+
 import numpy as np
 import logging
 logger = logging.getLogger(__name__)
@@ -48,7 +52,13 @@ class Experiment:
         List with data (energy, location,...) for each ray that got absorbed
     """
 
-    def __init__(self, scene, light_source, number_of_rays, show_in_doc=None):
+    def __init__(
+            self, 
+            scene: Scene, 
+            light_source: LightSource, 
+            number_of_rays: int, 
+            show_in_doc: Document|None = None
+        ):
         self.scene = scene
         self.light_source = light_source
         if show_in_doc:
@@ -64,7 +74,7 @@ class Experiment:
         self.PV_values = []
         self.points_absorber_Th = []
 
-    def run(self, show_in_doc=None):
+    def run(self, show_in_doc: Document|None = None) -> None:
         """Runs the experiment and plots the rays in the document specified (if any)"""
         for n in np.arange(0, self.number_of_rays, 1):
             logger.info(f"Emitting ray {n}")

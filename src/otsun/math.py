@@ -1,6 +1,8 @@
 """
 Module otsun.math with mathematical helper functions
 """
+import os
+from typing import Callable, Any
 
 import numpy as np
 from FreeCAD import Base
@@ -13,13 +15,9 @@ EPSILON = 1E-6
 INF = 1E20
 # Infinite
 
-try:
-    from functools import lru_cache
-except ImportError:
-    from backports.functools_lru_cache import lru_cache
+from functools import lru_cache
 
-
-def polar_to_cartesian(phi, theta):
+def polar_to_cartesian(phi: float, theta: float) -> Base.Vector:
     """Convert polar coordinates of unit vector to cartesian
 
     Parameters
@@ -41,7 +39,7 @@ def polar_to_cartesian(phi, theta):
     return Base.Vector(x, y, z)
 
 
-def rad_to_deg(angle):
+def rad_to_deg(angle: float) -> float:
     """Converts radians to degrees"""
     return angle * 180.0 / np.pi
 
@@ -51,7 +49,7 @@ def rad_to_deg(angle):
 # ---
 
 
-def constant_function(c):
+def constant_function(c: float) -> Callable[[Any], float]:
     """Create a constant function
 
     Parameters
@@ -66,7 +64,7 @@ def constant_function(c):
     return lambda x: c
 
 
-def tabulated_function(xvalues, yvalues):
+def tabulated_function(xvalues: list[float], yvalues: list[float]) -> Callable[[float], float]:
     """Create a linear interpolating function from tabulated values
 
     Parameters
@@ -84,7 +82,7 @@ def tabulated_function(xvalues, yvalues):
 
     # @memoize
     @lru_cache(maxsize=None)
-    def this_tabulated_function(x):
+    def this_tabulated_function(x: float) -> float:
         return np.interp(x, xvalues, yvalues)
 
     return this_tabulated_function
@@ -133,7 +131,7 @@ myrandom = random.random
 # ---
 
 
-def cdf_from_pdf_file(data_file):
+def cdf_from_pdf_file(data_file: str | bytes | os.PathLike) -> tuple[np.ndarray, np.ndarray]:
     """
     Computes CDF from PDF values stored in a file
 
@@ -168,7 +166,7 @@ def cdf_from_pdf_file(data_file):
     return x_cdf, y_cdf / y_cdf[-1]
 
 
-def pick_random_from_cdf(cdf):
+def pick_random_from_cdf(cdf: tuple[np.ndarray, np.ndarray]) -> float:
     """
     Pick a random value according to a given CDF.
 
@@ -186,7 +184,11 @@ def pick_random_from_cdf(cdf):
     return np.interp(random.random(), cdf[1], cdf[0])
 
 
-def parallel_orthogonal_components(vector, incident, normal):
+def parallel_orthogonal_components(
+        vector: Base.Vector,
+        incident: Base.Vector,
+        normal: Base.Vector
+) -> tuple[Base.Vector, Base.Vector, Base.Vector]:
     """Decomposition of vector in components
 
     Given `vector` (a polarization),
@@ -226,7 +228,7 @@ def parallel_orthogonal_components(vector, incident, normal):
     return parallel_v, perpendicular_v, normal_parallel_plane
 
 
-def two_orthogonal_vectors(vector):
+def two_orthogonal_vectors(vector: Base.Vector) -> tuple[Base.Vector, Base.Vector]:
     """Gives two orthogonal vectors of a vector
 
     Given `vector` find two orthogonal vectors
@@ -245,7 +247,7 @@ def two_orthogonal_vectors(vector):
     return orthogonal_1.normalize(), orthogonal_2.normalize()
 
 
-def one_orthogonal_vector(vector):
+def one_orthogonal_vector(vector: Base.Vector) -> Base.Vector:
     """Gives one orthogonal vector of a vector
 
     Given `vector` find one orthogonal vector
@@ -268,7 +270,7 @@ def one_orthogonal_vector(vector):
     return orthogonal.normalize()
 
 
-def correct_normal(normal, incident):
+def correct_normal(normal: Base.Vector, incident: Base.Vector) -> Base.Vector:
     """Corrects a vector so that is in a given half plane
 
     Parameters
@@ -286,14 +288,14 @@ def correct_normal(normal, incident):
         return normal
 
 
-def normalize(vector):
+def normalize(vector: Base.Vector) -> Base.Vector:
     """Normalizes a vector"""
     if vector.Length < EPSILON:
         vector = vector * INF
     return vector.normalize()
 
 
-def arccos(x):
+def arccos(x: float) -> float:
     """Safe modification of arccos"""
     assert abs(x) < 1 + EPSILON
     if abs(x) < 1 - EPSILON:
@@ -303,17 +305,17 @@ def arccos(x):
     return np.pi
 
 
-def projection_on_vector(u, v):
+def projection_on_vector(u: Base.Vector, v: Base.Vector) -> Base.Vector:
     """Compute the projection of u on <v>"""
     return (u.dot(v)/v.dot(v))*v
 
 
-def projection_on_orthogonal_of_vector(u, v):
+def projection_on_orthogonal_of_vector(u: Base.Vector, v: Base.Vector) -> Base.Vector:
     """Compute the projection of u on the subspace orthogonal to <v>"""
     return u - projection_on_vector(u, v)
 
 
-def area_of_triangle(vertices):
+def area_of_triangle(vertices: tuple[Base.Vector, Base.Vector, Base.Vector]) -> float:
     """Compute the area of the triangle with given vertices"""
     p, q, r = vertices
     pq = q-p
@@ -322,7 +324,7 @@ def area_of_triangle(vertices):
     return 0.5 * abs(v.Length)
 
 
-def random_point_of_triangle(vertices):
+def random_point_of_triangle(vertices: tuple[Base.Vector, Base.Vector, Base.Vector]) -> Base.Vector:
     """Compute a random point of the triangle with given vertices"""
     p, q, r = vertices
     pq = q-p

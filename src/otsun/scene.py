@@ -2,6 +2,11 @@
 
 The module defines the class `Scene` that models the elements in an optical system
 """
+from __future__ import annotations
+from typing import Any
+
+from Part import Face, Solid
+from FreeCAD import Base
 
 from .materials import Material, VolumeMaterial, SurfaceMaterial, TwoLayerMaterial, MaterialNotFoundError
 from .math import correct_normal
@@ -18,19 +23,24 @@ class Scene:
     that interfere with light rays.
     """
 
-    def __init__(self, objects, extra_data=None):
-        self.objects = objects
-        self.faces = []  # All the faces in the Scene
-        self.solids = []  # All the solids in the Scene
-        self.name_of_solid = {}
-        self.bb_of_solid = {}  # Bounding box of solid
-        self.materials = {}  # Assign the materials to objects
+    def __init__(
+            self, 
+            objects: list[Any], 
+            extra_data: dict[str, Any] | None = None
+            ):
+        self.objects: list[Any] = objects
+        self.faces: list[Face] = []  # All the faces in the Scene
+        self.solids: list[Solid] = []  # All the solids in the Scene
+        self.name_of_solid: dict[Solid, str] = {}
+        self.bb_of_solid: dict[Solid, Base.BoundBox] = {}  # Bounding box of solid
+        self.materials: dict[int, Material] = {}  # Assign the materials to objects
         # self.boundaries = {}  # Assign boundary faces to solids
         # self.sum_energy = 0.0 # Energy of the Scene
-        self.epsilon = EPSILON # Tolerance for solid containment # 2 nm.
-        self.boundbox = None
-        self.element_object_dict = {}
+        self.epsilon: float = EPSILON # Tolerance for solid containment # 2 nm.
+        self.boundbox: Base.BoundBox | None = None
+        self.element_object_dict: dict[ Face | Solid, Any] = {}
 
+        self.extra_data : dict[str, Any]
         if extra_data is None:
             self.extra_data = {}
         else:
@@ -114,9 +124,9 @@ class Scene:
 
         # self.remove_duplicate_faces()
 
-        self.diameter = self.boundbox.DiagonalLength
+        self.diameter : float = self.boundbox.DiagonalLength
 
-    def recompute_boundbox(self):
+    def recompute_boundbox(self) -> None:
         """
         Recomputes the boundbox, so that all objects are contained in it
         """
@@ -133,7 +143,7 @@ class Scene:
                 boundbox.add(elem.BoundBox)
         self.boundbox = boundbox
 
-    def remove_duplicate_faces(self):
+    def remove_duplicate_faces(self) -> None:
         """
         Removes redundant faces, so that the computation of next_intersection does not find duplicated points.
         """
@@ -156,7 +166,7 @@ class Scene:
         self.faces.extend(complex_no_material.Faces)
         logger.debug("Done Removing duplicate faces")
 
-    def solid_at_point(self, point):
+    def solid_at_point(self, point: Base.Vector) -> Solid | None:
         """
         Returns the solid that a point is inside.
         """
@@ -167,7 +177,7 @@ class Scene:
                     return solid
         return None
 
-    def face_at_point(self, point):
+    def face_at_point(self, point: Base.Vector) -> Face | None:
         """
         Returns the face that a point is inside.
         """
@@ -176,7 +186,12 @@ class Scene:
                 return face
         return None
 
-    def next_solid_at_point_in_direction(self, point, normal, direction):
+    def next_solid_at_point_in_direction(
+            self, 
+            point: Base.Vector, 
+            normal: Base.Vector, 
+            direction: Base.Vector
+        ) -> Solid:
         """
         Returns the next solid found in the given direction from a given point
         """

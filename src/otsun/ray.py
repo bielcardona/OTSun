@@ -2,11 +2,15 @@
 
 The module defines the class `Ray`
 """
-
+from __future__ import annotations
+import FreeCAD
 from autologging import traced
 import logging
+
+from .scene import Scene
+
 logger = logging.getLogger(__name__)
-from .materials import vacuum_medium, PVMaterial, SurfaceMaterial, TwoLayerMaterial, PolarizedThinFilm
+from .materials import vacuum_medium, PVMaterial, SurfaceMaterial, TwoLayerMaterial, Material
 from .optics import Phenomenon, OpticalState
 import numpy as np
 import Part
@@ -21,40 +25,56 @@ except AttributeError:
 LOW_ENERGY = 1E-6
 
 
-def _center(bb):
+def _center(bb: Base.BoundBox) -> Base.Vector:
     return Base.Vector((bb.XMin+bb.XMax)/2, (bb.YMin+bb.YMax)/2, (bb.ZMin+bb.ZMax)/2)
 
 
-def _interval_intersects(x1, x2, y1, y2):
+def _interval_intersects(x1: float, x2: float, y1: float, y2: float) -> bool:
     return x1 <= y2 and y1 <= x2
 
 
-def _bb_intersects(bb1, bb2):
+def _bb_intersects(bb1: Base.BoundBox, bb2: Base.BoundBox) -> bool:
     return (_interval_intersects(bb1.XMin, bb1.XMax, bb2.XMin, bb2.XMax) and
             _interval_intersects(bb1.YMin, bb1.YMax, bb2.YMin, bb2.YMax) and
             _interval_intersects(bb1.ZMin, bb1.ZMax, bb2.ZMin, bb2.ZMax))
 
 
-def _distance_point_to_line(point, line_point, line_vector):
+def _distance_point_to_line(
+        point: Base.Vector,
+        line_point: Base.Vector,
+        line_vector: Base.Vector
+) -> float:
     v = point-line_point
     cross = v.cross(line_vector)
     return cross.Length
 
 
-def _distance_point_to_ray(point, ray_origin, ray_vector):
+def _distance_point_to_ray(
+        point: Base.Vector,
+        ray_origin: Base.Vector,
+        ray_vector: Base.Vector
+) -> float:
     v = point - ray_origin
     if v.dot(ray_vector) >= 0:
         return _distance_point_to_line(point, ray_origin, ray_vector)
     return v.Length
 
 
-def _line_may_intersect_bb(bb, line_point, line_vector):
+def _line_may_intersect_bb(
+        bb: Base.BoundBox,
+        line_point: Base.Vector,
+        line_vector: Base.Vector
+) -> bool:
     center = _center(bb)
     d = _distance_point_to_line(center, line_point, line_vector)
     return d <= bb.DiagonalLength/2
 
 
-def _ray_may_intersect_bb(bb, ray_origin, ray_vector):
+def _ray_may_intersect_bb(
+        bb: Base.BoundBox,
+        ray_origin: Base.Vector,
+        ray_vector: Base.Vector
+) -> bool:
     center = _center(bb)
     d = _distance_point_to_ray(center, ray_origin, ray_vector)
     return d <= bb.DiagonalLength/2
@@ -105,34 +125,40 @@ class Ray(object):
         List of values of absorbed PV energy
     """
 
-    def __init__(self, scene, origin, direction,
-                 wavelength, energy, polarization_vector):
-        self.scene = scene
-        self.points = [origin]
-        state = OpticalState(
+    def __init__(
+            self,
+            scene: Scene,
+            origin: Base.Vector,
+            direction: Base.Vector,
+            wavelength: float,
+            energy: float,
+            polarization_vector: Base.Vector):
+        self.scene: Scene = scene
+        self.points : list[Base.Vector] = [origin]
+        state : OpticalState = OpticalState(
             polarization_vector,
             direction,
             Phenomenon.JUST_STARTED,
             vacuum_medium
         )
-        self.optical_states = [state]
-        self.current_solid = None
-        self.last_normal = None
-        self.last_touched_face = None
-        self.wavelength = wavelength
-        self.energy = energy
-        self.polarization_vectors = [polarization_vector]
-        self.finished = False
-        self.Th_absorbed = False
-        self.PV_values = []
-        self.PV_absorbed = []
+        self.optical_states : list[OpticalState] = [state]
+        self.current_solid : Part.Solid | None = None
+        self.last_normal : Base.Vector | None = None
+        self.last_touched_face : Part.Face | None = None
+        self.wavelength : float = wavelength
+        self.energy : float = energy
+        self.polarization_vectors : list[Base.Vector] = [polarization_vector]
+        self.finished : bool = False
+        self.Th_absorbed : bool = False
+        self.PV_values : list = [] # TODO: refinar
+        self.PV_absorbed : list[float] = []
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "Pos.: %s, OS: %s, Energy: %s" % (
             self.points[-1], self.optical_states[-1], self.energy
         )
 
-    def current_medium(self):
+    def current_medium(self) -> Material:
         """
         Get medium where ray is currently traveling
 
@@ -142,7 +168,7 @@ class Ray(object):
         """
         return self.optical_states[-1].material
 
-    def current_direction(self):
+    def current_direction(self) -> Base.Vector:
         """
         Get current direction
 
@@ -152,7 +178,7 @@ class Ray(object):
         """
         return self.optical_states[-1].direction
 
-    def current_polarization(self):
+    def current_polarization(self) -> Base.Vector:
         """
         Get current polarization
 
@@ -162,13 +188,13 @@ class Ray(object):
         """
         return self.optical_states[-1].polarization
 
-    def weighted_distance(self, p0, pair):
+    def weighted_distance(self, p0: Base.Vector, pair: tuple[Base.Vector, Part.Face]) -> float:
         if id(pair[1]) in self.scene.materials:
             return p0.distanceToPoint(pair[0])
         else:
             return p0.distanceToPoint(pair[0]) + self.scene.epsilon
 
-    def next_intersection(self):
+    def next_intersection(self) -> tuple[Base.Vector, Part.Face | None]:
         """
         Finds next intersection of the ray with the scene
 
@@ -232,7 +258,7 @@ class Ray(object):
                            key=lambda pair: self.weighted_distance(p0, pair))
         return tuple(closest_pair)
 
-    def next_state_solid_and_normal(self, face):
+    def next_state_solid_and_normal(self, face: Part.Face) -> tuple[OpticalState, Part.Solid | None, Base.Vector]:
         """
         Computes the next optical state after the ray hits the face, and the normal vector
 
@@ -283,7 +309,7 @@ class Ray(object):
             next_solid = nearby_solid
         return state, next_solid, normal
 
-    def update_energy(self):
+    def update_energy(self) -> None:
         material = self.current_medium()
         if (material.name == "Vacuum" and
                 'vacuum_material' in self.scene.extra_data and
@@ -306,7 +332,7 @@ class Ray(object):
                 d = point_1.distanceToPoint(point_2)
                 self.energy = self.energy * np.exp(- alpha * d)
 
-    def run(self, max_hops=200):
+    def run(self, max_hops: int =200) -> None:
         """
         Makes the ray propagate
 
@@ -370,7 +396,7 @@ class Ray(object):
         logger.debug("Ray stopped. Hop %s, %s, Solid %s", count, self,
                     self.scene.name_of_solid.get(self.current_solid, "Void"))
 
-    def add_to_document(self, doc):
+    def add_to_document(self, doc: FreeCAD.Document) -> None:
         """
         Draws the ray in a FreeCAD document
 

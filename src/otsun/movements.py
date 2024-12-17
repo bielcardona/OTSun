@@ -2,7 +2,12 @@
 
 The module defines the classes `Joint` (with subclasses `AxialJoint` and `CentralJoint`) and `MultiTracking`
 """
+from typing import AnyStr, Any
+
+import Part
 from FreeCAD import Base
+
+from .scene import Scene
 from .math import one_orthogonal_vector, projection_on_orthogonal_of_vector, EPSILON
 from numpy import pi
 from numpy.random import normal as random_normal
@@ -12,7 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def orientation(u, v, w):
+def orientation(u: Base.Vector, v: Base.Vector, w: Base.Vector) -> int:
     """Computes the orientation (+/-1) of a basis"""
     det = u.dot(v.cross(w))
     if det >= 0:
@@ -21,7 +26,7 @@ def orientation(u, v, w):
         return -1
 
 
-def signed_angle(axis, v1, v2):
+def signed_angle(axis: Base.Vector, v1: Base.Vector, v2: Base.Vector) -> float:
     """
     Computes the (signed) angle from v1 to v2, wrt the axis vector
     """
@@ -30,7 +35,7 @@ def signed_angle(axis, v1, v2):
     return angle
 
 
-def apply_movement_to_vector(movement, vector):
+def apply_movement_to_vector(movement: Base.Placement, vector: Base.Vector) -> Base.Vector:
     pA = Base.Vector(0, 0, 0)
     pB = pA + vector
     pAprime = movement.multVec(pA)
@@ -38,7 +43,8 @@ def apply_movement_to_vector(movement, vector):
     return pBprime - pAprime
 
 
-def axial_rotation_from_axis_and_angle(axis_origin, axis_dir, angle):
+def axial_rotation_from_axis_and_angle(axis_origin: Base.Vector, axis_dir: Base.Vector,
+                                       angle:float) -> Base.Placement:
     """
     Returns a rotation with given axis and angle
     """
@@ -48,7 +54,8 @@ def axial_rotation_from_axis_and_angle(axis_origin, axis_dir, angle):
         Base.Placement(Base.Vector(), Base.Rotation(angle * 180.0 / pi, 0, 0)).multiply(local_cs.inverse()))
 
 
-def axial_rotation_from_vector_and_image(origin, vector0, vector1, error=0):
+def axial_rotation_from_vector_and_image(origin: Base.Vector, vector0: Base.Vector,
+                                         vector1: Base.Vector, error: float=0) -> Base.Placement:
     """
     Returns a rotation that transforms the ray with origin and vector equals to vector0 to the ray with same
     origin and vector vector1.
@@ -63,8 +70,10 @@ def axial_rotation_from_vector_and_image(origin, vector0, vector1, error=0):
     angle += error
     return axial_rotation_from_axis_and_angle(origin, normal, angle)
 
-def biaxial_rotation_from_vector_and_image(origin, vector_v, vector_h, current_normal, desired_normal,
-                                           error_v=0, error_h=0):
+
+def biaxial_rotation_from_vector_and_image(origin: Base.Vector, vector_v: Base.Vector, vector_h: Base.Vector,
+                                           current_normal: Base.Vector, desired_normal: Base.Vector,
+                                           error_v: float=0, error_h: float=0) -> Base.Placement:
     # First rotate around vector_h, so that the image of vector_v is orthogonal
     # to desired_normal
     image_vector_horizontal = desired_normal.cross(vector_h)
@@ -74,7 +83,7 @@ def biaxial_rotation_from_vector_and_image(origin, vector_v, vector_h, current_n
     return g2.multiply(g1)
 
 
-def get_labels(obj):
+def get_labels(obj: Any) -> list[str]:
     """Gets the different labels of a given FreeCAD object"""
     label = obj.Label
     start = label.find("(")
@@ -99,16 +108,22 @@ class AxialJoint(Joint):
     Class used to represent joints that rotate around an axis
     """
 
-    def __init__(self, axis_origin, axis_vector, sigma=None):
-        self.axis_origin = axis_origin
-        self.axis_vector = axis_vector
-        self.sigma = sigma
+    def __init__(self,
+                 axis_origin: Base.Vector,
+                 axis_vector: Base.Vector,
+                 sigma: float | None = None):
+        self.axis_origin: Base.Vector = axis_origin
+        self.axis_vector: Base.Vector = axis_vector
+        self.sigma: float | None = sigma
+        self.error: float = 0
         if self.sigma is not None:
             self.error = random_normal(scale=self.sigma/1000)
-        else:
-            self.error = 0
 
-    def compute_rotation_to_point(self, target, normal, light_direction):
+
+    def compute_rotation_to_point(self,
+                                  target: Base.Vector,
+                                  normal: Base.Vector,
+                                  light_direction: Base.Vector) -> Base.Placement:
         """
         Computes a rotation so that ray in the direction of light_direction is reflected and hits the target.
         """
@@ -124,7 +139,9 @@ class AxialJoint(Joint):
         angle += self.error
         return axial_rotation_from_axis_and_angle(self.axis_origin, self.axis_vector, angle)
 
-    def compute_rotation_to_direction(self, normal, light_direction):
+    def compute_rotation_to_direction(self,
+                                      normal: Base.Vector,
+                                      light_direction: Base.Vector) -> Base.Placement:
         """
         Computes a rotation so that ray in the direction of light_direction is returned to its origin.
         """
@@ -142,23 +159,27 @@ class TwoOrthogonalAxialJoint(Joint):
     Class used to represent joints with two orthogonal axis
     """
 
-    def __init__(self, axis_origin, axis_vector_vertical, axis_vector_horizontal, sigma_v=None, sigma_h=None):
-        self.axis_origin = axis_origin
-        self.axis_vector_vertical = axis_vector_vertical
-        self.axis_vector_horizontal = axis_vector_horizontal
-        self.sigma_v = sigma_v
-        self.sigma_h = sigma_h
+    def __init__(self,
+                 axis_origin: Base.Vector,
+                 axis_vector_vertical: Base.Vector,
+                 axis_vector_horizontal: Base.Vector,
+                 sigma_v: float|None = None,
+                 sigma_h: float|None = None):
+        self.axis_origin: Base.Vector = axis_origin
+        self.axis_vector_vertical: Base.Vector = axis_vector_vertical
+        self.axis_vector_horizontal: Base.Vector = axis_vector_horizontal
+        self.sigma_v: float = sigma_v
+        self.sigma_h: float = sigma_h
+        self.error_v: float = 0
         if self.sigma_v is not None:
             self.error_v = random_normal(scale=self.sigma_v/1000)
-        else:
-            self.error_v = 0
+        self.error_h: float = 0
         if self.sigma_h is not None:
             self.error_h = random_normal(scale=self.sigma_h/1000)
-        else:
-            self.error_h = 0
 
 
-    def compute_rotation_to_point(self, target, normal, light_direction):
+    def compute_rotation_to_point(self, target: Base.Vector, normal: Base.Vector,
+                                  light_direction: Base.Vector) -> Base.Placement:
         """
         Computes a rotation so that ray in the direction of light_direction is reflected and hits the target.
         """
@@ -171,7 +192,9 @@ class TwoOrthogonalAxialJoint(Joint):
                                                       self.axis_vector_horizontal, normal, desired_normal,
                                                       self.error_v, self.error_h)
 
-    def compute_rotation_to_direction(self, normal, light_direction):
+    def compute_rotation_to_direction(self,
+                                      normal: Base.Vector,
+                                      light_direction: Base.Vector) -> Base.Placement:
         """
         Computes a rotation so that ray in the direction of light_direction is returned to its origin.
         """
@@ -189,10 +212,11 @@ class CentralJoint(Joint):
     Class used to represent joints that rotate around a point
     """
 
-    def __init__(self, center):
-        self.center = center
+    def __init__(self, center: Base.Vector):
+        self.center: Base.Vector = center
 
-    def compute_rotation_to_point(self, target, normal, light_direction):
+    def compute_rotation_to_point(self, target: Base.Vector, normal: Base.Vector,
+                                  light_direction: Base.Vector) -> Base.Placement:
         """
         Computes a rotation so that ray in the direction of light_direction is reflected and hits the target.
         """
@@ -203,7 +227,7 @@ class CentralJoint(Joint):
         desired_normal = pointing - light_unit
         return axial_rotation_from_vector_and_image(self.center, normal, desired_normal)
 
-    def compute_rotation_to_direction(self, normal, light_direction):
+    def compute_rotation_to_direction(self, normal: Base.Vector, light_direction: Base.Vector) -> Base.Placement:
         """
         Computes a rotation so that ray in the direction of light_direction is returned to its origin.
         """
@@ -219,22 +243,25 @@ class MultiTracking:
     Class that represents how objects are linked to joints and implements their movement.
     """
 
-    def __init__(self, source_direction, scene, analyze_labels=True):
-        self.scene = scene
-        self.source_direction = source_direction
-        self.object_joint_map = {}
-        self.object_normal_map = {}
-        self.object_target_map = {}
-        self.object_movements_map = {}
+    def __init__(self,
+                 source_direction: Base.Vector,
+                 scene: Scene,
+                 analyze_labels: bool=True):
+        self.scene: Scene = scene
+        self.source_direction: Base.Vector = source_direction
+        self.object_joint_map: dict[Any, Joint] = {}
+        self.object_normal_map: dict[Any, Base.Vector] = {}
+        self.object_target_map: dict[Any, Base.Vector|None] = {}
+        self.object_movements_map: dict[Any, Base.Placement] = {}
         if analyze_labels:
             self.get_data_from_objects()
             self.compute_movements()
 
-    def get_object_from_label(self, label):
+    def get_object_from_label(self, label: str) -> Any:
         return [obj2 for obj2 in self.scene.objects if obj2.Label == label][0]
 
     @staticmethod
-    def get_dimension_of_object(obj):
+    def get_dimension_of_object(obj: Any) -> int | None:
         obj_type = obj.Shape.ShapeType
         if obj_type == 'Vertex':
             return 0
@@ -243,24 +270,24 @@ class MultiTracking:
         return None
 
     @staticmethod
-    def get_point_from_vertex(vertex):
+    def get_point_from_vertex(vertex: Any) -> Base.Vector:
         return vertex.Shape.Vertexes[0].Point
 
     @staticmethod
-    def get_point_and_vector_from_edge(edge):
+    def get_point_and_vector_from_edge(edge: Any) -> tuple[Base.Vector, Base.Vector]:
         start = edge.Shape.Vertexes[0].Point
         end = edge.Shape.Vertexes[1].Point
         return start, end - start
 
     @staticmethod
-    def get_center_two_edges(ob1, ob2):
+    def get_center_two_edges(ob1: Any, ob2: Any) -> Base.Vector:
         sh1 = ob1.Shape
         sh2 = ob2.Shape
         d, pairs_data, _ = sh1.distToShape(sh2)
         pairs = pairs_data[0]
         return (pairs[0]+pairs[1])/2
 
-    def get_target_from_label(self, label):
+    def get_target_from_label(self, label: str) -> Base.Vector:
         """
         Finds the target of an object according to its label
         """
@@ -269,13 +296,13 @@ class MultiTracking:
             target = target_obj.Shape.Vertexes[0].Point
             return target
 
-    def get_deviation(self, axis_label):
+    def get_deviation(self, axis_label: str) -> float | None:
         try:
             return self.scene.extra_data['axis_deviation'][axis_label]
         except KeyError:
             return None
 
-    def get_data_from_objects(self):
+    def get_data_from_objects(self) -> None:
         """
         Gets all data of joints from the objects in the scene
         """
@@ -321,7 +348,7 @@ class MultiTracking:
             else:
                 self.object_target_map[obj] = None
 
-    def compute_movements(self):
+    def compute_movements(self) -> None:
         """
         Computes the movements so that the objects point in the right direction according to their target
         """
@@ -336,7 +363,7 @@ class MultiTracking:
                 movement = joint.compute_rotation_to_point(target, normal, self.source_direction)
             self.object_movements_map[obj] = movement
 
-    def make_movements(self):
+    def make_movements(self) -> None:
         """
         Makes the computed movements
         """
@@ -348,7 +375,7 @@ class MultiTracking:
                     element.Placement = movement.multiply(element.Placement)
         self.scene.recompute_boundbox()
 
-    def undo_movements(self):
+    def undo_movements(self) -> None:
         """
         Undo the movements so that they are in their original position
         """

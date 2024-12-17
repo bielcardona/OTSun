@@ -1,3 +1,4 @@
+from __future__ import annotations
 try:
     import freecad
     # Some distribuitions of FreeCAD need this import to set up the paths

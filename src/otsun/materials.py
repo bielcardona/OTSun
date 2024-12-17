@@ -4,10 +4,19 @@ The module relies on a basic class `Material` with two subclasses
 `VolumeMaterial` and `SurfaceMaterial`, and several subclasses of them
 for specific materials.
 """
+from __future__ import annotations
+import typing
+
+if typing.TYPE_CHECKING:
+    from .ray import Ray
 
 import json
 import zipfile
+from typing import ClassVar, Any, TextIO
+
 from FreeCAD import Base
+from pandas._typing import FilePath, ReadCsvBuffer
+
 from .optics import Phenomenon, OpticalState, refraction, matrix_reflectance, \
     calculate_reflectance, shure_refraction, reflection_hub, reflection, outgoing_polarization
 from .math import arccos, parallel_orthogonal_components, rad_to_deg, myrandom, normalize, \
@@ -29,7 +38,7 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def load_from_txt_or_csv(file):
+def load_from_txt_or_csv(file: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str]) -> np.ndarray:
     df = pd.read_table(
         file,
         sep=None,
@@ -65,21 +74,21 @@ class Material(object):
         String identifying the class
     """
 
-    by_name = {}
+    by_name: ClassVar[dict[str, Material]] = {}
     """
     Dict that associates the name of each created material with the material itself
     """
 
-    def __init__(self, name, properties=None):
+    def __init__(self, name: str, properties: dict[str,Any] | None =None):
         self.by_name[name] = self
-        self.name = name
-        self.classname = ""
+        self.name: str = name
+        self.classname: str = ""
         if properties is None:
             properties = {}
-        self.properties = properties
+        self.properties: dict[str, Any] = properties
 
     @staticmethod
-    def plain_properties_to_properties(plain_properties):
+    def plain_properties_to_properties(plain_properties: dict[str,Any]) -> dict[str,Any]:
         """
         Converts properties of a material in plain format (json) to internal format
 
@@ -109,7 +118,7 @@ class Material(object):
         return properties
 
     @staticmethod
-    def properties_to_plain_properties(properties):
+    def properties_to_plain_properties(properties: dict[str,Any]) -> dict[str,Any]:
         """
         Converts properties of a material in internal format to plain (json ready) format
 
@@ -127,7 +136,7 @@ class Material(object):
         return properties.get('plain_properties', None)
 
     @classmethod
-    def get_from_label(cls, label):
+    def get_from_label(cls, label: str) -> Material:
         """
         Returns the material given its label
 
@@ -154,12 +163,12 @@ class Material(object):
             raise MaterialNotFoundError(f"Material {name} not found")
 
     @classmethod
-    def create(cls, name, properties):
+    def create(cls, name: str, properties: dict[str,Any]) -> None:
         """Wrapper to create a material"""
         _ = cls(name, properties)
 
     @classmethod
-    def load_from_json(cls, info):
+    def load_from_json(cls, info: dict[str,Any]|list[dict[str,Any]]) -> str|list[str]:
         if type(info).__name__ == 'dict':
             info = [info]
         names = []
@@ -184,7 +193,7 @@ class Material(object):
             return names
 
     @classmethod
-    def load_from_json_fileobject(cls, f):
+    def load_from_json_fileobject(cls, f: TextIO) -> str:
         """
         Load materials from a json fileobject
 
@@ -206,7 +215,7 @@ class Material(object):
         return cls.load_from_json(info)
 
     @classmethod
-    def load_from_json_file(cls, filename):
+    def load_from_json_file(cls, filename: str) -> str:
         """
         Load materials from a json file
 
@@ -227,7 +236,7 @@ class Material(object):
             logger.exception("error in processing file %s", filename)
 
     @classmethod
-    def load_from_json_zip(cls, filename):
+    def load_from_json_zip(cls, filename: str) -> None:
         """
         Load all materials from a zip file
         Parameters
@@ -246,7 +255,7 @@ class Material(object):
         except IOError:
             logger.exception("error in processing file %s", filename)
 
-    def get_n(self, wavelength):
+    def get_n(self, wavelength: float) -> complex:
         """
         Returns the (complex) refractive index at a certain wavelength
 
@@ -266,7 +275,7 @@ class Material(object):
         else:
             return n
 
-    def change_of_optical_state(self, *args):
+    def change_of_optical_state(self, *args) -> OpticalState:
         """
         Computes how a ray behaves when interacting with the material.
         MUST be subclassed
@@ -285,11 +294,11 @@ class Material(object):
         """
         pass
 
-    def to_json(self):
+    def to_json(self) -> str:
         """Converts material to json. MUST be subclassed"""
         return ""
 
-    def save_to_json_file(self, filename):
+    def save_to_json_file(self, filename: str) -> None:
         """
         Save material to json file
 
@@ -302,7 +311,7 @@ class Material(object):
             f.write(self.to_json())
 
     @staticmethod
-    def all_to_json():
+    def all_to_json() -> list[str]:
         """
         Convert all materials to json
 
@@ -319,7 +328,7 @@ class Material(object):
         return [mat.to_json() for mat in all_mats]
 
     @staticmethod
-    def save_all_to_json_file(filename):
+    def save_all_to_json_file(filename: str) -> None:
         """
         Saves all materials to text file
 
@@ -332,7 +341,7 @@ class Material(object):
             f.write(',\n'.join(Material.all_to_json()))
             f.write('\n]')
 
-    def get_lambertian_weight_and_kind(self):
+    def get_lambertian_weight_and_kind(self) -> tuple[float, str|None]:
         if 'lambertian_material' in self.properties:
             # For backwards compatibility. In a previous version only "pure" lambertian
             # with total dispersion was considered
@@ -362,7 +371,7 @@ class VolumeMaterial(Material):
     def __init__(self, name, properties=None):
         super(VolumeMaterial, self).__init__(name, properties)
 
-    def change_of_optical_state(self, ray, normal_vector):
+    def change_of_optical_state(self, ray: Ray, normal_vector):
         """
         Compute the change of optical state
 
@@ -483,7 +492,7 @@ class PVMaterial(VolumeMaterial):
         super(PVMaterial, self).__init__(name)
         self.properties = Material.plain_properties_to_properties(plain_properties)
 
-    def get_PV_data(self, ray, energy_before):
+    def get_PV_data(self, ray: 'Ray', energy_before: float) -> tuple[float, tuple[float]]:
         """
         Computes the photovoltaic data stored in a ray.
 
@@ -516,7 +525,11 @@ class PolarizedThinFilm(VolumeMaterial):
     Subclass of `VolumeMaterial` for polarized thin film materials.
     """
 
-    def __init__(self, name, file_thin_film, file_front, file_back):
+    def __init__(self,
+                 name: str,
+                 file_thin_film: str,
+                 file_front: str,
+                 file_back: str):
         # thin film material calculated by TMM method, six columns:
         # wavelenth in nm,
         # angle in deg.,
@@ -598,8 +611,15 @@ class PolarizedThinFilm(VolumeMaterial):
         self.properties = Material.plain_properties_to_properties(plain_properties)
 
     @staticmethod
-    def calculate_state_thin_film(incident, normal_vector, n1, n2, polarization_vector,
-                                  properties, wavelength):
+    def calculate_state_thin_film(
+            incident: Base.Vector,
+            normal_vector: Base.Vector,
+            n1: complex,
+            n2: complex,
+            polarization_vector: Base.Vector,
+            properties: dict[str,Any],
+            wavelength: float
+    ) -> tuple[float, OpticalState]:
         """
         Helper function for the computation of the optical state once the ray has passed through the film
         """
@@ -681,7 +701,7 @@ class PolarizedThinFilm(VolumeMaterial):
                     OpticalState(polarization_vector_out, refracted_direction,
                                  Phenomenon.REFRACTION))  # TODO: Set solid
 
-    def change_of_optical_state(self, ray, normal_vector):
+    def change_of_optical_state(self, ray: Ray, normal_vector: Base.Vector) -> OpticalState:
         # the ray impacts on thin film material
         n1 = ray.current_medium().get_n(ray.wavelength)
         n_front = self.properties['index_of_refraction_front'](ray.wavelength)
@@ -733,7 +753,7 @@ class SurfaceMaterial(Material):
     def create(cls, name, properties):
         _ = cls(name, properties)
 
-    def compute_probabilities(self, ray):
+    def compute_probabilities(self, ray: Ray) -> list[float]:
         """
         Computes the tuple of probabilities that a ray hitting the surface gets reflected, absorbed or transmitted
         """
@@ -753,7 +773,7 @@ class SurfaceMaterial(Material):
 
         return [por, poa, pot]
 
-    def decide_phenomenon(self, ray):
+    def decide_phenomenon(self, ray: Ray) -> Phenomenon:
         """
         Decides which phenomenon will take place when a ray hits the surface.
         """
@@ -766,7 +786,12 @@ class SurfaceMaterial(Material):
         phenomenon = np.random.choice(phenomena, 1, p=probabilities)[0]
         return phenomenon
 
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+    def change_of_optical_state(
+            self,
+            ray: Ray,
+            normal_vector: Base.Vector,
+            nearby_material: Material
+    ) -> OpticalState:
         phenomenon = self.decide_phenomenon(ray)
         properties = self.properties
         if phenomenon == Phenomenon.REFLEXION:
@@ -807,7 +832,7 @@ class SurfaceMaterial(Material):
             return state
 
     @classmethod
-    def from_plain_properties(cls, name, plain_properties):
+    def from_plain_properties(cls, name: str, plain_properties: dict[str,Any]) -> Material:
         """
         Loads a material from its properties stored in a simple dictionary
 
@@ -824,7 +849,7 @@ class SurfaceMaterial(Material):
         material = cls(name, properties)
         return material
 
-    def to_json(self):
+    def to_json(self) -> str:
         return json.dumps(
             {
                 'name': self.name,
@@ -870,7 +895,7 @@ class TransparentSimpleLayer(SurfaceMaterial):
     Subclass of `SurfaceMaterial` for transparent layers.
     """
 
-    def __init__(self, name, pot):
+    def __init__(self, name, pot: float):
         plain_properties = {
             'probability_of_reflection': {
                 'type': 'constant',
@@ -903,7 +928,7 @@ class AbsorberSimpleLayer(SurfaceMaterial):
     Subclass of `SurfaceMaterial` for absorber layers with behaviour independent of the wavelength.
     """
 
-    def __init__(self, name, poa):
+    def __init__(self, name, poa: float):
         plain_properties = {
             'probability_of_reflection': {
                 'type': 'constant',
@@ -936,7 +961,7 @@ class AbsorberLambertianLayer(SurfaceMaterial):
     Subclass of `SurfaceMaterial` for absorber layers with lambertian behaviour when reflecting rays.
     """
 
-    def __init__(self, name, poa, weight=1, kind="Total"):
+    def __init__(self, name, poa: float, weight: float =1, kind:str="Total"):
         plain_properties = {
             'probability_of_reflection': {
                 'type': 'constant',
@@ -973,7 +998,13 @@ class ReflectorSpecularLayer(SurfaceMaterial):
     Subclass of `SurfaceMaterial` for reflector specular layers.
     """
 
-    def __init__(self, name, por, sigma_1=None, sigma_2=None, k=None):
+    def __init__(self,
+                 name,
+                 por: float,
+                 sigma_1: float|None=None,
+                 sigma_2: float|None=None,
+                 k: float|None=None
+                 ):
         plain_properties = {
             'probability_of_reflection': {
                 'type': 'constant',
@@ -1018,7 +1049,13 @@ class ReflectorLambertianLayer(SurfaceMaterial):
     Subclass of `SurfaceMaterial` for reflector layers with lambertian behaviour.
     """
 
-    def __init__(self, name, por, weight=1, kind="Total"):
+    def __init__(
+            self,
+            name,
+            por: float,
+            weight: float=1,
+            kind: str="Total"
+    ):
         plain_properties = {
             'probability_of_reflection': {
                 'type': 'constant',
@@ -1055,7 +1092,11 @@ class AbsorberTWModelLayer(SurfaceMaterial):
     Subclass of `SurfaceMaterial` for materials using Tesfamichael-Wackelgard model.
     """
 
-    def __init__(self, name, poa, b_constant, c_constant):
+    def __init__(self,
+                 name,
+                 poa: float,
+                 b_constant: float,
+                 c_constant: float):
         plain_properties = {
             'probability_of_reflection': {
                 'type': 'constant',
@@ -1090,7 +1131,12 @@ class AbsorberTWModelLayer(SurfaceMaterial):
         super(AbsorberTWModelLayer, self).__init__(name, properties)
 
     @staticmethod
-    def tw_absorptance_ratio(normal_vector, b_constant, c_constant, incident):
+    def tw_absorptance_ratio(
+            normal_vector: Base.Vector,
+            b_constant: float,
+            c_constant: float,
+            incident: Base.Vector
+    ) -> float:
         """Angular Solar Absorptance model for selective absorber material.
 
         Given by the formula 1 - b * (1/cos - 1) ** c, based on:
@@ -1125,7 +1171,12 @@ class AbsorberTWModelLayer(SurfaceMaterial):
             absorption_ratio = y0 - m * (inc_angle - 80.0)
         return absorption_ratio
 
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+    def change_of_optical_state(
+            self,
+            ray: Ray,
+            normal_vector: Base.Vector,
+            nearby_material: Material
+    ) -> OpticalState:
         properties = self.properties
         b_constant = properties['b_constant']
         c_constant = properties['c_constant']
@@ -1158,8 +1209,12 @@ class MetallicSpecularLayer(MetallicLayer):
     Subclass of `MetallicLayer` for metallic layers with specular properties.
     """
 
-    def __init__(self, name, file_index_of_refraction,
-                 sigma_1=None, sigma_2=None, k=None):
+    def __init__(self,
+                 name,
+                 file_index_of_refraction: str,
+                 sigma_1: float|None=None,
+                 sigma_2: float|None=None,
+                 k: float|None=None):
         # file_index_of_refraction with three columns: wavelenth in nm,
         # real(index of refraction), imaginary(index of refraction)
         data_refraction = load_from_txt_or_csv(file_index_of_refraction)
@@ -1192,7 +1247,12 @@ class MetallicSpecularLayer(MetallicLayer):
         properties = Material.plain_properties_to_properties(plain_properties)
         super(MetallicSpecularLayer, self).__init__(name, properties)
 
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+    def change_of_optical_state(
+            self,
+            ray: Ray,
+            normal_vector: Base.Vector,
+            nearby_material: Material
+    ) -> OpticalState:
         properties = self.properties
         polarization_vector = ray.current_polarization()
         n1 = ray.current_medium().get_n(ray.wavelength)
@@ -1216,7 +1276,11 @@ class MetallicLambertianLayer(MetallicLayer):
     Subclass of `MetallicLayer` for metallic layers with lambertian behaviour.
     """
 
-    def __init__(self, name, file_index_of_refraction, weight=1, kind="Total"):
+    def __init__(self,
+                 name,
+                 file_index_of_refraction: str,
+                 weight: float=1,
+                 kind: str="Total"):
         # file_index_of_refraction with three columns:
         # wavelenth in nm, real(index of refraction),
         # imaginary(index of refraction)
@@ -1246,7 +1310,12 @@ class MetallicLambertianLayer(MetallicLayer):
         properties = Material.plain_properties_to_properties(plain_properties)
         super(MetallicLambertianLayer, self).__init__(name, properties)
 
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+    def change_of_optical_state(
+            self,
+            ray: Ray,
+            normal_vector: Base.Vector,
+            nearby_material: Material
+    ) -> OpticalState:
         polarization_vector = ray.current_polarization()
         n1 = ray.current_medium().get_n(ray.wavelength)
         n2 = self.get_n(ray.wavelength)
@@ -1273,7 +1342,7 @@ class PolarizedCoatingLayer(SurfaceMaterial):
     def __init__(self, *args):
         super(PolarizedCoatingLayer, self).__init__(*args)
 
-    def precompute_change_of_optical_state(self, ray, normal_vector):
+    def precompute_change_of_optical_state(self, ray: Ray, normal_vector: Base.Vector) -> OpticalState|tuple:
         polarization_vector = ray.current_polarization()
         incident = ray.current_direction()
         wavelength = ray.wavelength
@@ -1322,7 +1391,12 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
     Subclass of `PolarizedCoatingLayer` for reflector layers.
     """
 
-    def __init__(self, name, coating_file, sigma_1=None, sigma_2=None, k=None):
+    def __init__(self,
+                 name,
+                 coating_file: str,
+                 sigma_1: float|None=None,
+                 sigma_2: float|None=None,
+                 k: float|None=None):
         # coating_material with four columns:
         # wavelenth in nm,
         # angle in deg.,
@@ -1353,7 +1427,12 @@ class PolarizedCoatingReflectorLayer(PolarizedCoatingLayer):
         properties = Material.plain_properties_to_properties(plain_properties)
         super(PolarizedCoatingReflectorLayer, self).__init__(name, properties)
 
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+    def change_of_optical_state(
+            self,
+            ray: Ray,
+            normal_vector: Base.Vector,
+            nearby_material: Material
+    ) -> OpticalState:
         new_state = self.precompute_change_of_optical_state(ray, normal_vector)
         if isinstance(new_state, OpticalState):
             return new_state
@@ -1370,7 +1449,9 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
     Subclass of `PolarizedCoatingLayer` for absorber layers.
     """
 
-    def __init__(self, name, coating_file):
+    def __init__(self,
+                 name: str,
+                 coating_file: str):
         # coating_material with four columns:
         # wavelenth in nm,
         # angle in deg.,
@@ -1393,7 +1474,12 @@ class PolarizedCoatingAbsorberLayer(PolarizedCoatingLayer):
         properties = Material.plain_properties_to_properties(plain_properties)
         super(PolarizedCoatingAbsorberLayer, self).__init__(name, properties)
 
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+    def change_of_optical_state(
+            self,
+            ray: Ray,
+            normal_vector: Base.Vector,
+            nearby_material: Material
+    ):
         new_state = self.precompute_change_of_optical_state(ray, normal_vector)
         if isinstance(new_state, OpticalState):
             return new_state
@@ -1411,7 +1497,9 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
     Subclass of `PolarizedCoatingLayer` for transparent layers.
     """
 
-    def __init__(self, name, coating_file):
+    def __init__(self,
+                 name: str,
+                 coating_file: str):
         # coatingmaterial calculated by TMM method, six columns:
         # wavelength in nm,
         # angle in deg.,
@@ -1438,7 +1526,12 @@ class PolarizedCoatingTransparentLayer(PolarizedCoatingLayer):
         properties = Material.plain_properties_to_properties(plain_properties)
         super(PolarizedCoatingTransparentLayer, self).__init__(name, properties)
 
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+    def change_of_optical_state(
+            self,
+            ray: Ray,
+            normal_vector: Base.Vector,
+            nearby_material: Material
+    ):
         polarization_vector = ray.current_polarization()
         incident = ray.current_direction()
         wavelength = ray.wavelength
@@ -1497,14 +1590,14 @@ class TwoLayerMaterial(Material):
     Subclass of `Material` for surface materials formed by two layers (back and front)
     """
 
-    def __init__(self, name, name_front_layer, name_back_layer):
+    def __init__(self, name: str, name_front_layer: str, name_back_layer: str):
         super(TwoLayerMaterial, self).__init__(name, {})
         self.name_front_layer = name_front_layer
         self.name_back_layer = name_back_layer
         self.front_material = Material.by_name[name_front_layer]
         self.back_material = Material.by_name[name_back_layer]
 
-    def to_json(self):
+    def to_json(self) -> str:
         return json.dumps(
             {
                 'name': self.name,
@@ -1514,7 +1607,12 @@ class TwoLayerMaterial(Material):
             }, cls=NumpyEncoder, indent=4
         )
 
-    def change_of_optical_state(self, ray, normal_vector, nearby_material):
+    def change_of_optical_state(
+            self,
+            ray: Ray,
+            normal_vector: Base.Vector,
+            nearby_material: Material
+    ):
         if ray.current_direction().dot(normal_vector) < 0:
             # Ray intercepted on the frontside of the surface
             material = self.front_material
