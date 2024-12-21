@@ -123,6 +123,8 @@ class Scene:
                 self.boundbox.add(obj.Shape.BoundBox)
 
         # self.remove_duplicate_faces()
+        if not self.boundbox:
+            raise ValueError("No objects in the scene")
 
         self.diameter : float = self.boundbox.DiagonalLength
 
@@ -131,16 +133,16 @@ class Scene:
         Recomputes the boundbox, so that all objects are contained in it
         """
         boundbox = None
-        for elem in self.solids:
+        for solid in self.solids:
             if boundbox is None:
-                boundbox = elem.BoundBox
+                boundbox = solid.BoundBox
             else:
-                boundbox.add(elem.BoundBox)
-        for elem in self.faces:
+                boundbox.add(solid.BoundBox)
+        for face in self.faces:
             if boundbox is None:
-                boundbox = elem.BoundBox
+                boundbox = face.BoundBox
             else:
-                boundbox.add(elem.BoundBox)
+                boundbox.add(face.BoundBox)
         self.boundbox = boundbox
 
     def remove_duplicate_faces(self) -> None:
@@ -191,7 +193,7 @@ class Scene:
             point: Base.Vector, 
             normal: Base.Vector, 
             direction: Base.Vector
-        ) -> Solid:
+        ) -> Solid|None:
         """
         Returns the next solid found in the given direction from a given point
         """

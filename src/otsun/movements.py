@@ -2,9 +2,8 @@
 
 The module defines the classes `Joint` (with subclasses `AxialJoint` and `CentralJoint`) and `MultiTracking`
 """
-from typing import AnyStr, Any
+from typing import Any
 
-import Part
 from FreeCAD import Base
 
 from .scene import Scene
@@ -99,8 +98,16 @@ class Joint:
     """
     Base class to represent joints
     """
-    pass
+    def compute_rotation_to_point(self,
+                                  target: Base.Vector,
+                                  normal: Base.Vector,
+                                  light_direction: Base.Vector) -> Base.Placement:
+        pass
 
+    def compute_rotation_to_direction(self,
+                                      normal: Base.Vector,
+                                      light_direction: Base.Vector) -> Base.Placement:
+        pass
 
 @traced(logger)
 class AxialJoint(Joint):

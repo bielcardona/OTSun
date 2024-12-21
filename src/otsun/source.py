@@ -8,6 +8,7 @@ from typing import Callable
 import Part
 import numpy as np
 from FreeCAD import Base, Document
+from numpy import ndarray
 
 from .math import pick_random_from_cdf, myrandom, tabulated_function, two_orthogonal_vectors, area_of_triangle, random_point_of_triangle
 from .optics import dispersion_from_main_direction, random_polarization, dispersion_polarization
@@ -43,12 +44,12 @@ class GeneralizedSunWindow(object):
                 points.append(point)
                 pu = u.dot(point - origin) * 1.02
                 pv = v.dot(point - origin) * 1.02
-                plane_points.append([pu,pv])
+                plane_points.append((pu,pv))
         hull = ConvexHull(plane_points)
         plane_vertices = [plane_points[i] for i in hull.vertices]
         self.vertices: list[Base.Vector] = [origin + u*pu + v*pv for (pu,pv) in plane_vertices]
-        self.triangles: list[list[Base.Vector]] = [
-            [self.vertices[0], self.vertices[i], self.vertices[i+1]]
+        self.triangles: list[tuple[Base.Vector, Base.Vector, Base.Vector]] = [
+            (self.vertices[0], self.vertices[i], self.vertices[i+1])
             for i in range(1,len(self.vertices)-1)]
         self.triangle_areas: list[float] = list(map(area_of_triangle, self.triangles))
         self.aperture: float = sum(self.triangle_areas)
@@ -73,9 +74,6 @@ class GeneralizedSunWindow(object):
         Base.Vector
         """
         return self.main_direction
-
-
-
 
 
 class SunWindow(object):
@@ -234,7 +232,7 @@ class LightSource(object):
             self,
             scene: Scene,
             emitting_region: SunWindow | GeneralizedSunWindow,
-            light_spectrum: float | tuple[list[float], list[float]],
+            light_spectrum: float | tuple[ndarray, ndarray],
             initial_energy: float,
             direction_distribution: Callable[[float],float]|None = None,
             polarization_vector: Base.Vector|None = None
@@ -275,65 +273,65 @@ class LightSource(object):
 
 # Auxiliary functions for buie_distribution
 
-def _calculate_a1(CSR: float, SD: float) -> float:
+def _calculate_a1(csr: float, sd: float) -> float:
     """ Parameter a1 needed for the normalization of the probability distribution in the disk region
     """
 
-    th = np.arange(0.0, SD, 0.001)
+    th = np.arange(0.0, sd, 0.001)
     values = [2.0 * np.pi * np.cos(0.326 * angle) / np.cos(0.305 * angle) * angle
               for angle in th]
-    a1 = (1.0 - CSR) / np.trapz(values, dx=0.001)
+    a1 = (1.0 - csr) / np.trapz(values, dx=0.001)
     return a1
 
 
-def _circumsolar__density_distribution(angle: float, CSR: float) -> float:
-    gamma = 2.2 * np.log(0.52 * CSR) * CSR ** 0.43 - 0.1
-    kappa = 0.9 * np.log(13.5 * CSR) * CSR ** (-0.3)
+def _circumsolar__density_distribution(angle: float, csr: float) -> float:
+    gamma = 2.2 * np.log(0.52 * csr) * csr ** 0.43 - 0.1
+    kappa = 0.9 * np.log(13.5 * csr) * csr ** (-0.3)
     return 2.0 * np.pi * np.exp(kappa) * angle ** (gamma + 1.0)
 
 
-def _calculate_a2(CSR: float, SD: float, SS: float) -> float:
+def _calculate_a2(csr: float, sd: float, ss: float) -> float:
     """ Parameter a2 needed for the normalization of the probability distribution in the circumsolar region"""
     f = _circumsolar__density_distribution
-    th = np.arange(SD, SS, 0.001)
+    th = np.arange(sd, ss, 0.001)
     f_th = np.vectorize(f)
-    a2 = CSR / np.trapz(f_th(th, CSR), dx=0.001)
+    a2 = csr / np.trapz(f_th(th, csr), dx=0.001)
     return a2
 
 
-def _calculate_CDF_disk_region(a1: float, SD: float) -> tuple[np.ndarray, np.ndarray]:
+def _calculate_cdf_disk_region(a1: float, sd: float) -> tuple[np.ndarray, np.ndarray]:
     """
     Cumulative Distribution Function in the solar disk region
     """
-    th = np.arange(0.0, SD, 0.001)
+    th = np.arange(0.0, sd, 0.001)
     values = [2.0 * np.pi * np.cos(0.326 * angle) / np.cos(0.305 * angle) * angle
               for angle in th]
     cumulative = np.cumsum(values)
-    CDF = (th, a1 * cumulative / 1000.0)
-    return CDF
+    cdf = (th, a1 * cumulative / 1000.0)
+    return cdf
 
 
-def _th_solar_disk_region(u: float, CDF: tuple[list[float], float]) -> float:
+def _th_solar_disk_region(u: float, cdf: tuple[ndarray, ndarray]) -> float:
     """ Random angle based on the probability distribution in the circumsolar region"""
     # TODO: It is recomputed every time? @Ramon
     # CDF = CDF_Disk_Region # calculate_CDF_disk_region(a1, SD)
-    idx = (np.abs(CDF[1] - u)).argmin()
-    return CDF[0][idx]
+    idx = (np.abs(cdf[1] - u)).argmin()
+    return cdf[0][idx]
 
 
-def _th_circumsolar_region(u: float, CSR: float, SD: float, a2: float) -> float:
+def _th_circumsolar_region(u: float, csr: float, sd: float, a2: float) -> float:
     """ Random angle based on the CDF in the circumsolar region"""
-    gamma = 2.2 * np.log(0.52 * CSR) * CSR ** (0.43) - 0.1
-    kappa = 0.9 * np.log(13.5 * CSR) * CSR ** (-0.3)
-    u_csr = (u - 1.0) + CSR  # Since CSR-CDF starts at zero
+    gamma = 2.2 * np.log(0.52 * csr) * csr ** 0.43 - 0.1
+    kappa = 0.9 * np.log(13.5 * csr) * csr ** (-0.3)
+    u_csr = (u - 1.0) + csr  # Since CSR-CDF starts at zero
     f1 = u_csr * (gamma + 2.0) / (a2 * 2 * np.pi * np.exp(kappa))
-    f2 = SD ** (gamma + 2.0)
+    f2 = sd ** (gamma + 2.0)
     exp = (1.0 / (gamma + 2.0))
     th_u = np.power(f1 + f2, exp)
     return th_u
 
 
-def buie_distribution(CircumSolarRatio: float) -> Callable[[float], float]:
+def buie_distribution(circum_solar_ratio: float) -> Callable[[float], float]:
     """
     Implementation of the Buie Distribution for Sun emission
 
@@ -344,34 +342,34 @@ def buie_distribution(CircumSolarRatio: float) -> Callable[[float], float]:
 
     Parameters
     ----------
-    CircumSolarRatio : float
+    circum_solar_ratio : float
 
     Returns
     -------
     angle distribution for random input: function
         Function that interpolates by straight line segments the input data
     """
-    CSR = CircumSolarRatio
-    SD = 4.65
+    csr = circum_solar_ratio
+    sd = 4.65
     # Solar Disk in mrad
-    SS = 43.6
+    ss = 43.6
     # Solar Size in mrad
     a2 = None # _calculate_a2(CSR, SD, SS)
-    CDF_Disk_Region = None # _calculate_CDF_disk_region(a1, SD)
+    cdf_disk_region = None # _calculate_CDF_disk_region(a1, SD)
     #    Buie distribution for the disk region
     u_values = np.arange(0.0, 1.001, 0.001)
     dist_values = []
     for u in u_values:
-        if u <= 1.0 - CSR:
-            if CDF_Disk_Region is None:
-                a1 = _calculate_a1(CSR, SD)
+        if u <= 1.0 - csr:
+            if cdf_disk_region is None:
+                a1 = _calculate_a1(csr, sd)
                 #     normalization constant for the disk region
-                CDF_Disk_Region = _calculate_CDF_disk_region(a1, SD)
-            dist_values.append(_th_solar_disk_region(u, CDF_Disk_Region) / 1000.0 * 180.0 / np.pi)
+                cdf_disk_region = _calculate_cdf_disk_region(a1, sd)
+            dist_values.append(_th_solar_disk_region(u, cdf_disk_region) / 1000.0 * 180.0 / np.pi)
         else:
             if a2 is None:
-                a2 = _calculate_a2(CSR, SD, SS)
+                a2 = _calculate_a2(csr, sd, ss)
                 #    normalization constant for the circumsolar region
-            dist_values.append(_th_circumsolar_region(u, CSR, SD, a2) / 1000.0 * 180.0 / np.pi)
+            dist_values.append(_th_circumsolar_region(u, csr, sd, a2) / 1000.0 * 180.0 / np.pi)
     f = tabulated_function(u_values, dist_values)
     return f

@@ -12,7 +12,7 @@ if typing.TYPE_CHECKING:
 
 import json
 import zipfile
-from typing import ClassVar, Any, TextIO
+from typing import ClassVar, Any, IO
 
 from FreeCAD import Base
 from pandas._typing import FilePath, ReadCsvBuffer
@@ -118,7 +118,7 @@ class Material(object):
         return properties
 
     @staticmethod
-    def properties_to_plain_properties(properties: dict[str,Any]) -> dict[str,Any]:
+    def properties_to_plain_properties(properties: dict[str,Any]) -> dict[str,Any]|None:
         """
         Converts properties of a material in internal format to plain (json ready) format
 
@@ -136,7 +136,7 @@ class Material(object):
         return properties.get('plain_properties', None)
 
     @classmethod
-    def get_from_label(cls, label: str) -> Material:
+    def get_from_label(cls, label: str) -> Material|None:
         """
         Returns the material given its label
 
@@ -193,7 +193,7 @@ class Material(object):
             return names
 
     @classmethod
-    def load_from_json_fileobject(cls, f: TextIO) -> str:
+    def load_from_json_fileobject(cls, f: IO) -> str:
         """
         Load materials from a json fileobject
 
@@ -492,7 +492,7 @@ class PVMaterial(VolumeMaterial):
         super(PVMaterial, self).__init__(name)
         self.properties = Material.plain_properties_to_properties(plain_properties)
 
-    def get_PV_data(self, ray: 'Ray', energy_before: float) -> tuple[float, tuple[float]]:
+    def get_PV_data(self, ray: 'Ray', energy_before: float) -> tuple[float, tuple]:
         """
         Computes the photovoltaic data stored in a ray.
 

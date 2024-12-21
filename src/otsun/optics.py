@@ -342,7 +342,7 @@ def refraction(incident: Base.Vector,
     """
     # Fresnel equations. Oblique incident in absorbing media.
     # See Chapter 2 of the book Thin-films optical filters
-    # See Fresnel equations in WikipediA
+    # See Fresnel equations in Wikipedia
     normal = correct_normal(normal_vector, incident)
     r = n1 / n2
     c1 = - normal.dot(incident)

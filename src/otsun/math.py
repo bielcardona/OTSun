@@ -2,13 +2,15 @@
 Module otsun.math with mathematical helper functions
 """
 import os
-from typing import Callable, Any
+from typing import Callable, Any, Iterable
 
 import numpy as np
 from FreeCAD import Base
 import random
 import time
 from functools import wraps
+
+from numpy import ndarray
 
 EPSILON = 1E-6
 # Tolerance for considering equal to zero
@@ -64,7 +66,7 @@ def constant_function(c: float) -> Callable[[Any], float]:
     return lambda x: c
 
 
-def tabulated_function(xvalues: list[float], yvalues: list[float]) -> Callable[[float], float]:
+def tabulated_function(xvalues: ndarray|list[float], yvalues: ndarray|list[float]) -> Callable[[float], float]:
     """Create a linear interpolating function from tabulated values
 
     Parameters
