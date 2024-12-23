@@ -87,7 +87,7 @@ jobs:
           poetry version ${{ needs.details.outputs.new_version }}
 
       - name: Install dependencies
-        run: poetry install --sync --no-interaction
+        run: poetry install --sync --no-interaction --without dev
 
       - name: Build source and wheel distribution
         run: |
