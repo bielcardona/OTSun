@@ -6,6 +6,7 @@ for specific materials.
 """
 from __future__ import annotations
 import typing
+from pathlib import Path
 
 if typing.TYPE_CHECKING:
     from .ray import Ray
@@ -254,6 +255,19 @@ class Material(object):
                         logger.exception("File %s in zip contains errors", matfile)
         except IOError:
             logger.exception("error in processing file %s", filename)
+
+    @classmethod
+    def load_from_folder(cls, folder: str) -> None:
+        """
+        Load all materials from a folder
+
+        Parameters
+        ----------
+        folder : str
+            Name of the folder
+        """
+        for matfile in Path(folder).glob('*.otmaterial'):
+            cls.load_from_json_file(str(matfile))
 
     def get_n(self, wavelength: float) -> complex:
         """
