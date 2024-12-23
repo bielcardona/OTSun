@@ -5,6 +5,7 @@ description = ""
 authors = ["Biel Cardona <bielcardona@gmail.com>"]
 readme = "README.md"
 packages = [{include = "otsun", from = "src"}]
+include = ["src/data/ASTMG173-direct.txt"]
 
 [tool.poetry.dependencies]
 python = ">=3.10"
