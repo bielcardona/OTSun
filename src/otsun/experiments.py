@@ -3,10 +3,13 @@
 The module defines a class `Experiment` that deals with the setup and
 run of experiments.
 """
+from pathlib import Path
+
 from .movements import MultiTracking
 from .source import LightSource, GeneralizedSunWindow, buie_distribution
 from .scene import Scene
 from .math import polar_to_cartesian, cdf_from_pdf_file
+from .helpers import get_document
 from FreeCAD import Document
 from importlib.resources import files
 
@@ -20,7 +23,7 @@ class Experiment:
     """
     Sets up and runs and experiment in a given scene with a given light source.
 
-    An Experiment is formed by a scene and a ligh_source. Rays are emitted from light_source
+    An Experiment is formed by a scene and a light_source. Rays are emitted from light_source
     and interfere with the scene until they are absorbed or scape from the scene. If they are
     absorbed, the energies are computed and stored.
 
@@ -78,6 +81,48 @@ class Experiment:
         self.PV_wavelength = []
         self.PV_values = []
         self.points_absorber_Th = []
+        self.has_run = False
+
+    @classmethod
+    def from_simple_data(
+            cls,
+            document: Document | str | Path,
+            phi: float,
+            theta: float,
+            number_of_rays: int,
+            track_movements: bool = False,
+            wavelength: float | str = 'ASTMG173-direct',
+            csr_value: float | None = None,
+            aperture_th: float | None = None,
+            aperture_pv: float | None = None,
+            plot_rays: bool = False,
+    ) -> 'Experiment':
+        extra_data = {}
+        if aperture_pv is not None:
+            extra_data['aperture_pv'] = aperture_pv
+        if aperture_th is not None:
+            extra_data['aperture_th'] = aperture_th
+        document = get_document(document)
+        scene = Scene.from_freecad_document(document, extra_data=extra_data)
+        main_direction = polar_to_cartesian(phi, theta) * (-1.0)
+        if track_movements:
+            tracking = MultiTracking(main_direction, scene)
+            tracking.make_movements()
+        emitting_region = GeneralizedSunWindow(scene, main_direction)
+        light_spectrum = wavelength
+        if type(wavelength) == str:
+            data_file_spectrum = files('otsun').joinpath('data', f'{wavelength}.txt').__str__()
+            light_spectrum = cdf_from_pdf_file(data_file_spectrum)
+        direction_distribution = None
+        if csr_value is not None:
+            direction_distribution = buie_distribution(csr_value)
+        light_source = LightSource(scene, emitting_region, light_spectrum, 1.0,
+                                   direction_distribution, None)
+        if plot_rays:
+            document_to_show = document
+        else:
+            document_to_show = None
+        return cls(scene, light_source, number_of_rays, document_to_show)
 
     def run(self) -> None:
         """Runs the experiment and plots the rays in the document specified (if any)"""
@@ -102,7 +147,7 @@ class Experiment:
             else:
                 self.Th_energy.append(0.0)
                 # TODO: Review... ray.wavelength always added to Th_wavelength
-                # Hence always Th_wavelength == wavelenghts
+                # Hence always Th_wavelength == wavelengths
                 self.Th_wavelength.append(ray.wavelength)
             if ray.PV_absorbed:
                 PV_energy_absorbed = np.sum(ray.PV_absorbed)
@@ -118,71 +163,22 @@ class Experiment:
                 self.PV_energy.append(0.0)
                 # TODO: Review... ray.wavelength always added to PV_wavelength
                 self.PV_wavelength.append(ray.wavelength)
-
-
-class TotalAnalysis:
-    def __init__(
-            self,
-            scene: Scene,
-            number_of_rays: int,
-            phi: float,
-            theta: float,
-            track_movements: bool = False,
-            csr_value: float | None = None,
-            aperture_th: float | None = None,
-            aperture_pv: float | None = None,
-    ):
-        self.scene = scene
-        self.number_of_rays = number_of_rays
-        self.phi = phi
-        self.theta = theta
-        self.csr_value = csr_value
-        self.track_movements = track_movements
-        self.has_run = False
-        self.aperture_th = aperture_th
-        self.aperture_pv = aperture_pv
-
-        self.main_direction = polar_to_cartesian(phi, theta) * (-1.0)
-        if self.track_movements:
-            tracking = MultiTracking(self.main_direction, self.scene)
-            tracking.make_movements()
-        emitting_region = GeneralizedSunWindow(self.scene, self.main_direction)
-        self.aperture = emitting_region.aperture
-        data_file_spectrum = files('otsun').joinpath('data', 'ASTMG173-direct.txt').__str__()
-        light_spectrum = cdf_from_pdf_file(data_file_spectrum)
-        if csr_value is None:
-            direction_distribution = None
-        else:
-            direction_distribution = buie_distribution(csr_value)
-        light_source = LightSource(scene, emitting_region, light_spectrum, 1.0,
-                                   direction_distribution, None)
-        self.experiment = Experiment(scene, light_source, number_of_rays, None)
-
-    def run(self):
-        self.experiment.run()
         self.has_run = True
 
-    @property
-    def results(self):
-        if not self.has_run:
-            raise ValueError("Experiment has not been run")
-        if self.aperture_pv is not None and self.aperture_pv != 0:
+    def efficiency_pv(self):
+        if self.scene.aperture_pv is not None and self.scene.aperture_pv != 0:
             efficiency_pv = (
-                    (self.experiment.captured_energy_PV / self.aperture_pv) /
-                    (self.number_of_rays / self.aperture))
+                    (self.captured_energy_PV / self.scene.aperture_pv) /
+                    (self.number_of_rays / self.light_source.emitting_region.aperture))
         else:
             efficiency_pv = 0
-        if self.aperture_th is not None and self.aperture_th != 0:
+        return efficiency_pv
+
+    def efficiency_th(self):
+        if self.scene.aperture_th is not None and self.scene.aperture_th != 0:
             efficiency_th = (
-                    (self.experiment.captured_energy_Th / self.aperture_th) /
-                    (self.number_of_rays / self.aperture))
+                    (self.captured_energy_Th / self.scene.aperture_th) /
+                    (self.number_of_rays / self.light_source.emitting_region.aperture))
         else:
             efficiency_th = 0
-
-        return {
-            'captured_Th': self.experiment.captured_energy_Th,
-            'captured_PV': self.experiment.captured_energy_PV,
-            'aperture': self.experiment.light_source.emitting_region.aperture,
-            'efficiency_Th': efficiency_th,
-            'efficiency_PV': efficiency_pv,
-        }
+        return efficiency_th
