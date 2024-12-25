@@ -5,12 +5,15 @@ The module defines the class `Scene` that models the elements in an optical syst
 from __future__ import annotations
 from typing import Any
 
+import FreeCAD
 from Part import Face, Solid
 from FreeCAD import Base
 
+from .helpers import parameters_for_freecad_doc, get_document
 from .materials import Material, VolumeMaterial, SurfaceMaterial, TwoLayerMaterial, MaterialNotFoundError
 from .math import correct_normal
 from autologging import traced
+from pathlib import Path
 import logging
 logger = logging.getLogger(__name__)
 
@@ -39,6 +42,8 @@ class Scene:
         self.epsilon: float = EPSILON # Tolerance for solid containment # 2 nm.
         self.boundbox: Base.BoundBox | None = None
         self.element_object_dict: dict[ Face | Solid, Any] = {}
+        self.aperture_pv: float | None = None
+        self.aperture_th: float | None = None
 
         self.extra_data : dict[str, Any]
         if extra_data is None:
@@ -62,6 +67,10 @@ class Scene:
             for axis, sigma in pairs_iterator:
                 self.extra_data['axis_deviation'][axis] = sigma
         # extra_data['axis_deviation']: Dictionary where each key is the axis in the scene and the value its std dev
+        if 'aperture_pv' in self.extra_data:
+            self.aperture_pv = self.extra_data['aperture_pv']
+        if 'aperture_th' in self.extra_data:
+            self.aperture_th = self.extra_data['aperture_th']
 
         for obj in objects:
             # noinspection PyNoneFunctionAssignment
@@ -127,6 +136,24 @@ class Scene:
             raise ValueError("No objects in the scene")
 
         self.diameter : float = self.boundbox.DiagonalLength
+
+    @classmethod
+    def from_freecad_document(
+            cls,
+            doc: str | Path | FreeCAD.Document,
+            extra_data: dict[str, Any] | None = None
+    ) -> Scene:
+        """
+        Creates a Scene from a FreeCAD document
+        """
+        doc = get_document(doc)
+        objects = doc.Objects
+        extra_data_from_doc = parameters_for_freecad_doc(doc)
+        if extra_data:
+            extra_data_from_doc.update(extra_data)
+            # Overwrite extra_data_from_doc with the one passed as argument if it exists
+            # If aperture_pv is given in extra_data, it will overwrite the one from the document
+        return cls(objects, extra_data_from_doc)
 
     def recompute_boundbox(self) -> None:
         """
