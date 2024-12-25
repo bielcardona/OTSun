@@ -13,6 +13,7 @@ from .source import *
 from .scene import *
 from .experiments import *
 from .movements import *
+from .helpers import *
 
 import importlib.metadata
 from pathlib import Path
