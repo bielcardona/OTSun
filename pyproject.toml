@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "otsun"
-version = "2.13.1"
+version = "2.13.2"
 description = ""
 authors = ["Biel Cardona <bielcardona@gmail.com>"]
 readme = "README.md"
