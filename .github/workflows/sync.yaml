@@ -23,4 +23,4 @@ jobs:
           TOKEN: ${{ secrets.DEST_REPO_TOKEN }}
         run: |
           git remote add dest https://x-access-token:${TOKEN}@github.com/otsun-uib/OTSun
-          git push -u dest main --force
+          git push -u dest master --force
