@@ -10,6 +10,8 @@ import numpy as np
 from FreeCAD import Base, Document
 from numpy import ndarray
 
+from abc import ABC, abstractmethod
+
 from .math import pick_random_from_cdf, myrandom, tabulated_function, two_orthogonal_vectors, area_of_triangle, random_point_of_triangle
 from .optics import dispersion_from_main_direction, random_polarization, dispersion_polarization
 from .ray import Ray
@@ -21,11 +23,25 @@ from scipy.spatial import ConvexHull
 EPSILON = 1E-6
 # Tolerance for considering equal to zero
 
-class GeneralizedSunWindow(object):
+class AbstractEmittingObject(ABC):
+    @abstractmethod
+    def random_point(self) -> Base.Vector:
+        pass
+
+    @abstractmethod
+    def normal_direction(self, point: Base.Vector) -> Base.Vector:
+        pass
+
+    # def random_direction(self) -> Base.Vector:
+    #     ...
+
+
+class GeneralizedSunWindow(AbstractEmittingObject):
     def __init__(
             self, 
             scene: Scene, 
             main_direction: Base.Vector):
+        super().__init__(scene=scene, main_direction=main_direction)
         bbs = []
         for shape in itertools.chain(scene.solids, scene.faces):
             bbs.append(shape.BoundBox)
@@ -63,20 +79,23 @@ class GeneralizedSunWindow(object):
         random_triangle = choices(self.triangles, self.triangle_areas)[0]
         return random_point_of_triangle(random_triangle)
 
-    def random_direction(self) -> Base.Vector:
-        """
-        Returns the main direction
-
-        Maybe in the future will return some random vector
-
-        Returns
-        -------
-        Base.Vector
-        """
+    def normal_direction(self, point: Base.Vector) -> Base.Vector:
         return self.main_direction
 
+    # def random_direction(self) -> Base.Vector:
+    #     """
+    #     Returns the main direction
+    #
+    #     Maybe in the future will return some random vector
+    #
+    #     Returns
+    #     -------
+    #     Base.Vector
+    #     """
+    #     return self.main_direction
 
-class SunWindow(object):
+
+class SunWindow(AbstractEmittingObject):
     """
     Class that implements a Sun window (rectangle that emits rays)
 
@@ -102,6 +121,7 @@ class SunWindow(object):
     """
 
     def __init__(self, scene: Scene, main_direction: Base.Vector):
+        super().__init__(scene=scene, main_direction=main_direction)
         bbs = []
         for shape in itertools.chain(scene.solids, scene.faces):
             bbs.append(shape.BoundBox)
@@ -190,17 +210,21 @@ class SunWindow(object):
         return (self.origin + self.v1 * self.length1 * myrandom() +
                 self.v2 * self.length2 * myrandom())
 
-    def random_direction(self) -> Base.Vector :
-        """
-        Returns the main direction
-
-        Maybe in the future will return some random vector
-
-        Returns
-        -------
-        Base.Vector
-        """
+    def normal_direction(self, point: Base.Vector) -> Base.Vector:
         return self.main_direction
+
+
+    # def random_direction(self) -> Base.Vector :
+    #     """
+    #     Returns the main direction
+    #
+    #     Maybe in the future will return some random vector
+    #
+    #     Returns
+    #     -------
+    #     Base.Vector
+    #     """
+    #     return self.main_direction
 
     def add_to_document(self, doc: Document) -> None:
         """
@@ -219,6 +243,26 @@ class SunWindow(object):
         doc.addObject("Part::Feature", "SunWindow").Shape = sw
 
 
+class EmittingSphere(AbstractEmittingObject):
+    def __init__(self, sphere: Part.Feature):
+        self.sphere = sphere
+
+    def random_point(self) -> Base.Vector:
+        u = 2.0 * np.pi * myrandom()
+        v = np.arccos(2.0 * myrandom() - 1.0)
+        r = self.sphere.Radius * (1.0 + EPSILON)
+        x = r * np.sin(v) * np.cos(u)
+        y = r * np.sin(v) * np.sin(u)
+        z = r * np.cos(v)
+        return Base.Vector(x, y, z) + self.sphere.Placement.Base
+
+    def normal_direction(self, point: Base.Vector) -> Base.Vector:
+        return point - self.sphere.Placement.Base
+
+    # def random_direction(self) -> Base.Vector:
+    #     ...
+
+
 class LightSource(object):
     """
     Sets up a light source with a given scene, a given emitting region and a given light spectrum.
@@ -231,7 +275,7 @@ class LightSource(object):
     def __init__(
             self,
             scene: Scene,
-            emitting_region: SunWindow | GeneralizedSunWindow,
+            emitting_region: AbstractEmittingObject,
             light_spectrum: float | tuple[ndarray, ndarray],
             initial_energy: float,
             direction_distribution: Callable[[float],float]|None = None,
@@ -250,7 +294,8 @@ class LightSource(object):
         Simulates the emission of a ray
         """
         point = self.emitting_region.random_point()
-        main_direction = self.emitting_region.main_direction  # emitting main direction
+        ## main_direction = self.emitting_region.main_direction  # emitting main direction
+        main_direction = self.emitting_region.normal_direction(point)
         direction = main_direction
         if self.direction_distribution is not None:  # main direction has a distribution
             theta = self.direction_distribution(myrandom())
