@@ -336,3 +336,149 @@ def random_point_of_triangle(vertices: tuple[Base.Vector, Base.Vector, Base.Vect
         y = random.random()
         if x + y <= 1:
             return p + pq*x + pr*y
+        
+
+def blackbody_cdf(
+    temperature,
+    wl_min=None,
+    wl_max=None,
+    num_points=1000,
+    range_factor=2.5,
+    emissivity=None
+):
+    """
+    Returns the wavelengths (in nm) and normalized CDF of thermal emission at a given temperature,
+    optionally including wavelength-dependent emissivity.
+
+    Parameters
+    ----------
+    temperature : float
+        Temperature in Kelvin.
+    wl_min : float, optional
+        Minimum wavelength in nanometers. If None, computed from spectral peak / range_factor.
+    wl_max : float, optional
+        Maximum wavelength in nanometers. If None, computed from spectral peak * range_factor.
+    num_points : int, optional
+        Number of wavelength samples. Default is 1000.
+    range_factor : float, optional
+        Factor to expand around the peak wavelength. Default is 2.5.
+    emissivity : None | float | str, optional
+        - None → ideal blackbody (ε = 1)
+        - float (0 < ε ≤ 1) → constant emissivity
+        - str → path to file with two columns: wavelength [nm], emissivity [0–1]
+
+    Returns
+    -------
+    tuple of np.ndarray
+        wavelengths_nm : array of wavelengths in nanometers
+        cdf : normalized cumulative distribution function (values from 0 to 1)
+    """
+
+    # Physical constants
+    h = 6.62607015e-34
+    c = 2.99792458e8
+    kB = 1.380649e-23
+    b = 2.897771955e6  # Wien's constant (nm·K)
+
+    # Compute peak wavelength
+    wl_peak = b / temperature
+    wl_min = wl_peak / range_factor if wl_min is None else wl_min
+    wl_max = wl_peak * range_factor if wl_max is None else wl_max
+
+    # Wavelength array
+    wavelengths_nm = np.linspace(wl_min, wl_max, num_points)
+    wavelengths_m = wavelengths_nm * 1e-9
+
+    # Spectral radiance using Planck's law
+    spectral_radiance = (2 * h * c**2) / (wavelengths_m**5) * \
+        1 / (np.exp((h * c) / (wavelengths_m * kB * temperature)) - 1)
+
+    # Handle emissivity
+    if emissivity is None:
+        ε = np.ones_like(wavelengths_nm)
+    elif isinstance(emissivity, (float, int)):
+        ε = np.full_like(wavelengths_nm, float(emissivity))
+    elif isinstance(emissivity, str):
+        try:
+            data = np.loadtxt(emissivity, delimiter=None)
+            wl_data = data[:, 0]
+            ε_data = data[:, 1]
+
+            # Sort by wavelength (just in case)
+            sort_idx = np.argsort(wl_data)
+            wl_data = wl_data[sort_idx]
+            ε_data = ε_data[sort_idx]
+
+            # Interpolate emissivity, extrapolate with boundary values
+            ε_interp = np.interp(wavelengths_nm, wl_data, ε_data,
+                                 left=ε_data[0], right=ε_data[-1])
+            ε = ε_interp
+        except Exception as e:
+            raise ValueError(f"Failed to load emissivity data: {e}")
+    else:
+        raise TypeError("emissivity must be None, a float, or a path to a data file.")
+
+    # Compute emissive power
+    emission = ε * spectral_radiance
+
+    # Normalize as probability distribution
+    pdf = emission / np.trapz(emission, wavelengths_nm)
+
+    # Compute CDF
+    cdf = np.cumsum(pdf)
+    cdf /= cdf[-1]
+
+    return wavelengths_nm, cdf
+
+
+import numpy as np
+
+def generate_material_file_from_emissivity(
+    emissivity_file,
+    output_file=None,
+    separator="\t"
+):
+    """
+    Generates a material reflectivity file for two angles (0° and 90°)
+    based on a spectral emissivity file.
+
+    Parameters
+    ----------
+    emissivity_file : str
+        Path to input file with two columns: wavelength_nm, emissivity (0–1).
+    output_file : str, optional
+        If provided, saves the generated data to this file.
+    separator : str, optional
+        Column separator used for writing the file. Default is tab.
+
+    Returns
+    -------
+    np.ndarray
+        Array of shape (2*N, 4) with columns:
+        wavelength_nm, angle_deg (0 or 90), reflectivity (1 - emissivity), transmittance
+    """
+
+    # Load input file (auto-detect separator)
+    data = np.loadtxt(emissivity_file)
+    wavelengths = data[:, 0]
+    emissivities = data[:, 1]
+    reflectivities = 1.0 - emissivities
+    N = len(wavelengths)
+
+    # Create output array with duplicated rows for 0° and 90° angles
+    output_data = np.empty((2 * N, 4))
+    output_data[0::2, 0] = wavelengths
+    output_data[1::2, 0] = wavelengths
+    output_data[0::2, 1] = 0
+    output_data[1::2, 1] = 90
+    output_data[0::2, 2] = reflectivities
+    output_data[1::2, 2] = reflectivities
+    output_data[0::2, 3] = 0
+    output_data[1::2, 3] = 0
+
+    # Save to file if needed
+    if output_file:
+        header = f"# wavelength_nm{separator}angle_deg{separator}reflectivity"
+        np.savetxt(output_file, output_data, fmt="%.6f", delimiter=separator, header=header, comments='')
+
+    return output_data
