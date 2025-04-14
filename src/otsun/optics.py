@@ -281,7 +281,7 @@ def cosine_lambertian_reflection(incident: Base.Vector, normal_vector: Base.Vect
         optical state of the reflected ray
     """
     normal = correct_normal(normal_vector, incident)
-    theta = np.arcsin(myrandom()) * 180 / np.pi
+    theta = np.arcsin(np.sqrt(myrandom())) * 180 / np.pi
     phi = 360. * myrandom()
     new_direction = dispersion_from_main_direction(normal, theta, phi)
     new_polarization_vector = dispersion_polarization(normal, polarization_vector, theta, phi)
