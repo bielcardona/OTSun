@@ -41,7 +41,6 @@ class GeneralizedSunWindow(AbstractEmittingObject):
             self, 
             scene: Scene, 
             main_direction: Base.Vector):
-        super().__init__(scene=scene, main_direction=main_direction)
         bbs = []
         for shape in itertools.chain(scene.solids, scene.faces):
             bbs.append(shape.BoundBox)
@@ -121,7 +120,6 @@ class SunWindow(AbstractEmittingObject):
     """
 
     def __init__(self, scene: Scene, main_direction: Base.Vector):
-        super().__init__(scene=scene, main_direction=main_direction)
         bbs = []
         for shape in itertools.chain(scene.solids, scene.faces):
             bbs.append(shape.BoundBox)
